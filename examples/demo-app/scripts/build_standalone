@@ -92,9 +92,9 @@ pushd ${out_dir}/core
   touch yarn.lock
 
   # Copy yarn config
-  cp ../../../../../.yarnrc.yml .
+  cp ../../../../.yarnrc.yml .
   mkdir -p .yarn
-  cp -r ../../../../../.yarn/releases ./.yarn/releases
+  cp -r ../../../../.yarn/releases ./.yarn/releases
 
   if [ "${registry_package}" == "1" ] ; then
       upa_version=`jq -r .version ../../../../upa/package.json`
@@ -120,9 +120,9 @@ pushd ${out_dir}/frontend
   touch yarn.lock
 
   # Copy yarn config
-  cp ../../../../../.yarnrc.yml .
+  cp ../../../../.yarnrc.yml .
   mkdir -p .yarn
-  cp -r ../../../../../.yarn/releases ./.yarn/releases
+  cp -r ../../../../.yarn/releases ./.yarn/releases
 
   if [ "${registry_package}" == "1" ] ; then
       upa_version=`jq -r .version ../../../../upa/package.json`

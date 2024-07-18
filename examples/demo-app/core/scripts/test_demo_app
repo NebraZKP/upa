@@ -28,8 +28,8 @@ fi
 
 if [ -e node_modules/@nebrazkp/upa ] ; then
     UPA_CONTRACTS=`realpath node_modules/@nebrazkp/upa`
-elif [ -e ../../../../node_modules/@nebrazkp/upa ] ; then
-    UPA_CONTRACTS=`realpath ../../../../node_modules/@nebrazkp/upa`
+elif [ -e ../../../node_modules/@nebrazkp/upa ] ; then
+    UPA_CONTRACTS=`realpath ../../../node_modules/@nebrazkp/upa`
 else
     echo "Cannot find @nebrazkp/upa"
     exit 1
