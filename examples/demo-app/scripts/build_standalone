@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+
+function usage() {
+    echo " Usage:  $0 [<options>]"
+    echo ""
+    echo "Copies the demo-app project into a demo-app directory, "
+    echo "referencing upa either from a package.tgz file (for"
+    echo "testing upa, or from a package registry."
+    echo ""
+    echo "Options:"
+    echo "  --out-dir      Build into the given directory (demo-app)"
+    echo "  --registry     Reference UPA in package registry"
+    echo "  --dont-delete  Don't delete output directory directory"
+    echo ""
+}
+
+out_dir="demo-app"
+registry_package=0
+dont_delete=0
+
+
+while [[ $# -gt 0 ]] ; do
+    case $1 in
+        --out-dir)
+            shift
+            out_dir=$1
+            ;;
+        --registry)
+            registry_package=1
+            ;;
+        --dont-delete)
+            dont_delete=1
+            ;;
+        --help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "error: unrecognized command"
+            usage
+            exit 1
+    esac
+    shift
+done
+
+echo registry_package=${registry_package}
+echo out_dir=${out_dir}
+echo dont_delete=${dont_delete}
+
+set -x
+set -e
+
+#
+# Build the upa package.json
+#
+pushd ../../upa
+    yarn
+    yarn build
+    yarn pack
+popd # upa
+
+
+if ! [ "${dont_delete}" == "1" ] ; then
+    rm -rf ${out_dir}
+fi
+
+mkdir -p ${out_dir}/core
+
+# Copy `demo-app` files
+pushd ${out_dir}/core
+  # Copy `src`, `contracts`, `circuits`
+  cp -r ../../core/{src,contracts,circuits} .
+
+  # Config files
+  cp ../../core/{hardhat.config.ts,tsconfig.json} .
+
+  # Copy shell setup script
+  mkdir -p ./scripts
+  cp ../../core/scripts/{shell_setup.sh,test_demo_app} ./scripts
+
+  # Copy package.json, removing the `yarn setup` command
+  jq 'del(.scripts.setup)' ../../core/package.json > ./package.json
+
+  # Pin working version of OpenZeppelin dependencies
+  jq '.resolutions = {
+  "@openzeppelin/defender-sdk-base-client": "1.13.1",
+  "@openzeppelin/defender-sdk-deploy-client": "1.13.1",
+  "@openzeppelin/defender-sdk-network-client": "1.13.1"
+  }' ../../core/package.json > ./package.json
+
+  # Create an empty yarn.lock to make this project separate from the workspace
+  touch yarn.lock
+
+  # Copy yarn config
+  cp ../../../../../.yarnrc.yml .
+  mkdir -p .yarn
+  cp -r ../../../../../.yarn/releases ./.yarn/releases
+
+  if [ "${registry_package}" == "1" ] ; then
+      upa_version=`jq -r .version ../../../../upa/package.json`
+      yarn add @nebrazkp/upa@${upa_version}
+  else
+      yarn add ../../../../upa/package.tgz
+  fi
+popd
+
+echo "demo-app standalone/core written to ${out_dir}/core"
+
+mkdir -p ${out_dir}/frontend
+
+# Copy `demo-app/frontend` files
+pushd ${out_dir}/frontend
+  # Copy frontend folders
+  cp -r ../../frontend/{public,components,lib,pages,src,styles} .
+
+  # Copy frontend config files
+  cp ../../frontend/{.gitignore,.eslintrc.json,next.config.mjs,package.json,tsconfig.json,postcss.config.js,tailwind.config.ts} .
+
+  # Create an empty yarn.lock to make this project separate from the workspace
+  touch yarn.lock
+
+  # Copy yarn config
+  cp ../../../../../.yarnrc.yml .
+  mkdir -p .yarn
+  cp -r ../../../../../.yarn/releases ./.yarn/releases
+
+  if [ "${registry_package}" == "1" ] ; then
+      upa_version=`jq -r .version ../../../../upa/package.json`
+      yarn add @nebrazkp/upa@${upa_version}
+  else
+      yarn add ../../../../upa/package.tgz
+  fi
+popd
+
+set +x
+set +e
+
+echo "demo-app/frontend standalone written to ${out_dir}"

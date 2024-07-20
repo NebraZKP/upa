@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+set -x
+set -e
+
+# Build `upa`.
+pushd ../../../upa
+    yarn build
+    yarn
+popd
+
+# Allow `shell_setup.sh` to create aliases for use in this script.
+shopt -s expand_aliases
+. scripts/shell_setup.sh
+
+# You will need circom installed in order to run this setup script.
+if ! (which upa) ; then
+    echo "ERROR: upa not found in path."
+    exit 1
+fi
+if ! (which demo-app) ; then
+    echo "ERROR: demo-app not found in path."
+    exit 1
+fi
+if ! (which circom) ; then
+    echo "ERROR: circom not found in path.  It must be installed to run this script."
+    exit 1
+fi
+
+TEST_DIR="$(pwd)/circuits"
+
+circom ${TEST_DIR}/circuit.circom --r1cs --wasm --output ${TEST_DIR}
+
+# Steps 15-22 and 25 from https://github.com/iden3/snarkjs
+#
+
+POWERSOFTAUFILE="${TEST_DIR}/powersOfTau28_hez_final_08.ptau"
+
+# Pre-generated powersOfTau from snarkjs
+#
+if ! [ -e ${POWERSOFTAUFILE} ] ; then
+    curl https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_08.ptau --output ${POWERSOFTAUFILE}
+fi
+
+# We just need the following files from this setup script.
+UPAVKFILE="$TEST_DIR/../circuits/upa_verification_key.json"
+VERIFIERCONTRACT="${TEST_DIR}/../contracts/CircuitVerifier.sol"
+
+if ! [ -e ${UPAVKFILE} ] || ! [ -e ${VERIFIERCONTRACT} ] ; then
+    # 15. Setup
+    yarn snarkjs groth16 setup ${TEST_DIR}/circuit.r1cs ${POWERSOFTAUFILE} ${TEST_DIR}/circuit_0000.zkey
+
+    # 16. Contribute to the phase 2 ceremony
+    yarn snarkjs zkey contribute ${TEST_DIR}/circuit_0000.zkey ${TEST_DIR}/circuit_0001.zkey --name="1st Contributor Name" -v -e="random entropy"
+
+    # 17. Provide a second contribution
+    yarn snarkjs zkey contribute ${TEST_DIR}/circuit_0001.zkey ${TEST_DIR}/circuit_0002.zkey --name="2nd Contributor Name" -v -e="Another random entropy"
+
+    # 18. Provide a third contribution using third party software
+    yarn snarkjs zkey export bellman ${TEST_DIR}/circuit_0002.zkey ${TEST_DIR}/challenge_phase2_0003
+    yarn snarkjs zkey bellman contribute bn128 ${TEST_DIR}/challenge_phase2_0003 ${TEST_DIR}/response_phase2_0003 -e='some random text'
+    yarn snarkjs zkey import bellman ${TEST_DIR}/circuit_0002.zkey ${TEST_DIR}/response_phase2_0003 ${TEST_DIR}/circuit_0003.zkey -n='Third contribution name'
+
+    # 19. Verify the latest zkey
+    yarn snarkjs zkey verify ${TEST_DIR}/circuit.r1cs ${POWERSOFTAUFILE} ${TEST_DIR}/circuit_0003.zkey
+
+    # 20. Apply a random beacon
+    # 21. Verify the final zkey
+    yarn snarkjs zkey beacon ${TEST_DIR}/circuit_0003.zkey ${TEST_DIR}/circuit.zkey 0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f 10 -n="Final Beacon phase2"
+    yarn snarkjs zkey verify ${TEST_DIR}/circuit.r1cs ${POWERSOFTAUFILE} ${TEST_DIR}/circuit.zkey
+
+    # 22. Export the verification key
+    yarn snarkjs zkey export verificationkey ${TEST_DIR}/circuit.zkey ${TEST_DIR}/snarkjs_verification_key.json
+
+
+    # Create the `upa` command.
+    shopt -s expand_aliases
+    . scripts/shell_setup.sh
+
+    # Convert to a UPA verification key using the upa tool
+    SNARKJSVKFILE="$TEST_DIR/../circuits/snarkjs_verification_key.json"
+    upa convert-vk-snarkjs \
+        --snarkjs-vk ${SNARKJSVKFILE} \
+        --vk-file ${UPAVKFILE}
+
+    # 25. Turn the verifier into a smart contract
+    yarn snarkjs zkey export solidityverifier ${TEST_DIR}/circuit.zkey ${VERIFIERCONTRACT}
+fi
+
+# Clean up some unnecessary files
+rm -f ${TEST_DIR}/circuit_000* ${TEST_DIR}/response_phase2_0003 ${TEST_DIR}/challenge_phase2_0003 ${TEST_DIR}/circuit.r1cs ${TEST_DIR}/circuit_js/generate_witness.js ${TEST_DIR}/circuit_js/witness_calculator.js
+
+set +x
+set +e
+
+echo "SETUP SUCCEEDED!"

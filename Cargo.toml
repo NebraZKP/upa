@@ -1,0 +1,31 @@
+[workspace]
+members = [
+    "circuits",
+    "prover"
+]
+
+# By default, run tests with optimization enabled.
+[profile.test]
+opt-level = 3
+
+[patch.crates-io]
+# TODO: remove once compiler is upgraded.  Newer compiler required for:
+#   asntyle v1.0.3
+#   anstyle-parse v0.2.2
+#   anstyle-query v1.0.1
+#   colored v2.0.4
+anstyle = { git = "https://github.com/rust-cli/anstyle.git", rev = "v1.0.2" }
+anstyle-parse = { git = "https://github.com/rust-cli/anstyle.git", rev = "v1.0.2" }
+anstyle-query = { git = "https://github.com/rust-cli/anstyle.git", rev = "v1.0.0" }
+colored = { git = "https://github.com/colored-rs/colored.git", rev = "v2.0.4" }
+# TODO: remove once compiler is upgraded.  v0.5.1 requires newer compiler
+clap_lex = { git = "https://github.com/clap-rs/clap.git", package = "clap_lex", rev = "5047bb40bd74457215e524db2039211d362cc6e9", version = "0.5.0" }
+toml_edit = { git = "https://github.com/toml-rs/toml.git", package = "toml_edit", rev = "v0.20.2" }
+rust_decimal = { git = "https://github.com/paupino/rust-decimal.git", rev = "1.33.1" }
+borsh = { git = "https://github.com/near/borsh-rs.git", rev = "borsh-v1.2.1" }
+parity-scale-codec = { git = "https://github.com/paritytech/parity-scale-codec", rev = "v3.6.9" }
+scale-info = { git = "https://github.com/paritytech/scale-info.git", rev = "v2.10.0" }
+ahash = { git = "https://github.com/tkaitchuck/ahash.git", rev = "v0.8.5" }
+ciborium-ll = { git = "https://github.com/enarx/ciborium", package = "ciborium-ll", rev = "v0.2.1" }
+ciborium = { git = "https://github.com/enarx/ciborium", package = "ciborium", rev = "v0.2.1" }
+half = { git = "https://github.com/starkat99/half-rs", rev = "v1.8.3" }

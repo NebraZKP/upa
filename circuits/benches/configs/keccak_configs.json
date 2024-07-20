@@ -1,0 +1,23 @@
+[
+  {
+    "max_num_app_public_inputs": 4,
+    "inner_batch_size": 4,
+    "outer_batch_size": 4,
+    "bv_config": {
+      "degree_bits": 1,
+      "lookup_bits": 0,
+      "limb_bits": 88,
+      "num_limbs": 3
+    },
+    "keccak_config": {
+      "degree_bits": 17,
+      "lookup_bits": 8
+    },
+    "outer_config": {
+      "degree_bits": 1,
+      "lookup_bits": 0,
+      "limb_bits": 88,
+      "num_limbs": 3
+    }
+  }
+]

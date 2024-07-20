@@ -1,0 +1,6 @@
+# Ignore artifacts:
+node_modules/
+dist/
+*.yaml
+*.json
+*.md

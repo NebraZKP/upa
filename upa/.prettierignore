@@ -1,0 +1,13 @@
+# Ignore artifacts:
+node_modules/
+dist/
+docs/
+upa-sdk-reference/
+artifacts
+*.yml
+*.json
+typechain-types
+# Ignore readme files:
+*.md
+# Ignore slither:
+_slither/

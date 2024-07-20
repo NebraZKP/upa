@@ -1,0 +1,13 @@
+{
+  "extends": "solhint:recommended",
+  "plugins": ["prettier"],
+  "rules": {
+    "max-line-length": ["error", 80],
+    "no-global-import": "off",
+    "func-visibility": ["error", { "ignoreConstructors": true }],
+    "no-inline-assembly": "off",
+    "custom-errors": "off",
+    "avoid-low-level-calls": "off",
+    "contract-name-camelcase": "off"
+  }
+}

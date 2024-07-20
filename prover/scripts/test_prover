@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# Basic tests of the prover commands, primarily to check consistency against
+# the SDK and contract code.
+
+# Build
+pushd ../upa/
+  yarn
+  yarn build
+  yarn
+popd
+cargo build --release
+
+# Shell setup
+shopt -s expand_aliases
+. ../upa/scripts/shell_setup.sh
+. ./scripts/shell_setup.sh
+
+set -e
+set -x
+
+mkdir -p _test_prover
+pushd _test_prover
+
+    cp ../../circuits/src/tests/data/vk.json vk.json
+
+    # Check native and Typescript cids match
+    cid_evm=`upa compute-circuit-id vk.json`
+    cid_native=`prover universal-batch-verifier compute-circuit-id --app-vk=vk.json`
+    if ! [ "${cid_evm}" == "${cid_native}" ] ; then
+        echo "cid_evm: ${cid_native}"
+        echo "cid_native: ${cid_native}"
+        exit 1
+    fi
+
+popd # _test_prover
+
+set +x
+set +e
+
+echo "======================================"
+echo "====            PASSED            ===="
+echo "======================================"

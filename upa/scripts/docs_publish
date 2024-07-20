@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+rm -rf docs
+yarn docs
+
+if ! [ -e upa-sdk-reference ] ; then
+    git clone git@github.com:nebrazkp/upa-sdk-reference
+else
+    cd upa-sdk-reference
+    git pull
+fi
+
+pushd upa-sdk-reference
+  git rm -rf ./**
+  mv ../docs/* .
+  git add -A ./**
+  git commit -m 'docs'
+
+echo "UPDATED.  To publish:"
+echo "  cd upa-sdk-reference ; git push"
+echo ""
+echo "Site: https://nebrazkp.github.io/upa-sdk-reference/"

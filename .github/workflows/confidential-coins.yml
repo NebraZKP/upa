@@ -1,0 +1,80 @@
+name: confidential-coins tests
+
+on:
+  push:
+    paths:
+    - package.json
+    - 'upa/**'
+    - 'examples/confidential-coins/**'
+    - .github/workflows/confidential-coins.yml
+
+concurrency:
+    cancel-in-progress: true
+    group: ${{github.workflow}}-${{github.ref}}
+
+jobs:       
+  check_confidential_coins:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: examples/confidential-coins
+
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: [20]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "yarn"
+          cache-dependency-path: "**/yarn.lock"
+
+      - name: Install rust compiler for circom
+        uses: actions-rs/toolchain@v1
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install circom if necessary
+        id: install_circom
+        run: |
+          if ! (which circom); then
+            echo "Installing circom"
+            if [ ! -d "circom" ]; then
+              echo "Directory 'circom' does not exist."
+              git clone --depth 1 https://github.com/iden3/circom.git
+            else
+              echo "Directory 'circom' already exists."
+            fi
+            pushd circom
+            cargo build --release
+            cargo install --path circom
+            popd
+          else
+            echo "circom is already installed"
+          fi
+
+      - name: Build confidential-coins
+        run: |
+          yarn
+          yarn setup
+          yarn build
+
+      - name: Linters and formatter
+        run: |
+          yarn run lint
+          yarn run format
+          git diff --no-ext-diff --ignore-cr-at-eol -- **.ts > format.diff
+          echo "DIFF:" && cat format.diff
+          ! [ -s format.diff ]
+
+      - name: test_confidential_coins
+        run: |
+          ./scripts/test_confidential_coins

@@ -1,0 +1,56 @@
+name: prover tests
+
+on:
+  push:
+    paths:
+    - '**/Cargo.toml'
+    - '**/*.rs'
+    - 'prover/**'
+    - .github/workflows/prover.yml
+
+concurrency:
+    cancel-in-progress: true
+    group: ${{github.workflow}}-${{github.ref}}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings -A unknown-lints
+  RUST_BACKTRACE: full
+
+jobs:
+  prover-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: prover
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install rust compiler and tools
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: rustfmt, clippy
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Run rustfmt
+        run: |
+          cargo fmt --check
+
+      - name: Cargo sort
+        run: |
+          cargo +stable install cargo-sort
+          cargo +stable sort --workspace --check
+
+      - name: Run clippy
+        run: |
+          cargo clippy --no-deps
+
+      - name: Run test_prover
+        run: |
+            ./scripts/test_prover
