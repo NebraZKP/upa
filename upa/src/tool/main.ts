@@ -8,7 +8,7 @@ import { dev } from "./dev";
 import { computecircuitid } from "./computeCircuitId";
 import { devAggregator } from "./devAggregator";
 import { registervk } from "./registerVK";
-import { stats } from "./stats";
+import { stats, statsUI } from "./stats";
 import { submitProofs } from "./submitProofs";
 import { submitAggregatedProof } from "./submitAggregatedProof";
 import { computeFinalDigest } from "./computeFinalDigest";
@@ -55,6 +55,7 @@ const root = subcommands({
     "convert-vk-snarkjs": convertvkSnarkJs,
     "convert-vk-proofs-inputs": convertVkProofsAndInputsFile,
     stats,
+    "stats-ui": statsUI,
     "submit-proofs": submitProofs,
     genstandardjsoninput,
     "compute-circuit-id": computecircuitid,

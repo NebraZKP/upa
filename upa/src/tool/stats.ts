@@ -7,6 +7,7 @@ import { strict as assert } from "assert";
 // eslint-disable-next-line
 import { Groth16VKStructOutput } from "../../typechain-types/contracts/UpaProofReceiver";
 import { UpaFixedGasFee__factory } from "../../typechain-types";
+import * as blessed from "blessed";
 
 /// The json data output from this command.
 type StateJSON = {
@@ -120,5 +121,88 @@ export const stats = command({
 
     // Print this to stdout, NOT the log, so it can be consumed by scripts.
     console.log(utils.JSONstringify(output, 2));
+  },
+});
+
+export const statsUI = command({
+  name: "stats-ui",
+  args: {
+    endpoint: endpoint(),
+    instance: instance(),
+  },
+  description: "Query the UPA contract state",
+  handler: async function ({ endpoint, instance }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const { verifier } = upaFromInstanceFile(instance, provider);
+
+    const getTableContent = async () => {
+      const blockNumberP = provider.getBlockNumber();
+      const nextSubmissionIdxP = verifier.getNextSubmissionIdx();
+      const nextSubmissionIdxToVerifyP = verifier.nextSubmissionIdxToVerify();
+      const lastVerifiedSubmissionHeightP =
+        verifier.lastVerifiedSubmissionHeight();
+      const [allocatedFee, claimableFees, verifiedProofIdxForAllocatedFee] =
+        await Promise.all([
+          verifier.feeAllocated(),
+          verifier.claimableFees(),
+          verifier.verifiedSubmissionIdxForAllocatedFee(),
+        ]);
+
+      const output: StateJSON = {
+        blockNumber: await blockNumberP,
+        nextSubmissionIdxToVerify: await nextSubmissionIdxToVerifyP,
+        lastVerifiedSubmissionHeight: await lastVerifiedSubmissionHeightP,
+        nextSubmissionIdx: await nextSubmissionIdxP,
+        numPendingSubmissions:
+          (await nextSubmissionIdxP) - (await nextSubmissionIdxToVerifyP),
+        allocatedFee,
+        claimableFees,
+        verifiedProofIdxForAllocatedFee,
+      };
+
+      return Object.keys(output).map((k) => [
+        " " + k + ":",
+        " " + (output as any)[k] + " ",
+      ]);
+    };
+
+    // Create a screen object and cetnered table.
+    var screen = blessed.screen({ smartCSR: true });
+    screen.title = "my window title";
+
+    var table = blessed.table({
+      parent: screen,
+      top: "center",
+      left: "center",
+      width: "50%",
+      height: "50%",
+      label: "{bold}UPA stats (q, esc, ctrl-c to quit){/bold}",
+      padding: 1,
+      tags: true,
+      align: "left",
+      border: { type: "line" },
+      noCellBorders: true,
+      style: {
+        // bg: "black",
+        // border: { bg: "black" },
+        // header: { bg: "black", fg: "green" },
+        // cell: { bg: "black", fg: "green" },
+        // label: { bg: "black" },
+      },
+    });
+    screen.append(table);
+
+    screen.key(["escape", "q", "C-c"], function (_ch, _key) {
+      return process.exit(0);
+    });
+    table.focus();
+    screen.render();
+
+    const updateContent = async () => {
+      table.setData(await getTableContent());
+      screen.render();
+    };
+    await updateContent();
+    setInterval(updateContent, 10000);
   },
 });

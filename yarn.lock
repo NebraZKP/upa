@@ -728,12 +728,14 @@ __metadata:
     "@openzeppelin/hardhat-upgrades": "npm:^3.0.3"
     "@typechain/ethers-v6": "npm:^0.4.0"
     "@typechain/hardhat": "npm:^8.0.0"
+    "@types/blessed": "npm:^0.1.25"
     "@types/chai": "npm:^4.3.9"
     "@types/mocha": "npm:^10.0.2"
     "@types/node": "npm:^20.4.2"
     "@types/readline-sync": "npm:^1.4.8"
     "@typescript-eslint/eslint-plugin": "npm:^6.7.0"
     "@typescript-eslint/parser": "npm:^6.7.0"
+    blessed: "npm:^0.1.81"
     chai: "npm:^4.3.9"
     cmd-ts: "npm:^0.13.0"
     dotenv: "npm:^16.3.1"
@@ -1555,6 +1557,15 @@ __metadata:
     hardhat: ^2.9.9
     typechain: ^8.3.1
   checksum: 2b7b8d60e35b0b65884659f14bd6a354c88ec042f9af7d9f43003784ccca9a36bf8193b2cd26859b9b262acc543b1b477306bfb4d314a3de79aacff1136b97ec
+  languageName: node
+  linkType: hard
+
+"@types/blessed@npm:^0.1.25":
+  version: 0.1.25
+  resolution: "@types/blessed@npm:0.1.25"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: ec298878c1c9d4202fee26248677c39236d7c0eac8ed8f6e93a9e5838bc531074fe44941e2b85fc77b0cc20924493930d295042ee0315e020dffeba99668737a
   languageName: node
   linkType: hard
 
@@ -2543,6 +2554,15 @@ __metadata:
   version: 1.2.1
   resolution: "blakejs@npm:1.2.1"
   checksum: c284557ce55b9c70203f59d381f1b85372ef08ee616a90162174d1291a45d3e5e809fdf9edab6e998740012538515152471dc4f1f9dbfa974ba2b9c1f7b9aad7
+  languageName: node
+  linkType: hard
+
+"blessed@npm:^0.1.81":
+  version: 0.1.81
+  resolution: "blessed@npm:0.1.81"
+  bin:
+    blessed: ./bin/tput.js
+  checksum: 19515ff7899e8af0dd6c080e30e849833ee9518508cc4eabae5a2ea5f17440537a2526169081f20c79d73fbbeca26cc798cc4b037ec250f91f4952b3a75a2143
   languageName: node
   linkType: hard
 
