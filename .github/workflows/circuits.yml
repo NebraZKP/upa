@@ -6,6 +6,7 @@ on:
     - 'Cargo.toml'
     - 'circuits/**'
     - .github/workflows/circuits.yml
+    - .rustfmt.toml
 
 concurrency:
     cancel-in-progress: true

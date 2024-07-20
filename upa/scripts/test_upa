@@ -328,7 +328,7 @@ pushd _test_upa
         --proof-file test_snarkjs_proof.upa.json
 
     # Assemble into UPA proof file format {vk, proof, inputs}
-    jq --argfile vk test_snarkjs_vk.upa.json '.vk = $vk' test_snarkjs_proof.upa.json > tmp_upa.json
+    jq --slurpfile vk test_snarkjs_vk.upa.json '.vk = $vk[0]' test_snarkjs_proof.upa.json > tmp_upa.json
     mv tmp_upa.json test_snarkjs_proof.upa.json
 
     upa groth16-verify \

@@ -29,7 +29,7 @@ fi
 
 TEST_DIR="$(pwd)/circuits"
 
-CIRCOMLIB_DIR="$(pwd)/../../../node_modules/circomlib/circuits"
+CIRCOMLIB_DIR="$(pwd)/../../node_modules/circomlib/circuits"
 
 circom ${TEST_DIR}/validatetx.circom --r1cs --wasm --output ${TEST_DIR} -l ${CIRCOMLIB_DIR}
 

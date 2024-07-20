@@ -112,7 +112,7 @@ function start_hardhat_node() {
     if [ "${launch_command}" == "" ] ; then
         # This must be run inside the upa dir, or Hardhat
         # complains we're not in a Hardhat project.
-        launch_command="${UPA_DIR}/../node_modules/.bin/hardhat node ${node_flags}"
+        launch_command="${UPA_DIR}/node_modules/.bin/hardhat node ${node_flags}"
         start_dir=${UPA_DIR}/upa
     fi
 
