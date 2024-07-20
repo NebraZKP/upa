@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+#
+# Tests confidential-coins:
+# - Run setup script
+# - Deploy UPA tool and register confidential-coins verification key
+# - Deploy confidential-coins and run confidential-coins commands.
+#
+set -x
+set -e
+
+# Setup necessary files
+yarn
+yarn build
+yarn   # re-run to ensure confidential-coins command is in node_modules/.bin
+
+. scripts/shell_setup.sh
+
+if ! (which upa) ; then
+    echo "No upa command in PATH"
+    echo "PATH=${PATH}"
+    exit 1
+fi
+if ! (which confidential-coins) ; then
+    echo "No confidential-coins command in PATH"
+    echo "PATH=${PATH}"
+    exit 1
+fi
+
+if [ -e node_modules/@nebrazkp/upa ] ; then
+    UPA_CONTRACTS=`realpath node_modules/@nebrazkp/upa`
+elif [ -e ../../node_modules/@nebrazkp/upa ] ; then
+    UPA_CONTRACTS=`realpath ../../node_modules/@nebrazkp/upa`
+else
+    echo "Cannot find @nebrazkp/upa"
+    exit 1
+fi
+
+mkdir -p _test_confidential_coins
+pushd _test_confidential_coins
+
+    # Import hardhat util functions
+    . ${UPA_CONTRACTS}/scripts/utils.sh
+
+    start_hardhat_node 10546 "yarn hardhat node --port 10546"
+    export RPC_ENDPOINT="http://127.0.0.1:10546/"
+    trap stop_hardhat_node EXIT
+
+    # Run this script from the `confidential-coins` directory.
+    DEPLOYER_KEYFILE="deploy.key"
+    APP_KEYFILE="confidential-coins.keyfile"
+    AGGREGATOR_KEYFILE="aggregator.key"
+    SNARKJSVKFILE="../circuits/snarkjs_verification_key.json"
+    APP_VKFILE="../circuits/upa_verification_key.json"
+    UPAINSTANCE="upa.instance"
+
+    export KEYFILE_PASSWORD=""
+
+    # Create and fund addresses
+    if ! [ -e ${DEPLOYER_KEYFILE} ] ; then
+        upa dev ethkeygen --keyfile ${DEPLOYER_KEYFILE}
+    fi
+    upa dev fund --keyfile ${DEPLOYER_KEYFILE}
+
+    if ! [ -e ${APP_KEYFILE} ] ; then
+        upa dev ethkeygen --keyfile ${APP_KEYFILE}
+    fi
+    upa dev fund --keyfile ${APP_KEYFILE}
+
+    if ! [ -e ${AGGREGATOR_KEYFILE} ] ; then
+        upa dev ethkeygen --keyfile ${AGGREGATOR_KEYFILE}
+    fi
+    AGGREGATOR_ADDRESS=0x`cat ${AGGREGATOR_KEYFILE} | jq -r .address`
+    upa dev fund ${AGGREGATOR_ADDRESS}
+
+    # Set interval mining mode for contract deployment
+    upa dev interval-mining 500
+
+    # Deploy UPA using DEPLOYER_KEYFILE and then confidential-coins using
+    # APP_KEYFILE.
+    upa deploy \
+           --keyfile ${DEPLOYER_KEYFILE} \
+           --verifier ${UPA_CONTRACTS}/test/data/test.bin \
+           --instance ${UPAINSTANCE} \
+           --worker ${AGGREGATOR_ADDRESS} \
+           --use-test-config \
+           --retries 3
+
+    upa dev interval-mining 0
+
+    # Register a vk
+    upa registervk \
+           --keyfile ${APP_KEYFILE} \
+           --vk-file ${APP_VKFILE} \
+           --wait
+
+    confidential-coins deploy \
+               --keyfile ${APP_KEYFILE} \
+               --upa-instance ${UPAINSTANCE}
+
+    # Launch Dev Aggregator
+    BATCH_SIZE=6;
+    MAX_WAIT_TIME=10;
+    start_dev_aggregator $BATCH_SIZE $MAX_WAIT_TIME $AGGREGATOR_KEYFILE
+
+    confidential-coins get-state --keyfile ${APP_KEYFILE}
+
+    confidential-coins convert --keyfile ${APP_KEYFILE} -n 32
+
+    confidential-coins get-state --keyfile ${APP_KEYFILE}
+
+    confidential-coins init-balances --keyfile ${APP_KEYFILE}
+
+    confidential-coins get-state --keyfile ${APP_KEYFILE}
+
+    confidential-coins agg-convert --keyfile ${APP_KEYFILE} -n 32
+
+    # TODO (670): Pass in tx sequence from file and check contract state is correct.
+
+    stop_dev_aggregator
+    stop_hardhat_node
+
+popd
+
+set +x
+set +e
+
+echo "========================================"
+echo "====             PASSED             ===="
+echo "========================================"

@@ -1,0 +1,89 @@
+{
+  "name": "@nebrazkp/upa",
+  "license": "MIT",
+  "version": "1.1.2",
+  "description": "UPA contracts, client SDK and tools",
+  "repository": "https://github.com/nebrazkp/upa",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "require": "./dist/src/index.js"
+    },
+    "./sdk": {
+      "import": "./dist/src/sdk/index.js",
+      "require": "./dist/src/sdk/index.js"
+    },
+    "./tool": {
+      "import": "./dist/src/tool/index.js",
+      "require": "./dist/src/tool/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "./README.md",
+    "./dist",
+    "./contracts/I*",
+    "./contracts/Proof.sol",
+    "./test",
+    "./scripts/*",
+    "./cache/*"
+  ],
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": "dist/src/tool/main.js",
+  "scripts": {
+    "setup": "",
+    "build": "hardhat compile && hardhat typechain && tsc --build",
+    "docs": "typedoc --options .typedoc.json",
+    "docs-publish": "./scripts/docs_publish",
+    "format": "prettier . --write",
+    "lint:browsersdk": "(git grep -irn '\"fs\"' -- src/sdk && (echo 'fs in src/sdk' ; error)) || (echo) ",
+    "lint": "eslint --ext .ts . && prettier --check 'contracts/**/*.sol' && solhint 'contracts/*.sol' && yarn lint:browsersdk",
+    "test": "HARDHAT_CONFIG=./hardhat.config.ts hardhat test",
+    "slither": "./scripts/run_slither"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@typechain/ethers-v6": "^0.4.0",
+    "@typechain/hardhat": "^8.0.0",
+    "@types/chai": "^4.3.9",
+    "@types/mocha": "^10.0.2",
+    "@types/node": "^20.4.2",
+    "@types/readline-sync": "^1.4.8",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "chai": "^4.3.9",
+    "eslint": "^8.49.0",
+    "eslint-config-prettier": "^9.0.0",
+    "hardhat-contract-sizer": "^2.10.0",
+    "hardhat-deploy": "^0.11.0",
+    "hardhat-gas-reporter": "^1.0.8",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.3",
+    "solhint": "^3.6.2",
+    "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.8.1",
+    "ts-node": "^10.9.1",
+    "typechain": "^8.2.0",
+    "typedoc": "^0.25.12",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@ethersproject/keccak256": "^5.7.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@openzeppelin/contracts": "^5.0.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.1",
+    "@openzeppelin/hardhat-upgrades": "^3.0.3",
+    "cmd-ts": "^0.13.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.11.1",
+    "ffjavascript": "^0.3.0",
+    "hardhat": "^2.17.4",
+    "readline-sync": "^1.4.10",
+    "snarkjs": "^0.7.3",
+    "winston": "^3.10.0"
+  }
+}

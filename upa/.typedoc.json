@@ -1,0 +1,9 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "out": "docs",
+  "commentStyle": "block",
+  "disableSources": true,
+  "excludePrivate": true,
+  "excludeNotDocumented": false
+}

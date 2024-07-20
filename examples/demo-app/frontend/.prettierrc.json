@@ -1,0 +1,11 @@
+{
+  "overrides": [
+    {
+      "files": "*.tsx",
+      "options": {
+        "printWidth": 80,
+        "trailingComma": "es5"
+      }
+    }
+  ]
+}

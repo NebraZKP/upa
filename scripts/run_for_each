@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -e
+
+# 1 - list of packages
+# 2 - command to run
+
+for p in $1 ; do
+    echo "Entering $p ..."
+    pushd $p
+    eval $2
+    popd
+done

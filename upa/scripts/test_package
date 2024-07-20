@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -e
+set -x
+
+# Test the package in a fresh project
+
+this_dir=`dirname ${BASH_SOURCE[0]}`
+package_dir=`realpath ${this_dir}/..`
+
+# Builds the package
+rm -f package.tgz
+yarn
+yarn build
+yarn
+yarn pack
+
+# This command was required to force local updates
+# yarn cache clean
+# yarn remove --all @nebrazkp/upa || echo -n
+
+# Create a test project and install.  Must be outside the project to avoid
+# picking up parent node_modules.
+pushd ../../..
+rm -rf _test_upa_package
+mkdir _test_upa_package
+pushd _test_upa_package
+
+yarn init -y
+touch yarn.lock
+yarn
+
+yarn add --force ${package_dir}/package.tgz
+yarn
+
+./node_modules/.bin/upa dev describe
+
+popd # _test_package
+popd # ../..
+
+set +e
+set +x
+
+echo "========================================"
+echo "====             PASSED             ===="
+echo "========================================"

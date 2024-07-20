@@ -1,0 +1,20 @@
+{
+  "workspaces": [
+    "upa",
+    "examples/demo-app/*",
+    "examples/confidential-coins"
+  ],
+  "config": {
+    "packages": "upa examples/demo-app/core examples/confidential-coins"
+  },
+  "scripts": {
+    "setup": "./scripts/run_for_each \"${npm_package_config_packages}\" 'yarn setup'",
+    "build": "./scripts/run_for_each \"${npm_package_config_packages}\" 'yarn build'"
+  },
+  "packageManager": "yarn@4.0.2",
+  "resolutions": {
+    "@openzeppelin/defender-sdk-base-client": "1.13.1",
+    "@openzeppelin/defender-sdk-deploy-client": "1.13.1",
+    "@openzeppelin/defender-sdk-network-client": "1.13.1"
+  }
+}

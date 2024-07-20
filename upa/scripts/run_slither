@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -e
+
+[ "${ZSH_VERSION}" = "" ] && this_dir=`dirname ${BASH_SOURCE[0]}` || this_dir=`dirname ${(%):-%N}`
+root_dir=`realpath ${this_dir}/..`
+
+mkdir -p "${root_dir}/_slither"
+pushd "${root_dir}/_slither"
+    if ! [ -e slither/env/bin/activate ] ; then
+        # Perform developer installation
+        # (See https://github.com/crytic/slither/wiki/Developer-installation)
+        git clone https://github.com/crytic/slither
+        pushd slither
+            git checkout dev
+            make dev
+        popd
+    fi
+
+    # `slither` shell command
+    source slither/env/bin/activate
+
+    # Excluded detectors because are they low severity they give false
+    # positives.
+    EXCLUDED_DETECTORS="pragma,assembly,naming-convention,unused-import"
+
+    # Excluded paths
+    EXCLUDED_PATHS="@openzeppelin|contracts/tests|Groth16Verifier.sol"
+
+    # Run slither on contracts. It will exit with an error if any issues are
+    # detected.
+    #
+    # Exclude new false positives by running this script with `--triage-mode`.
+    # This can update the file slither.db.json to exclude new false positives.
+    slither .. \
+            --skip-assembly \
+            --exclude ${EXCLUDED_DETECTORS} \
+            --filter-paths ${EXCLUDED_PATHS} \
+            "$@"  # Passes command line args for this script to slither
+popd
+
+set +e

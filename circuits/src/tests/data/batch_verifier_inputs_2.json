@@ -1,0 +1,118 @@
+{
+  "app_vk": {
+    "alpha": [
+      "0x2d4d9aa7e302d9df41749d5507949d05dbea33fbb16c643b22f599a2be6df2e2",
+      "0x14bedd503c37ceb061d8ec60209fe345ce89830a19230301f076caff004d1926"
+    ],
+    "beta": [
+      [
+        "0x0e187847ad4c798374d0d6732bf501847dd68bc0e071241e0213bc7fc13db7ab",
+        "0x0967032fcbf776d1afc985f88877f182d38480a653f2decaa9794cbc3bf3060c"
+      ],
+      [
+        "0x1739c1b1a457a8c7313123d24d2f9192f896b7c63eea05a9d57f06547ad0cec8",
+        "0x304cfbd1e08a704a99f5e847d93f8c3caafddec46b7a0d379da69a4d112346a7"
+      ]
+    ],
+    "gamma": [
+      [
+        "0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed",
+        "0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2"
+      ],
+      [
+        "0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa",
+        "0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b"
+      ]
+    ],
+    "delta": [
+      [
+        "0x296fd59fb38f41eea84d96a5525049daabc602f827fe197a8e4dbe201b823414",
+        "0x0685967bd2f46c2e6ac64afd0a54b940d0ae5fb7a0a8db4980c5b9638f2fdd41"
+      ],
+      [
+        "0x19cffb0bbda7db702ae128dbd3a56683a5d817dc2ffa77cbfa9416b77a796da3",
+        "0x1ed39c5e8b64aa4159547af885a2316ce8756e5cf4c565c5c2b7b217436b5f8e"
+      ]
+    ],
+    "s": [
+      [
+        "0x14e11e485c81033710414eca4230082abcf0291ae3e94575840892f1ab335b9b",
+        "0x1423a6e079a2d699f43d7953d7048f77133fd2f840e941a976b0e4043b10a964"
+      ],
+      [
+        "0x05087d8d86a2b1859ad55a81f036c2d6fc481a8eff44e97fd25884ea26fb5516",
+        "0x0cf1631f6380ee7bdfb27479c15a2257a8d45d67c0adbee68fc874519555dfb1"
+      ],
+      [
+        "0x21e1e45eeafcbc0a56722ef1bdf95c95790aeff2372dff8f687ec2168e39a30f",
+        "0x13aab303ff9cab840623f021b983f0c65cdc74bc182358368ce830b9f87664a5"
+      ],
+      [
+        "0x09e7943434f1fe288624d705f35973d20003ee5b3e82cda95e5ba272a81fb8c0",
+        "0x1f83f36989ef89536a6eb15b42556ce678bccc57cba8aca84c8814f80ec17f9d"
+      ],
+      [
+        "0x1c40549b982c8590e34ee2da3ea164d3ad344f703401f2a998207a1606cfdae7",
+        "0x1e0d0046c1dbbc81ecc352b1fc745e4df63ef7e4a8cb5408b62cd538970e2055"
+      ]
+    ],
+    "h1": [],
+    "h2": []
+  },
+  "app_proofs_and_inputs": [
+    {
+      "proof": {
+        "pi_a": [
+          "0x0a849af6b7d55edbfb663ac63a0928e26de6b28a1015331bbaeebeaa00c1208e",
+          "0x142aee2f2eb435dfffbd89279c0fd3d77edcf03952dcc17bc8dc2e5da6e31630"
+        ],
+        "pi_b": [
+          [
+            "0x2e891c8413297f35a00f84f035cf20a472c365f283cdadab3ccc304484c60033",
+            "0x06f82fd7e4fa431e8fc9caf1ec87a4813cb32c822c95a7405cd7fae9fa172f25"
+          ],
+          [
+            "0x048c29130c75d9b0e22add1803a41a3bf7842cda26f484ba9ff7281bab5ef703",
+            "0x2b320b41a443e7078960bda56a33c8736c7b633f34fe6bd7de718365d3555da1"
+          ]
+        ],
+        "pi_c": [
+          "0x04b04a91b86ff3d4cf8c3151144366882c46db7a09660ec68db28f0bd7462323",
+          "0x1d3535d143e07413e2bdad3a7127824d54969e35e00522d8ea8191df4ee2ddab"
+        ],
+        "m": [],
+        "pok": []
+      },
+      "protocol": "groth16",
+      "curve": "bn128",
+      "inputs": ["30752", "43644", "30752", "43645"]
+    },
+    {
+      "proof": {
+        "pi_a": [
+          "0x305a10c55ade388862d44fbb6bbc0c4dc0759ab81f38bcc10da8c18e0ef45e3f",
+          "0x180c431ad60c92ee0915a6ab3fe402fc17dcd82e4df5994dfa65f32ca82f1557"
+        ],
+        "pi_b": [
+          [
+            "0x10dec35fdc9455829dc31c10056c6e511ea7670f2efe43f25206053f46153dbf",
+            "0x2e83d09ee804c61c4f492842062a213fd9bb1e07ebe96676776a108637625532"
+          ],
+          [
+            "0x081e4cef8b06bd829c60a74fbfc4082f07492e28046d66d82f7da4687993fbf9",
+            "0x2c58156e0676e0e1ad01e489c3e3759e6e0dc810b9bec8ee56b035f18dbaa6fa"
+          ]
+        ],
+        "pi_c": [
+          "0x0720e21caf4d791d5f775a14827d3c6c9c745ab6817875c67ec11894aa04fcc5",
+          "0x26f8afc75d007e64f2bd7444f9967c8b3e8676a650a94a28c9b61609254f0c35"
+        ],
+        "m": [],
+        "pok": []
+      },
+      "protocol": "groth16",
+      "curve": "bn128",
+      "inputs": ["17871", "53295", "17871", "53296"]
+    }
+  ]
+}

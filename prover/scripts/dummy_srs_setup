@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# Exit on error
+set -e
+
+[ "${ZSH_VERSION}" = "" ] && this_dir=`dirname ${BASH_SOURCE[0]}` || this_dir=`dirname ${(%):-%N}`
+
+# Create dummy SRS files in the current dir, as symlinks to files in the
+# directory ../_srs.
+
+# 1 - circuit name
+# 2 - degree
+function create_srs_for_circuit() {
+    circuit_name=$1
+    degree=$2
+    srs_file=${circuit_name}.srs
+
+    # Assign prover if PROVER is not set
+    if [ "$3" == "" ]; then
+        prover=`realpath ${this_dir}/../../target/release/prover`
+    else
+        prover=$3
+    fi
+
+    # If an srs file already exists, we're done.  Otherwise, create one, using
+    # the cache of files in ../_srs.
+    if ! [ -e ${srs_file} ] ; then
+
+        # If the real underlying file does not exist, create it
+        real_srs_file=../_srs/${degree}.srs
+        if ! [ -e ${real_srs_file} ] ; then
+            echo "Creating srs file ${real_srs_file}..."
+            mkdir -p ../_srs
+            ${prover} srs generate -d ${degree} -s ${real_srs_file}
+        else
+            echo "Real srs file ${real_srs_file} already exists."
+        fi
+
+        # Symlink
+        echo "Linking ${srs_file} -> ${real_srs_file}"
+        ln -s ${real_srs_file} ${srs_file}
+    else
+        echo "File ${srs_file} already exists in current dir.  Skipping."
+        return
+    fi
+}
+
+# 1 - circuit name
+# 2 - config file
+function get_circuit_degree() {
+    circuit_name=$1
+    config_file=$2
+    degree=`cat ${config_file} | jq .${circuit_name}_config.degree_bits`
+    echo ${degree}
+}
+
+# If a config file exists, create a dummy srs for it.
+#
+# 1 - circuit name
+function create_srs_if_config_file() {
+    circuit_name=$1
+    config_file=upa_config.json
+    if [ -e ${config_file} ] ; then
+        echo "Found config file ${config_file}"
+        degree=`get_circuit_degree ${circuit_name} ${config_file}`
+        create_srs_for_circuit ${circuit_name} ${degree} $2
+    else
+        echo "No config file ${config_file}.  Cannot generate dummy srs"
+        exit 1
+    fi
+}
+
+# Usage:
+#   dummy_srs_setup <circuit-name>
+# or
+#   dummy_srs_setup
+# to set up all circuits
+
+if [ "$1" == "" || "$1" == "all" ] ; then
+    echo "Setting up srs for all circuits"
+    create_srs_if_config_file bv $2
+    create_srs_if_config_file keccak $2
+    create_srs_if_config_file outer $2
+else
+    echo "Setting up srs for circuit: $1"
+    create_srs_if_config_file $1 $2
+fi

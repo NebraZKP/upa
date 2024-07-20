@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+
+set -x
+set -e
+
+# Build
+yarn build
+
+# Allow aliases to be expanded in this shell, so that `shell_setup.sh` can
+# create the `upa` command.
+shopt -s expand_aliases
+. scripts/shell_setup.sh
+
+# Include the util functions.
+. scripts/utils.sh
+
+# Verify in groups of this size
+BATCH_SIZE=2
+# Dev aggregator submits batches every $LATENCY seconds
+LATENCY=5
+LATENCY_PLUS_ONE=$(($LATENCY + 1))
+# For now test assumes batch size of 2 because sample
+# proofs file contains only 4 proofs
+if ! [ "2" == $BATCH_SIZE ] ; then
+    echo "Test currently assumes batch size of 2"
+fi
+
+export UPA_LOG_LEVEL=debug
+
+# 1 - address to fund
+function fund() {
+    bal=`upa dev balance $1`
+    if (( $(echo "${bal} < 100" | bc -l) )) ; then
+        upa dev fund $1 --amount 1.5
+    fi
+}
+
+mkdir -p _test_dev_aggregator
+pushd _test_dev_aggregator
+
+    start_hardhat_node 10545
+    export RPC_ENDPOINT="http://127.0.0.1:10545/"
+    export KEYFILE_PASSWORD=""
+
+    KEYFILE="deployer.key"
+
+    # Set interval mining mode
+    upa dev interval-mining 500
+
+    # Create and fund a dummy address
+    if ! [ -e ${KEYFILE} ] ; then
+        addr=`upa dev ethkeygen --keyfile ${KEYFILE}`
+    else
+        addr=0x`cat ${KEYFILE} | jq -r .address`
+    fi
+    fund ${addr}
+
+    # Create and fund user address
+    USER_KEYFILE="user.key"
+    if ! [ -e ${USER_KEYFILE} ] ; then
+        upa dev ethkeygen --keyfile ${USER_KEYFILE}
+    fi
+    user_addr=0x`cat ${USER_KEYFILE} | jq -r .address`
+    fund ${user_addr}
+
+    # Deploy using this key
+    upa deploy \
+            --keyfile ${KEYFILE} \
+            --verifier ${UPA_DIR}/upa/test/data/test.bin \
+            --use-test-config \
+            --retries 3
+
+    # Test data
+    TEST_VK=${UPA_DIR}/circuits/src/tests/data/vk.json
+    VK_2=${UPA_DIR}/circuits/src/tests/data/vk-2.json
+    VK_3=${UPA_DIR}/circuits/src/tests/data/vk-3.json
+    #   series of proofs for vk.json, vk-2.json, vk-3.json
+    TEST_PROOFS=${UPA_DIR}/circuits/src/tests/data/universal_batch_verifier_8_proofs.json
+
+    # Register VKs
+    KEYFILE=${KEYFILE} upa registervk --vk-file ${TEST_VK}
+    KEYFILE=${KEYFILE} upa registervk --vk-file ${VK_2}
+    KEYFILE=${KEYFILE} upa registervk --vk-file ${VK_3} --wait
+
+    # Check stats and record
+    upa stats > stats.0
+    if ! [ "1"  == "`jq -r .nextSubmissionIdx stats.0`" ] ; then
+        echo "FAILURE: nextSubmissionIdx expected to be 0"
+        exit 1
+    fi
+    if ! [ "1" == "`jq -r .nextSubmissionIdxToVerify stats.0`" ] ; then
+        echo "FAILURE: nextSubmissionIdxToVerify expected to be 1"
+        echo "Dev aggregator may have missed a partially verified submission"
+        exit 1
+    fi
+
+    # Submit a batch of BATCH_SIZE
+    upa submit-proofs \
+           --keyfile ${USER_KEYFILE} \
+           --proofs-file ${TEST_PROOFS} \
+           --proof-ids-file pids.json \
+           --submission-file submission.json \
+           -N ${BATCH_SIZE} \
+           --wait
+
+    # Extract proof refs, cids
+    for i in {0..1} ; do
+        upa compute-proof-ref \
+                --submission-file submission.json \
+                --proof-idx $i \
+                --proof-ref-file submission.ref-$i.json
+        jq ".[$i]" "$TEST_PROOFS" > "submission.proof-$i.json"
+    done
+
+    # Manually submit (fake) aggregated proof containing only the first
+    # submitted proof. (Later we test whether dev aggregator correctly starts
+    # in the middle of previous submission.)
+    jq '.[0:1]' pids.json > agg.pids.json
+
+    # Compute calldata
+    upa compute-final-digest \
+            --proof-ids-file agg.pids.json \
+            --calldata-file agg.proof.calldata
+
+    # Compute SubmissionProof
+    upa compute-submission-proof \
+            --submission-file submission.json \
+            --start-idx 0 \
+            --num-proofs 1 \
+            > submission-proof.0.json
+
+    # Submit aggregated proof
+    upa submit-aggregated-proof \
+            --keyfile ${KEYFILE} \
+            --calldata-file agg.proof.calldata \
+            --submission-proof-file submission-proof.0.json \
+            --proof-ids-file agg.pids.json \
+            --wait > agg-proof.hash
+
+    # Submission has not been verified, so proofs are not marked as verified
+    # yet.
+    (! upa is-verified \
+            --proof-file submission.proof-0.json \
+            --proof-ref-file submission.ref-0.json)
+    (! upa is-verified \
+            --proof-file submission.proof-1.json \
+            --proof-ref-file submission.ref-1.json)
+
+    # Check stats
+    upa stats > stats.1
+    if ! [ "2"  == "`jq -r .nextSubmissionIdx stats.1`" ] ; then
+        echo "FAILURE: nextSubmissionIdx expected to be 2"
+        exit 1
+    fi
+    # The first submission is not yet fully verified
+    if ! [ "1" == "`jq -r .nextSubmissionIdxToVerify stats.1`" ] ; then
+        echo "FAILURE: nextSubmissionIdxToVerify expected to be 1"
+        exit 1
+    fi
+
+    # Start a dev aggregator
+    start_dev_aggregator $BATCH_SIZE $LATENCY $KEYFILE
+    sleep 5
+
+    # Wait for it to complete the partially proven submission.
+    sleep ${LATENCY_PLUS_ONE}
+
+    # Check stats
+    upa stats > stats.2
+    if ! [ "2"  == "`jq -r .nextSubmissionIdx stats.2`" ] ; then
+        echo "FAILURE: nextSubmissionIdx expected to be 2"
+        exit 1
+    fi
+    if ! [ "2" == "`jq -r .nextSubmissionIdxToVerify stats.2`" ] ; then
+        echo "FAILURE: nextSubmissionIdxToVerify expected to be 2"
+        exit 1
+    fi
+
+    # Submit twice. A Whole batch, and then a single submission.
+    upa submit-proofs \
+           --keyfile ${USER_KEYFILE} \
+           --proofs-file ${TEST_PROOFS} \
+           --skip ${BATCH_SIZE} \
+           -N ${BATCH_SIZE} \
+
+    TOTAL_SUBMITTED=$((${BATCH_SIZE} + ${BATCH_SIZE}))
+
+    upa submit-proofs \
+           --keyfile ${USER_KEYFILE} \
+           --proofs-file ${TEST_PROOFS} \
+           --skip ${TOTAL_SUBMITTED} \
+           -N 1 \
+           --wait
+
+    # Give aggregator time to submit two batches (one for the first submission
+    # of a full batch, and one for the single submission).
+    sleep ${LATENCY}
+    sleep ${LATENCY_PLUS_ONE}
+
+    # Extra sleep to make sure on slower CI machines
+    sleep ${LATENCY_PLUS_ONE}
+
+    # Check that two more submissions have been verified
+    upa stats > stats.3
+    if ! [ "4"  == "`jq -r .nextSubmissionIdx stats.3`" ] ; then
+        echo "FAILURE: nextSubmissionIdx expected to be 4" #
+        exit 1
+    fi
+    if ! [ "4" == "`jq -r .nextSubmissionIdxToVerify stats.3`" ] ; then
+        echo "FAILURE: nextSubmissionIdxToVerify expected to be 4"
+        exit 1
+    fi
+
+    stop_dev_aggregator
+    stop_hardhat_node
+
+popd # _test_dev_aggregator
+
+set +e
+set +x
+
+echo "========================================"
+echo "====             PASSED             ===="
+echo "========================================"

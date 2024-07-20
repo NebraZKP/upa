@@ -1,0 +1,63 @@
+name: circuit tests
+
+on:
+  push:
+    paths:
+    - 'Cargo.toml'
+    - 'circuits/**'
+    - .github/workflows/circuits.yml
+    - .rustfmt.toml
+
+concurrency:
+    cancel-in-progress: true
+    group: ${{github.workflow}}-${{github.ref}}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings -A unknown-lints
+  RUST_BACKTRACE: full
+
+jobs:
+  # Build, check and test the circuit test code
+  circuit-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: circuits
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install rust compiler and tools
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: rustfmt, clippy
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run rustfmt
+        run: |
+          cargo fmt --check
+
+      - name: Check for dangerous Field traits
+        run: |
+          if (git grep -n PrimeField | grep -v EccPrimeField | grep -v use) ; then echo "Use crate::EccPrimeField everywhere" ; exit 1 ; fi
+
+      - name: Cargo sort
+        run: |
+          cargo +stable install cargo-sort
+          cargo +stable sort --workspace --check
+
+      - name: Run clippy
+        run: |
+          cargo clippy --no-deps
+          cargo clippy --no-deps --tests
+          cargo clippy --no-deps --benches
+          
+      - name: Run unit tests
+        run: |
+          cargo test -- --test-threads=1 --show-output

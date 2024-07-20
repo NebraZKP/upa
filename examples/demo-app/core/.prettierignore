@@ -1,0 +1,7 @@
+# Ignore artifacts:
+node_modules/
+dist/
+artifacts/
+README.md
+*.json
+contracts/CircuitVerifier.sol
