@@ -57,48 +57,58 @@ export function readAddressFromKeyfile(keyfile: string): string {
   return ethers.getAddress(keystoreObj.address);
 }
 
-/// Consistent handling of txs over multiple commands.  If estimateGas is
-/// true, print the gas and exit.  Otherwise, if dumpTx is true, write out the
-/// Tx JSON and exit, otherwise sign and send the tx, optionally waiting for
-/// it to be accepted.
-export async function handleTxRequest(
+/// Result of handling a transaction according to standard flags.
+type HandleTxRequestResult = {
+  // The populated Tx
+  populatedTx: ethers.TransactionRequest;
+  // Gas cost, if computed
+  gas?: bigint;
+  // The sent Tx, if available
+  sentTx?: ethers.TransactionResponse;
+};
+
+/// Handle tx according to some standard flags, and process errors so they are
+/// more human-readable.
+export async function handleTxRequestInternal(
   wallet: ethers.Signer,
   txReq: ethers.PreparedTransactionRequest,
   estimateGas: boolean,
   dumpTx: boolean,
   wait: boolean,
   contractInterface?: ethers.Interface
-): Promise<void> {
+): Promise<HandleTxRequestResult> {
   const doHandleTx = async () => {
     const populatedTx = await wallet.populateTransaction(txReq);
     const provider = wallet.provider;
     assert(provider);
 
+    const result: HandleTxRequestResult = { populatedTx };
+
     if (estimateGas) {
-      assert(!dumpTx, "--dump-tx should not be used with --estimate-gas");
-      assert(!wait, "--dump-tx should not be used with --wait");
+      assert(!wait, "--estimate-gas should not be used with --wait");
       const gas = await provider.estimateGas(populatedTx);
-      console.log(`${gas} gas`);
-      return;
+      result.gas = gas;
+      return result;
     }
 
     if (dumpTx) {
-      console.log(utils.JSONstringify(populatedTx));
-      return;
+      return result;
     }
 
     const signedTx = await wallet.signTransaction(populatedTx);
     const tx = await provider.broadcastTransaction(signedTx);
-    console.log(tx.hash);
+    result.sentTx = tx;
 
     log.info(tx.hash);
     if (wait) {
       log.debug("waiting ...");
       await tx.wait();
     }
+
+    return result;
   };
 
-  doHandleTx().catch((err) => {
+  return doHandleTx().catch((err) => {
     // If an interface was given, attempt to decode the error
     if (contractInterface) {
       // eslint-disable-next-line
@@ -113,6 +123,50 @@ export async function handleTxRequest(
 
     throw err;
   });
+}
+
+/// Consistent handling of txs over multiple commands.  If estimateGas is
+/// true, print the gas and exit.  Otherwise, if dumpTx is true, write out the
+/// Tx JSON and exit, otherwise sign and send the tx, optionally waiting for
+/// it to be accepted.
+export async function handleTxRequest(
+  wallet: ethers.Signer,
+  txReq: ethers.PreparedTransactionRequest,
+  estimateGas: boolean,
+  dumpTx: boolean,
+  wait: boolean,
+  contractInterface?: ethers.Interface
+): Promise<void> {
+  const handleTxResult = await handleTxRequestInternal(
+    wallet,
+    txReq,
+    estimateGas,
+    dumpTx,
+    wait,
+    contractInterface
+  );
+
+  // TODO: this is not great for now as we are trying to replicate the
+  // behaviour of handleTxRequestInternal, but this allows us to use this
+  // high-level command for most txs, and the `Internal` version for commands
+  // where we need to control exactly what is output.
+
+  if (estimateGas) {
+    assert(!dumpTx, "--dump-tx should not be used with --estimate-gas");
+    assert(!wait, "--dump-tx should not be used with --wait");
+    assert(handleTxResult.gas);
+    console.log(`${handleTxResult.gas} gas`);
+    return;
+  }
+
+  if (dumpTx) {
+    assert(handleTxResult.populatedTx);
+    console.log(utils.JSONstringify(handleTxResult.populatedTx));
+    return;
+  }
+
+  assert(handleTxResult.sentTx);
+  console.log(handleTxResult.sentTx.hash);
 }
 
 /// Load application VK

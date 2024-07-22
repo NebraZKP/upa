@@ -1,9 +1,11 @@
-import { loadWallet } from "./config";
+import { handleTxRequestInternal, loadWallet } from "./config";
 import { keyfile, endpoint, password, getPassword } from "./options";
 import { command, positional, string } from "cmd-ts";
 import * as ethers from "ethers";
 import * as fs from "fs";
+import * as options from "./options";
 import * as utils from "../sdk/utils";
+import { strict as assert } from "assert";
 
 export const deployBinary = command({
   name: "deploy-binary",
@@ -11,13 +13,9 @@ export const deployBinary = command({
     endpoint: endpoint(),
     keyfile: keyfile(),
     password: password(),
-    // TODO: Not clear how we could support these in a nice way, given that if
-    // we need to call `ethers.getCreateAddress` on the `TransactionResponse`,
-    // which significantly complicates the logic of handleTxRequest.
-    //
-    // wait: options.wait(),
-    // estimateGas: options.estimateGas(),
-    // dumpTx: options.dumpTx(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    wait: options.wait(),
     verifier_bin: positional({
       type: string,
       description: "On-chain verifier binary file",
@@ -28,6 +26,9 @@ export const deployBinary = command({
     endpoint,
     keyfile,
     password,
+    estimateGas,
+    dumpTx,
+    wait,
     verifier_bin,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
@@ -36,8 +37,27 @@ export const deployBinary = command({
     // Load binary contract
     const contractHex = "0x" + fs.readFileSync(verifier_bin, "utf-8").trim();
 
-    // Deploy and output the resulting contract address to stdout.
-    const address = await utils.deployBinaryContract(wallet, contractHex);
-    console.log(address);
+    const txReq = await utils.populateDeployBinaryContract(wallet, contractHex);
+
+    const { populatedTx, gas, sentTx } = await handleTxRequestInternal(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait
+    );
+
+    if (estimateGas) {
+      assert(gas);
+      console.log(`${gas} gas`);
+    } else if (dumpTx) {
+      assert(populatedTx);
+      console.log(utils.JSONstringify(populatedTx));
+    } else {
+      // Deploy and output the resulting contract address to stdout.
+      assert(sentTx);
+      const address = ethers.getCreateAddress(sentTx);
+      console.log(address);
+    }
   },
 });
