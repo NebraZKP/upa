@@ -219,6 +219,13 @@ const DEFAULT_AGGREGATOR_COLLATERAL = 10000000000000000n; // 0.01 eth
 /// Default fixed reimbursement for censorship claims
 const DEFAULT_FIXED_REIMBURSEMENT = 0n;
 
+/// Block time in seconds
+const BLOCK_TIME = 12;
+
+/// Default number of blocks to wait for the signer nonce
+/// to be updated
+const DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE = 6;
+
 /// Deploys the UPA contract, with all dependencies.  `verifier_bin_file`
 /// points to the hex representation of the verifier byte code (as output by
 /// solidity). The address of `signer` is used by default for `owner` and
@@ -278,9 +285,9 @@ export async function deployUpa(
   // before attempting to deploy UPA
   let counter = 0;
   while ((await signer.getNonce()) !== nonce) {
-    await sleep(10);
+    await sleep(BLOCK_TIME * 1000);
     counter++;
-    if (counter >= maxRetries) {
+    if (counter >= DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE) {
       throw "Unable to update nonce";
     }
   }

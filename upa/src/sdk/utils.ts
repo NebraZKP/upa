@@ -317,7 +317,7 @@ export function weiToEther(wei: bigint, numDecimalPlaces: number): number {
   );
 }
 
-/// Pauses execution for `s` seconds, then resumes.
-export function sleep(s: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 1000 * s));
+/// Pauses execution for `s` miliseconds, then resumes.
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
