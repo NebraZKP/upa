@@ -7,6 +7,25 @@ this_dir=`realpath ${this_dir}`
 # Root of the upa repo
 UPA_DIR=`realpath ${this_dir}/../..`
 
+#1 pid
+# timeout
+function wait_for_pid() {
+    pid=$1
+    timeout=$2
+    xs=`seq 1 ${timeout}`
+    for i in $xs ; do
+        if ! (ps $pid > /dev/null 2>&1) ; then
+            break
+        fi
+        echo "Waiting for pid $pid to die ..."
+        sleep 1
+    done
+    if [ "$i" == "$timeout" ] ; then
+        echo "Process $pid did not die after $timeout seconds."
+        exit 1
+    fi
+}
+
 # 1 - name
 # 2 - start command
 # 3 - check command
