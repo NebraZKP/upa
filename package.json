@@ -9,7 +9,9 @@
   },
   "scripts": {
     "setup": "./scripts/run_for_each \"${npm_package_config_packages}\" 'yarn setup'",
-    "build": "./scripts/run_for_each \"${npm_package_config_packages}\" 'yarn build'"
+    "build": "./scripts/run_for_each \"${npm_package_config_packages}\" 'yarn build'",
+    "format": "./scripts/run_for_each \"${npm_package_config_packages}\" 'yarn format'",
+    "lint": "./scripts/run_for_each \"${npm_package_config_packages}\" 'yarn lint'"
   },
   "packageManager": "yarn@4.0.2",
   "resolutions": {
