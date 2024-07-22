@@ -20,7 +20,7 @@ import { IGroth16Verifier__factory } from "../../typechain-types";
 import * as options from "./options";
 import * as ethers from "ethers";
 import * as fs from "fs";
-import { parseNumberOrUndefined } from "../sdk/utils";
+import { parseNumberOrUndefined, sleep } from "../sdk/utils";
 import * as utils from "../sdk/utils";
 import {
   IGroth16Verifier,
@@ -273,6 +273,17 @@ export async function deployUpa(
     await universalGroth16Verifier.waitForDeployment();
     return universalGroth16Verifier.getAddress();
   })();
+
+  // Wait for the chain to catch up to the signer's nonce
+  // before attempting to deploy UPA
+  let counter = 0;
+  while ((await signer.getNonce()) !== nonce) {
+    await sleep(10);
+    counter++;
+    if (counter >= maxRetries) {
+      throw "Unable to update nonce";
+    }
+  }
 
   // Deploy UPA
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
