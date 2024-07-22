@@ -20,7 +20,7 @@ import { IGroth16Verifier__factory } from "../../typechain-types";
 import * as options from "./options";
 import * as ethers from "ethers";
 import * as fs from "fs";
-import { parseNumberOrUndefined } from "../sdk/utils";
+import { parseNumberOrUndefined, sleep } from "../sdk/utils";
 import * as utils from "../sdk/utils";
 import {
   IGroth16Verifier,
@@ -219,6 +219,13 @@ const DEFAULT_AGGREGATOR_COLLATERAL = 10000000000000000n; // 0.01 eth
 /// Default fixed reimbursement for censorship claims
 const DEFAULT_FIXED_REIMBURSEMENT = 0n;
 
+/// Block time in seconds
+const BLOCK_TIME = 12;
+
+/// Default number of blocks to wait for the signer nonce
+/// to be updated
+const DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE = 6;
+
 /// Deploys the UPA contract, with all dependencies.  `verifier_bin_file`
 /// points to the hex representation of the verifier byte code (as output by
 /// solidity). The address of `signer` is used by default for `owner` and
@@ -273,6 +280,17 @@ export async function deployUpa(
     await universalGroth16Verifier.waitForDeployment();
     return universalGroth16Verifier.getAddress();
   })();
+
+  // Wait for the chain to catch up to the signer's nonce
+  // before attempting to deploy UPA
+  let counter = 0;
+  while ((await signer.getNonce()) !== nonce) {
+    await sleep(BLOCK_TIME * 1000);
+    counter++;
+    if (counter >= DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE) {
+      throw "Unable to update nonce";
+    }
+  }
 
   // Deploy UPA
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
