@@ -14,13 +14,20 @@ $ alias prover=`pwd`/../target/release/prover
 
 ## Configuration
 
-Create a directory to hold the UPA config and deployment data.  Create or
-copy the relevant config file (`upa_config.json`) into this directory.  See examples in [tests] directory.
+Create a directory to hold the UPA config and deployment data.  Create or copy
+the relevant config file (`upa_config.json`) into this directory.  See
+examples in [tests] directory.
 
 ```console
 $ mkdir -p upa
 $ cd upa
 $ cp <this-repo-root>/prover/tests/config_2.json upa_config.json
+```
+
+## Enable the tools in the current shell
+
+```console
+$ source <this-repo-root>/prover/scripts/shell-setup.sh
 ```
 
 ## SRS files
@@ -30,13 +37,17 @@ circuit. To generate dummy srs data for all configs in the current directory,
 run the `dummy_srs_setup` script.
 
 ```console
-$ <this-repo-root>/prover/scripts/dummy_srs_setup
+$ dummy_srs_setup
 ```
+
+(Use the `--help` flag to see all options)
 
 ## Keygen
 
-Run the `[DRY_RUN=1] keygen` command to create keys at the expected locations.
+Run the `keygen` command to create keys at the expected locations.
 
 ```console
 $ keygen
 ```
+
+(Use the `--help` flag to see all options)

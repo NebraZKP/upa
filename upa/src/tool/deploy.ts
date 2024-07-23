@@ -255,7 +255,7 @@ export async function deployUpa(
   let nonce = await nonceP;
 
   const chainId = (await signer.provider?.getNetwork())?.chainId;
-  assert(chainId, "failed to get cahinId");
+  assert(chainId, "failed to get chainId");
 
   // Sanity check address strings
   owner = ethers.getAddress(owner);
