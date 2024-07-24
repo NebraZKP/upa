@@ -321,7 +321,9 @@ export async function deployUpa(
   const upaVerifier: ethers.Contract = await utils.requestWithRetry(
     deployFn,
     "UPA contract upgrade",
-    maxRetries
+    maxRetries,
+    undefined /*timeoutMs*/,
+    UpaVerifierFactory.interface
   );
 
   await upaVerifier.waitForDeployment();

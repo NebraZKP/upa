@@ -6,10 +6,17 @@ import {
   wait,
   password,
   getPassword,
+  estimateGas,
+  dumpTx,
 } from "./options";
-import { loadWallet, upaFromInstanceFile } from "./config";
-import * as log from "./log";
+import {
+  handleTxRequestInternal,
+  loadWallet,
+  upaFromInstanceFile,
+} from "./config";
 import * as ethers from "ethers";
+import assert from "assert";
+import { utils } from "../sdk";
 
 export const unpause = command({
   name: "unpause",
@@ -19,6 +26,8 @@ export const unpause = command({
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
+    estimateGas: estimateGas(),
+    dumpTx: dumpTx(),
     wait: wait(),
   },
   handler: async function ({
@@ -26,18 +35,31 @@ export const unpause = command({
     keyfile,
     password,
     instance,
+    estimateGas,
+    dumpTx,
     wait,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const upa = upaFromInstanceFile(instance, wallet);
 
-    const tx = await upa.verifier.unpause();
-    log.info(tx.hash);
-    console.log(tx.hash);
+    const txReq = await upa.verifier.unpause.populateTransaction();
 
-    if (wait) {
-      await tx.wait();
+    const { populatedTx, gas } = await handleTxRequestInternal(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      upa.verifier.interface
+    );
+
+    if (estimateGas) {
+      assert(gas);
+      console.log(`${gas} gas`);
+    } else if (dumpTx) {
+      assert(populatedTx);
+      console.log(utils.JSONstringify(populatedTx));
     }
   },
 });

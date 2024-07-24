@@ -108,6 +108,13 @@ export const submitAggregatedProof = command({
       optionsPayable
     );
 
-    await config.handleTxRequest(wallet, txReq, estimateGas, dumpTx, wait);
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      verifier.interface
+    );
   },
 });

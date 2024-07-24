@@ -7,10 +7,18 @@ import {
   password,
   getPassword,
   vkFile,
+  estimateGas,
+  dumpTx,
 } from "./options";
-import { loadAppVK, loadWallet, upaFromInstanceFile } from "./config";
-import * as log from "./log";
+import {
+  handleTxRequestInternal,
+  loadAppVK,
+  loadWallet,
+  upaFromInstanceFile,
+} from "./config";
 import * as ethers from "ethers";
+import assert from "assert";
+import { utils } from "../sdk";
 
 export const registervk = command({
   name: "registervk",
@@ -20,6 +28,8 @@ export const registervk = command({
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
+    estimateGas: estimateGas(),
+    dumpTx: dumpTx(),
     wait: wait(),
     vkFile: vkFile(),
   },
@@ -28,6 +38,8 @@ export const registervk = command({
     keyfile,
     password,
     instance,
+    estimateGas,
+    dumpTx,
     wait,
     vkFile,
   }): Promise<void> {
@@ -36,12 +48,28 @@ export const registervk = command({
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const upa = upaFromInstanceFile(instance, wallet);
 
-    const tx = await upa.verifier.registerVK(vk.solidity());
-    log.info(tx.hash);
-    console.log(tx.hash);
+    const txReq = await upa.verifier.registerVK.populateTransaction(
+      vk.solidity()
+    );
+    const { populatedTx, gas, sentTx } = await handleTxRequestInternal(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      upa.verifier.interface
+    );
 
-    if (wait) {
-      await tx.wait();
+    if (estimateGas) {
+      assert(gas);
+      console.log(`${gas} gas`);
+    } else if (dumpTx) {
+      assert(populatedTx);
+      console.log(utils.JSONstringify(populatedTx));
+    } else {
+      // Deploy and output the resulting contract address to stdout.
+      assert(sentTx);
+      console.log(sentTx.hash);
     }
   },
 });

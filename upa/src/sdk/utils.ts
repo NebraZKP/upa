@@ -18,6 +18,7 @@ import {
   evmInnerHashFn,
   evmLeafHashFn,
 } from "./merkleUtils";
+import { utils } from ".";
 
 // Domain tags for the circuit id calculations.
 // Reproduce the calculation with:
@@ -149,6 +150,7 @@ export async function requestWithRetry<T>(
   requestLabel: string,
   maxRetries: number = 5,
   timeoutMs?: number,
+  contractInterface?: ethers.Interface,
   onFail?: () => void
 ): Promise<T> {
   const retryWaitMs = 10000;
@@ -172,6 +174,19 @@ export async function requestWithRetry<T>(
 
       return await Promise.race(promises);
     } catch (error) {
+      // If an interface was given, attempt to decode the error. If this was a
+      // custom error, throw it without retrying (it will keep reverting).
+      if (contractInterface) {
+        // eslint-disable-next-line
+        const data = (error as any)?.data?.data || (error as any)?.data;
+        if (data) {
+          throw utils.JSONstringify({
+            error: error,
+            msg: contractInterface.parseError(data),
+          });
+        }
+      }
+
       if (
         isError(error, "UNKNOWN_ERROR") ||
         isError(error, "NETWORK_ERROR") ||
