@@ -21,15 +21,12 @@ library UpaInternalLib {
     uint256 internal constant ALPHA_BETA_GAMMA_DELTA_SIZE_BYTES =
         ALPHA_BETA_GAMMA_DELTA_SIZE_WORDS * 32;
 
-    /// Domain tag for the circuit id. This is the keccak hash of
-    /// "UPA v1.0.0 CircuitId" realized as a 32-byte field element.
-    ///
-    /// Reproduce the calculation with:
-    ///
-    ///   `cargo test -- poseidon --show-output`
-    ///
-    /// in the repo root. See
-    /// `upa_circuits::tests::hashing::poseidon_domain_tags` test.
+    // Reproduce the calculation with:
+    //
+    //   `cargo test -- domain --no-capture --include-ignored`
+    //
+    // in the repo root. See
+    // `upa_circuits::tests::hashing::domain_tags` test.
     uint256 internal constant CIRCUIT_ID_DOMAIN_TAG =
         0x4fb2fda778fd224ee633116280b47f502b0d937ce78d390aa16f73d9007c65f2;
     uint256 internal constant CIRCUIT_ID_DOMAIN_TAG_WITH_COMMITMENT =
