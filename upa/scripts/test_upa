@@ -60,6 +60,11 @@ pushd _test_upa
     orig_max_num_inputs=`upa get-max-num-public-inputs`
     KEYFILE_PASSWORD=${DUMMY_PW} upa deploy-binary \
                     --keyfile ${KEYFILE} \
+                    --dump-tx \
+                    ${UPA_DIR}/upa/test/data/test.bin \
+                    > new_agg_proof_verifier.tx
+    KEYFILE_PASSWORD=${DUMMY_PW} upa deploy-binary \
+                    --keyfile ${KEYFILE} \
                     ${UPA_DIR}/upa/test/data/test.bin \
                     > new_agg_proof_verifier.addr
     KEYFILE_PASSWORD=${DUMMY_PW} upa set-aggregated-proof-verifier \

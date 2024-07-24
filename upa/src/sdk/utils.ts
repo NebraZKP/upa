@@ -87,13 +87,26 @@ export function bytes32IsWellFormed(bytes32: string): boolean {
 }
 
 // Read and deploy bytecode as a contract
+export async function populateDeployBinaryContract(
+  deployer: Signer,
+  outer_verifier_hex: string,
+  nonce?: number
+): Promise<ethers.PreparedTransactionRequest> {
+  const factory = new ContractFactory([], outer_verifier_hex, deployer);
+  return await factory.getDeployTransaction({ nonce });
+}
+
+// Read and deploy bytecode as a contract
 export async function deployBinaryContract(
   deployer: Signer,
   outer_verifier_hex: string,
   nonce?: number
 ): Promise<string> {
-  const factory = new ContractFactory([], outer_verifier_hex, deployer);
-  const txReq = await factory.getDeployTransaction({ nonce });
+  const txReq = await populateDeployBinaryContract(
+    deployer,
+    outer_verifier_hex,
+    nonce
+  );
   const sentTx = await deployer.sendTransaction(txReq);
   const address = ethers.getCreateAddress(sentTx);
   await sentTx.wait();
