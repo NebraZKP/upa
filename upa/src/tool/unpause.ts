@@ -9,14 +9,8 @@ import {
   estimateGas,
   dumpTx,
 } from "./options";
-import {
-  handleTxRequestInternal,
-  loadWallet,
-  upaFromInstanceFile,
-} from "./config";
+import { handleTxRequest, loadWallet, upaFromInstanceFile } from "./config";
 import * as ethers from "ethers";
-import assert from "assert";
-import { utils } from "../sdk";
 
 export const unpause = command({
   name: "unpause",
@@ -45,7 +39,7 @@ export const unpause = command({
 
     const txReq = await upa.verifier.unpause.populateTransaction();
 
-    const { populatedTx, gas } = await handleTxRequestInternal(
+    await handleTxRequest(
       wallet,
       txReq,
       estimateGas,
@@ -53,13 +47,5 @@ export const unpause = command({
       wait,
       upa.verifier.interface
     );
-
-    if (estimateGas) {
-      assert(gas);
-      console.log(`${gas} gas`);
-    } else if (dumpTx) {
-      assert(populatedTx);
-      console.log(utils.JSONstringify(populatedTx));
-    }
   },
 });
