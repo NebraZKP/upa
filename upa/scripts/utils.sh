@@ -12,7 +12,7 @@ UPA_DIR=`realpath ${this_dir}/../..`
 function wait_for_pid() {
     pid=$1
     timeout=$2
-    xs=`seq 1 ${timeout}`
+    xs=`seq -s " " 1 ${timeout}`
     for i in $xs ; do
         if ! (ps $pid > /dev/null 2>&1) ; then
             break

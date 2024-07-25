@@ -5,7 +5,7 @@ set -e
 
 [ "${ZSH_VERSION}" = "" ] && this_dir=`dirname ${BASH_SOURCE[0]}` || this_dir=`dirname ${(%):-%N}`
 . ${this_dir}/shell_setup.sh
-. ${this_dir}/utils.sh
+. ${this_dir}/prelude.sh
 
 function usage() {
     echo "Usage:"
@@ -36,9 +36,6 @@ while [[ $# -gt 0 ]] ; do
             ;;
     esac
 done
-
-# Ensure PROVER is set up.  Configure PROVER_FLAGS.
-_setup_prover_flags
 
 # Create dummy SRS files in the current dir, as symlinks to files in the
 # directory ../_srs.

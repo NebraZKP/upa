@@ -5,7 +5,7 @@ set -e
 
 [ "${ZSH_VERSION}" = "" ] && this_dir=`dirname ${BASH_SOURCE[0]}` || this_dir=`dirname ${(%):-%N}`
 . ${this_dir}/shell_setup.sh
-. ${this_dir}/utils.sh
+. ${this_dir}/prelude.sh
 
 # The version of SOLC required by the circuit verifier
 SOLC_VERSION=0.8.17
@@ -40,8 +40,6 @@ while [[ $# -gt 0 ]] ; do
             ;;
     esac
 done
-
-_setup_prover_flags
 
 # Assign prover if PROVER is not set
 if [ "${PROVER}" == "" ] ; then
