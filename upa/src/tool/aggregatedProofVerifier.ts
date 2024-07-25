@@ -78,6 +78,13 @@ export const setAggregatedProofVerifier = command({
       maxNumPublicInputs
     );
 
-    await config.handleTxRequest(wallet, txReq, estimateGas, dumpTx, wait);
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      verifier.interface
+    );
   },
 });

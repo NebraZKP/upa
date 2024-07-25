@@ -87,7 +87,14 @@ export const challenge = command({
         submission.computeProofDataMerkleProof(i),
         optionsPayable
       );
-      await config.handleTxRequest(wallet, txReq, estimateGas, dumpTx, wait);
+      await config.handleTxRequest(
+        wallet,
+        txReq,
+        estimateGas,
+        dumpTx,
+        wait,
+        verifier.interface
+      );
     }
   },
 });

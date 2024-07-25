@@ -7,9 +7,15 @@ import {
   password,
   getPassword,
   vkFile,
+  estimateGas,
+  dumpTx,
 } from "./options";
-import { loadAppVK, loadWallet, upaFromInstanceFile } from "./config";
-import * as log from "./log";
+import {
+  handleTxRequest,
+  loadAppVK,
+  loadWallet,
+  upaFromInstanceFile,
+} from "./config";
 import * as ethers from "ethers";
 
 export const registervk = command({
@@ -20,6 +26,8 @@ export const registervk = command({
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
+    estimateGas: estimateGas(),
+    dumpTx: dumpTx(),
     wait: wait(),
     vkFile: vkFile(),
   },
@@ -28,6 +36,8 @@ export const registervk = command({
     keyfile,
     password,
     instance,
+    estimateGas,
+    dumpTx,
     wait,
     vkFile,
   }): Promise<void> {
@@ -36,12 +46,16 @@ export const registervk = command({
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const upa = upaFromInstanceFile(instance, wallet);
 
-    const tx = await upa.verifier.registerVK(vk.solidity());
-    log.info(tx.hash);
-    console.log(tx.hash);
-
-    if (wait) {
-      await tx.wait();
-    }
+    const txReq = await upa.verifier.registerVK.populateTransaction(
+      vk.solidity()
+    );
+    await handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      upa.verifier.interface
+    );
   },
 });

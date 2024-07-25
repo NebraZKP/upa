@@ -63,6 +63,13 @@ export const setFee = command({
       optionsPayable
     );
 
-    await handleTxRequest(wallet, txReq, estimateGas, dumpTx, wait);
+    await handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      upa.verifier.interface
+    );
   },
 });

@@ -89,7 +89,9 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
   const verifier: ethers.Contract = await requestWithRetry(
     upgradeFn,
     "UPA contract upgrade",
-    maxRetries
+    maxRetries,
+    undefined /*timeoutMs*/,
+    newUpaVerifierFactory.interface
   );
 
   const deployedVerifier = await verifier.waitForDeployment();
