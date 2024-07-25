@@ -13,7 +13,6 @@ cargo build --release
 
 # Shell setup
 shopt -s expand_aliases
-. ../upa/scripts/shell_setup.sh
 . ./scripts/shell_setup.sh
 
 set -e

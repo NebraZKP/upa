@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+# Exit on error
+set -e
+
+[ "${ZSH_VERSION}" = "" ] && this_dir=`dirname ${BASH_SOURCE[0]}` || this_dir=`dirname ${(%):-%N}`
+. ${this_dir}/shell_setup.sh
+. ${this_dir}/prelude.sh
+
+# The version of SOLC required by the circuit verifier
+SOLC_VERSION=0.8.17
+
+function usage() {
+    echo "Usage:"
+    echo ""
+    echo "  keygen [options]"
+    echo ""
+    echo "Options:"
+    echo ""
+    echo "  --help         Print this message"
+    echo "  --dry-run      Dry-run mode (for testing, export DRY_RUN=1)"
+    echo ""
+}
+
+while [[ $# -gt 0 ]] ; do
+    case $1 in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -n|--dry-run)
+            export DRY_RUN=1
+            shift
+            ;;
+        *)
+            echo "Unrecognized flag:  $1"
+            echo
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+# Assign prover if PROVER is not set
+if [ "${PROVER}" == "" ] ; then
+    echo "No prover.  Did you build the prover executable?"
+    exit 1
+fi
+
+echo PROVER: ${PROVER}
+echo PROVER_FLAGS: ${PROVER_FLAGS}
+
+function keygen_universal_bv() {
+    # If DRY_RUN, early out if the specs file exists
+    if [ "${DRY_RUN}" == "1" ] && [ -e ${UBV_GATE_CONFIG} ] ; then
+        echo Specs file ${UBV_GATE_CONFIG} already exists
+        return
+    fi
+
+    # Early out if VK file exists
+    if [ -e ${UBV_VK} ] ; then
+        echo ${UBV_VK} already exists.
+        return
+    fi
+
+    ${PROVER} universal-batch-verifier keygen ${PROVER_FLAGS}
+}
+
+function keygen_universal_keccak() {
+    # If DRY_RUN, early out if the specs file exists
+    if [ "${DRY_RUN}" == "1" ] && [ -e ${KECCAK_GATE_CONFIG} ] ; then
+        echo Specs file ${KECCAK_GATE_CONFIG} already exists
+        return
+    fi
+
+    # Early out if VK file exists
+    if [ -e ${KECCAK_VK} ] ; then
+        echo Skipping KECCAK keygen.  ${KECCAK_VK} already exists.
+        return
+    fi
+
+    ${PROVER} keccak keygen ${PROVER_FLAGS}
+}
+
+function keygen_universal_outer() {
+
+    if ! [ ${DRY_RUN} == "1" ] ; then
+        # Check the svm version up front
+        if ! (which solc) ; then
+            if ! (which svm) ; then
+                echo "solc and svm not found.  Run:  cargo install svm-rs"
+                exit 1
+            fi
+            svm use ${SOLC_VERSION}
+        fi
+
+        # Get the installed version of Solidity and strip out the part after "+"
+        solc_version=$(solc --version | awk '/Version:/ {print $2}' | awk -F '+' '{print $1}')
+        if [[ $solc_version != "${SOLC_VERSION}" ]]; then
+            echo "Error: Expected solc ${SOLC_VERSION} but found $solc_version."
+            echo "Run: cargo install svm-rs && svm use ${SOLC_VERSION}"
+            exit 1
+        fi
+    fi
+
+    # For some reason, outer keygen does not complain when it is run twice in
+    # dry-run, so we only need to early-out if the VK already exists.
+    if ! [ -e ${OUTER_VK} ] ; then
+        ${PROVER} universal-outer keygen ${PROVER_FLAGS}
+    else
+        echo Skipping OUTER keygen.  ${OUTER_VK} already exists.
+    fi
+
+    # Generate the outer contract on-chain verifier if it doesn't already exist
+    if ! [ -e ${OUTER_VERIFIER_BIN} ] ; then
+        if [ "${DRY_RUN}" == "1" ] ; then
+            cp ${this_dir}/../../upa/test/data/test.bin ${OUTER_VERIFIER_BIN}
+        else
+            ${PROVER} universal-outer generate-verifier
+            solc --yul ${OUTER_VERIFIER_YUL} --bin | tail -1 > ${OUTER_VERIFIER_BIN}
+        fi
+    fi
+}
+
+keygen_universal_bv
+keygen_universal_keccak
+keygen_universal_outer

@@ -71,6 +71,8 @@ export type UpaInstanceDescriptor = {
   deploymentBlockNumber: number;
   /// Deployment tx ID
   deploymentTx: string;
+  /// ChainId
+  chainId: string;
 };
 
 /// Reference to a deployed instance
@@ -78,6 +80,7 @@ export type UpaInstance = {
   verifier: UpaVerifier;
   deploymentBlockNumber: number;
   deploymentTx: string;
+  chainId: string;
 };
 
 /// Reference to a deployed instance (only for testing upgrade)
@@ -95,6 +98,7 @@ export function upaInstanceFromDescriptor(
     verifier: verifier.connect(provider),
     deploymentBlockNumber: instanceDescriptor.deploymentBlockNumber,
     deploymentTx: instanceDescriptor.deploymentTx,
+    chainId: instanceDescriptor.chainId,
   };
 }
 

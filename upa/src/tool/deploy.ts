@@ -254,6 +254,9 @@ export async function deployUpa(
   feeRecipient = feeRecipient || worker;
   let nonce = await nonceP;
 
+  const chainId = (await signer.provider?.getNetwork())?.chainId;
+  assert(chainId, "failed to get chainId");
+
   // Sanity check address strings
   owner = ethers.getAddress(owner);
   worker = ethers.getAddress(worker);
@@ -343,6 +346,7 @@ export async function deployUpa(
     verifier: upaVerifierAddr,
     deploymentBlockNumber,
     deploymentTx: deploymentTx.hash,
+    chainId: chainId.toString(),
   };
 }
 
