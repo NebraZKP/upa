@@ -177,11 +177,14 @@ export async function updateFeeOptions(
       // In the query to estimateFee, use `gasPrice` set to `maxFeePerGas`,
       // otherwise the node may run the query may with a lower price, and the
       // tx will later fail if a higher price is used.
+      // Set `gasLimit` to a reasonable number, otherwise `estimateFee` may
+      // fail due to using a far-too-large amount of supplied gas
       queryOptions = {
         ...options,
         gasPrice: options.maxFeePerGas,
         maxPriorityFeePerGas: undefined,
         maxFeePerGas: undefined,
+        gasLimit: 100_000
       };
     }
 
