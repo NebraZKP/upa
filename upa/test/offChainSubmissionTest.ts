@@ -151,7 +151,7 @@ describe("Submissions verified in one aggregation", async () => {
     );
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandle = await upaClient.submitProofs(
       onChainCidsProofsAndInputs
     );
@@ -237,7 +237,7 @@ describe("Submissions verified in one aggregation", async () => {
     );
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandle = await upaClient.submitProofs(
       onChainCidsProofsAndInputs
     );
@@ -321,7 +321,7 @@ describe("Submissions verified in one aggregation", async () => {
     );
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandle = await upaClient.submitProofs(
       onChainCidsProofsAndInputs
     );
@@ -451,7 +451,7 @@ describe("Submissions verified over multiple aggregations", async () => {
     );
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandle = await upaClient.submitProofs(
       onChainCidsProofsAndInputs
     );
@@ -596,7 +596,7 @@ describe("Submissions verified over multiple aggregations", async () => {
     );
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandle = await upaClient.submitProofs(
       onChainCidsProofsAndInputs
     );
@@ -771,7 +771,7 @@ describe("Aggregations containing multiple submissions", async () => {
     ];
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandles = [
       await upaClient.submitProofs(onChainCidsProofsAndInputsArray[0]),
     ];
@@ -1034,7 +1034,7 @@ describe("Failure cases", async () => {
     );
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandle = await upaClient.submitProofs(
       onChainCidsProofsAndInputs
     );
@@ -1139,7 +1139,7 @@ describe("Failure cases", async () => {
     );
 
     // Submit on-chain
-    const upaClient = new UpaClient(user1, upaDesc);
+    const upaClient = await UpaClient.init(user1, upaDesc);
     const onChainSubmissionHandles = [
       await upaClient.submitProofs(onChainCidsProofsAndInputsArray[0]),
     ];

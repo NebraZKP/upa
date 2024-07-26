@@ -1,3 +1,4 @@
+import * as pkg from "../../package.json";
 import { loadUpaConfig, loadWallet } from "./config";
 import {
   instance,
@@ -241,8 +242,16 @@ export async function deployUpa(
   feeRecipient?: string,
   feeInGas?: bigint,
   aggregatorCollateral?: bigint,
-  fixedReimbursement?: bigint
+  fixedReimbursement?: bigint,
+  versionString?: string
 ): Promise<UpaInstanceDescriptor> {
+  // Decode version string
+  if (!versionString) {
+    versionString = pkg.version;
+  }
+  assert(versionString);
+  let versionNum = utils.versionStringToUint(versionString);
+
   const addrP = signer.getAddress();
   const nonceP = signer.getNonce();
   feeInGas = feeInGas || DEFAULT_FEE_IN_GAS;
@@ -311,6 +320,7 @@ export async function deployUpa(
         feeInGas,
         aggregatorCollateral,
         maxNumInputs,
+        versionNum,
       ],
       {
         kind: "uups",

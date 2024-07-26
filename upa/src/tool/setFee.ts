@@ -48,7 +48,7 @@ export const setFee = command({
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
-    const upa = upaFromInstanceFile(instance, wallet);
+    const upa = await upaFromInstanceFile(instance, wallet);
 
     const fee = parseNumberOrUndefined(feeInGas, "Error parsing fee in gas");
     if (!fee) {

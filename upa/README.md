@@ -50,6 +50,9 @@ from `UpaClient` and is now available as a standalone function in the
 `ProofVerified` events are no longer emitted. Instead, `SubmissionVerified`
 events are emitted.
 
+The `UpaClient` is now initialized using a static async `init` function.  Its
+contructor is private.
+
 ### V1.1.2
 
 Added the `upa` tool command `upa convert-proof-snarkjs`.

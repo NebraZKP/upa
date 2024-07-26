@@ -12,7 +12,7 @@ export const verifierByteCode = command({
   description: "Query the bytecode of the aggregated proof verifier contract.",
   handler: async function ({ endpoint, instance }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = upaFromInstanceFile(instance, provider);
+    const { verifier } = await upaFromInstanceFile(instance, provider);
     const aggregatedProofVerifier = await verifier.outerVerifier();
 
     const bytecode = await provider.getCode(aggregatedProofVerifier);

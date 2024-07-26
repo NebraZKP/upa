@@ -26,7 +26,7 @@ export const submissionFromTx = command({
     txHash,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = config.upaFromInstanceFile(instance, provider);
+    const { verifier } = await config.upaFromInstanceFile(instance, provider);
 
     const txReceiptP = provider.getTransactionReceipt(txHash);
     const txP = provider.getTransaction(txHash);

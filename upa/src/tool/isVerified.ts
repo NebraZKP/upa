@@ -35,7 +35,7 @@ export const isVerified = command({
     })();
 
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const upa = config.upaFromInstanceFile(instance, provider);
+    const upa = await config.upaFromInstanceFile(instance, provider);
 
     /// Choose which `isVerified` function to call, based on whether there is
     /// a proofRef or not.

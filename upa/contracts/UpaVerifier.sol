@@ -124,6 +124,8 @@ contract UpaVerifier is
         /// Maps a key `submissionId` to the block at which the submission
         /// was verified. Maps unverified submissions to 0.
         mapping(bytes32 => uint256) verifiedAtBlock;
+        /// Contract version
+        uint32 version;
     }
 
     /// Gas per transaction.
@@ -187,7 +189,8 @@ contract UpaVerifier is
         uint256 _fixedReimbursement,
         uint256 _fixedFeePerProof,
         uint256 _aggregatorCollateral,
-        uint8 _maxNumPublicInputs
+        uint8 _maxNumPublicInputs,
+        uint32 _version
     ) public initializer {
         require(_owner != address(0), OwnerAddressIsZero());
         require(_worker != address(0), WorkerAddressIsZero());
@@ -207,6 +210,7 @@ contract UpaVerifier is
         verifierStorage.nextSubmissionIdxToVerify = 1;
         verifierStorage.lastVerifiedSubmissionHeight = (uint64)(block.number);
         verifierStorage.fixedReimbursement = _fixedReimbursement;
+        verifierStorage.version = _version;
 
         __upaProofReceiver_init(
             _owner,
@@ -215,6 +219,10 @@ contract UpaVerifier is
             _maxNumPublicInputs
         );
         __UUPSUpgradeable_init();
+    }
+
+    function version() external view override returns (uint32) {
+        return _getVerifierStorage().version;
     }
 
     /// Only the owner is authorized to upgrade this contract. Required to

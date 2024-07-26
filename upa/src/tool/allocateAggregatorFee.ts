@@ -34,7 +34,7 @@ export const allocateAggregatorFee = command({
       options.getPassword(password),
       provider
     );
-    const { verifier: verifier } = config.upaFromInstanceFile(instance, wallet);
+    const { verifier: verifier } = await config.upaFromInstanceFile(instance, wallet);
 
     const optionsPayable: PayableOverrides = {
       maxFeePerGas: utils.parseGweiOrUndefined(maxFeePerGasGwei),

@@ -2,6 +2,7 @@ import {
   loadFixture,
   mine,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { ethers } from "hardhat";
 import {
   deployUpaDummyVerifier,
   pf_a,
@@ -18,8 +19,8 @@ import {
   pi_f,
 } from "./upaTests";
 import { UpaClient, SubmissionHandle } from "../src/sdk/client";
-import { UpaInstance, dummyProofData, updateFeeOptions } from "../src/sdk/upa";
-import { loadAppVK } from "../src/tool/config";
+import { UpaInstance, dummyProofData, updateFeeOptions, upaInstanceFromDescriptor } from "../src/sdk/upa";
+import { loadAppVK, upaFromInstanceFile } from "../src/tool/config";
 import { CircuitIdProofAndInputs } from "../src/sdk/application";
 import { Signer } from "ethers";
 import { expect } from "chai";
@@ -47,7 +48,7 @@ async function deployAndRegister(): Promise<DeployAndRegisterResult> {
   const vk = loadAppVK("../circuits/src/tests/data/vk.json");
   const deployResult = await deployUpaDummyVerifier();
   const { upa, upaDesc, worker } = deployResult;
-  const upaClient = new UpaClient(worker, upaDesc);
+  const upaClient = await UpaClient.init(worker, upaDesc);
   const { verifier } = upa;
   await verifier.registerVK(vk);
   const cid_a = computeCircuitId(vk);
@@ -100,6 +101,16 @@ async function deployAndSubmit(): Promise<DeployAndSubmitResult> {
 
 // UpaClient tests
 describe("UPA Client", async () => {
+  it.only("Fails to initialize if contract version is out of date", async() => {
+    let thrown = false;
+    try {
+      await deployUpaDummyVerifier("0.3.0");
+    } catch (e) {
+      thrown = true;
+    }
+    expect(thrown).to.be.true;
+  });
+
   it("Throws error if submission was skipped", async () => {
     const deployResult = await loadFixture(deployAndSubmit);
     const {

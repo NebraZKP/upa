@@ -55,7 +55,7 @@ export const challenge = command({
       options.getPassword(password),
       provider
     );
-    const { verifier } = config.upaFromInstanceFile(instance, wallet);
+    const { verifier } = await config.upaFromInstanceFile(instance, wallet);
 
     const submission = Submission.fromCircuitIdsProofsAndInputs(
       circuitIdProofAndInputs

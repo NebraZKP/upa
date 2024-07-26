@@ -35,7 +35,7 @@ export const unpause = command({
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
-    const upa = upaFromInstanceFile(instance, wallet);
+    const upa = await upaFromInstanceFile(instance, wallet);
 
     const txReq = await upa.verifier.unpause.populateTransaction();
 

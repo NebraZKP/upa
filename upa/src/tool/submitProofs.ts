@@ -92,7 +92,7 @@ export const submitProofs = command({
       options.getPassword(password),
       provider
     );
-    const { verifier } = config.upaFromInstanceFile(instance, wallet);
+    const { verifier } = await config.upaFromInstanceFile(instance, wallet);
 
     // Create the Submission object
     const submission = Submission.fromCircuitIdsProofsAndInputs(
