@@ -1,10 +1,10 @@
 {
-  "max_num_app_public_inputs": 4,
+  "max_num_app_public_inputs": 2,
   "inner_batch_size": 2,
   "outer_batch_size": 2,
   "bv_config": {
-    "degree_bits": 18,
-    "lookup_bits": 17,
+    "degree_bits": 23,
+    "lookup_bits": 22,
     "num_limbs": 3,
     "limb_bits": 88
   },
