@@ -26,7 +26,8 @@ describe("UPA Upgrade", async () => {
     await upgradeVerifierContract(
       upaDesc,
       testUpaVerifierFactory,
-      0 /*maxRetries*/
+      0 /*maxRetries*/,
+      false /*prepare*/
     ).catch(() => {
       threw = 1;
     });
@@ -41,7 +42,8 @@ describe("UPA Upgrade", async () => {
     await upgradeVerifierContract(
       upaDesc,
       testUpaVerifierFactory,
-      3 /*maxRetries*/
+      3 /*maxRetries*/,
+      false /*prepare*/
     );
     const { verifier } = testUpaInstanceFromDescriptor(upaDesc, owner);
 
