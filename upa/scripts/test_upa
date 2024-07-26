@@ -330,6 +330,9 @@ pushd _test_upa
     upa dev groth16-verify \
             --proof-file test_snarkjs_proof.upa.json
 
+    # Prepare upgrade (dumps the tx used to update the proxy)
+    upa upgrade --keyfile ${KEYFILE} --password ${DUMMY_PW} --retries 3 --prepare
+
     # Perform a verifier contract upgrade
     upa dev interval-mining 500
     upa owner upgrade --keyfile ${KEYFILE} --password ${DUMMY_PW} --retries 3

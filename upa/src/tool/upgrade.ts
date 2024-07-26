@@ -15,7 +15,7 @@ if (process.env.HARDHAT_CONFIG) {
 }
 const upgrades = importUpgrades();
 import { options } from ".";
-import { command, number, option } from "cmd-ts";
+import { boolean, command, flag, number, option } from "cmd-ts";
 import { loadInstance, loadWallet } from "./config";
 import { getPassword, keyfile, password } from "./options";
 import { setupEnvAndRepeatCommand } from "./deploy";
@@ -31,6 +31,7 @@ type UpgradeArgs = {
   password: string;
   instance: string;
   maxRetries: number;
+  prepare: boolean;
   versionString?: string;
 };
 
@@ -48,18 +49,18 @@ const upgradeHandler = async function (args: UpgradeArgs): Promise<void> {
   }
 
   // Upgrade logic below
-  const { endpoint, keyfile, password, instance, maxRetries } = args;
+  const { endpoint, keyfile, password, instance, maxRetries, prepare } = args;
 
   const provider = new ethers.JsonRpcProvider(endpoint);
   const wallet = await loadWallet(keyfile, getPassword(password), provider);
   const upaDesc = loadInstance(instance);
 
   const newUpaVerifierFactory = new UpaVerifier__factory(wallet);
-
   await upgradeVerifierContract(
     upaDesc,
     newUpaVerifierFactory,
     maxRetries,
+    prepare,
     args.versionString
   );
 };
@@ -77,6 +78,11 @@ export const upgrade = command({
       defaultValue: () => 1,
       description: "The number of times to retry verifier upgrade",
     }),
+    prepare: flag({
+      type: boolean,
+      long: "prepare",
+      description: "Only deploy the implementation contract",
+    }),
   },
   description: "Upgrade the UPA verifier contract. Keyfile must be the owner",
   handler: upgradeHandler,
@@ -87,6 +93,7 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
   oldUpaVerifierDescriptor: UpaInstanceDescriptor,
   newUpaVerifierFactory: T,
   maxRetries: number,
+  prepare: boolean,
   versionString?: string
 ): Promise<void> {
   // Decode version string
@@ -103,25 +110,51 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
 
   const proxyAddress = oldUpaVerifierDescriptor.verifier;
   // The signer doing this upgrade comes from `UpaVerifierV2Factory`.
-  const upgradeFn = async () =>
-    upgrades.upgradeProxy(proxyAddress, newUpaVerifierFactory, {
-      redeployImplementation: "always",
-      unsafeAllowLinkedLibraries: true,
-      call,
-    });
+  const upgradeFn = async () => {
+    if (prepare) {
+      const newImplAddress: string = await upgrades.prepareUpgrade(
+        proxyAddress,
+        newUpaVerifierFactory,
+        {
+          redeployImplementation: "always",
+          unsafeAllowLinkedLibraries: true,
+        }
+      );
 
-  const verifier: ethers.Contract = await requestWithRetry(
+      console.log(
+        `Upgraded UpaVerifier impl has been deployed to ${newImplAddress}`
+      );
+      const verifier = UpaVerifier__factory.connect(proxyAddress);
+
+      const txReq = await verifier.upgradeToAndCall.populateTransaction(
+        newImplAddress,
+        "0x",
+        {} /*overrides*/
+      );
+      console.log("Tx for updating the proxy contract:");
+      console.log(utils.JSONstringify(txReq.data));
+    } else {
+      const verifier: ethers.Contract = await upgrades.upgradeProxy(
+        proxyAddress,
+        newUpaVerifierFactory,
+        {
+          redeployImplementation: "always",
+          unsafeAllowLinkedLibraries: true,
+          call,
+        }
+      );
+      await verifier.waitForDeployment();
+      const newImplAddress = await verifier.getAddress();
+      console.log(`UpaVerifier at ${newImplAddress} has been upgraded`);
+    }
+  };
+
+  await requestWithRetry(
     upgradeFn,
     "UPA contract upgrade",
     maxRetries,
     undefined /*timeoutMs*/,
     newUpaVerifierFactory.interface
-  );
-
-  const deployedVerifier = await verifier.waitForDeployment();
-  const newImplAddress = await deployedVerifier.getAddress();
-  console.log(
-    `Upgraded UpaVerifier impl has been deployed to ${newImplAddress}`
   );
 
   return;
