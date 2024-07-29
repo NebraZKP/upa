@@ -81,7 +81,7 @@ export const upgrade = command({
     prepare: flag({
       type: boolean,
       long: "prepare",
-      description: "Only deploy the implementation contract",
+      description: "Only deploy the implementation contract, not the proxy",
     }),
   },
   description: "Upgrade the UPA verifier contract. Keyfile must be the owner",
@@ -102,11 +102,18 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
   }
   assert(versionString);
   const versionNum = utils.versionStringToUint(versionString);
+  console.log(`Upgrading to UPA version ${versionString}`);
 
   // Write call that sets the version of the contract.
   const setVersionFragment =
     newUpaVerifierFactory.interface.getFunction("setVersion")!;
+  // Encoding for OpenZeppelin `upgradeProxy` method
   const call = { fn: setVersionFragment, args: [versionNum] };
+  // Encoding for proxy contract's `upgradeToAndCall` method
+  const encodedCall = newUpaVerifierFactory.interface.encodeFunctionData(
+    call.fn,
+    call.args
+  );
 
   const proxyAddress = oldUpaVerifierDescriptor.verifier;
   // The signer doing this upgrade comes from `UpaVerifierV2Factory`.
@@ -128,10 +135,10 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
 
       const txReq = await verifier.upgradeToAndCall.populateTransaction(
         newImplAddress,
-        "0x",
+        encodedCall,
         {} /*overrides*/
       );
-      console.log("Tx for updating the proxy contract:");
+      console.log("Tx to update proxy contract (send to UPA contract):");
       console.log(utils.JSONstringify(txReq.data));
     } else {
       const verifier: ethers.Contract = await upgrades.upgradeProxy(
