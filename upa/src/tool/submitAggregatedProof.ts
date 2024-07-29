@@ -90,7 +90,10 @@ export const submitAggregatedProof = command({
       options.getPassword(password),
       provider
     );
-    const { verifier: verifier } = await config.upaFromInstanceFile(instance, wallet);
+    const { verifier: verifier } = await config.upaFromInstanceFile(
+      instance,
+      wallet
+    );
 
     const submissionProofsSolidity = onChainSubmissionProofs.map((p) =>
       p.solidity()

@@ -153,7 +153,7 @@ export const aggConvert = command({
     }
 
     // Initialize a `UpaClient` for submitting proofs to the UPA.
-    const upaClient = new UpaClient(wallet, loadInstance(upaInstance));
+    const upaClient = await UpaClient.init(wallet, loadInstance(upaInstance));
 
     const submissionHandle = await upaClient.submitProofs(
       circuitIdProofAndInputs

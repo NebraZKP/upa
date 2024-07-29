@@ -99,7 +99,10 @@ export const multiSubmit = command({
     const startTimeMilliseconds = Date.now();
 
     // Initialize a `UpaClient` for submitting proofs to the UPA.
-    const upaClient = new UpaClient(wallet, config.loadInstance(upaInstance));
+    const upaClient = await UpaClient.init(
+      wallet,
+      config.loadInstance(upaInstance)
+    );
 
     // TODO(#515): This will round up to a multiple of `submissionSize`. Make
     // this submit the exact number of proofs.

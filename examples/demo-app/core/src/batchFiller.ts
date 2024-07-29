@@ -93,7 +93,7 @@ export const batchFiller = command({
     const demoAppInstance = loadDemoAppInstance(instance);
     const circuitId = demoAppInstance.circuitId;
 
-    const { verifier } = config.upaFromInstanceFile(upaInstance, wallet);
+    const { verifier } = await config.upaFromInstanceFile(upaInstance, wallet);
 
     await fillBatch(
       verifier,

@@ -33,7 +33,7 @@ export const deploy = command({
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, password, provider);
 
-    const upa = upaFromInstanceFile(upaInstance, provider);
+    const upa = await upaFromInstanceFile(upaInstance, provider);
     const vk = config.loadAppVK(vkFile);
     const circuitId = utils.computeCircuitId(vk);
 

@@ -23,7 +23,6 @@ import {
   computeFinalDigest,
   digestAsFieldElements,
   versionStringToUint,
-  versionUintToString,
 } from "./utils";
 
 // Function lookup strings
@@ -96,13 +95,17 @@ export async function upaInstanceFromDescriptor(
   instanceDescriptor: UpaInstanceDescriptor,
   provider: ethers.ContractRunner
 ): Promise<UpaInstance> {
-  const verifierContract = UpaVerifier__factory.connect(instanceDescriptor.verifier);
+  const verifierContract = UpaVerifier__factory.connect(
+    instanceDescriptor.verifier
+  );
   const verifier = verifierContract.connect(provider);
   const contractVersion = await verifier.version();
   const sdkVersion = versionStringToUint(pkg.version);
   if (contractVersion / 100n !== sdkVersion / 100n) {
-    throw `UPA contract version ${contractVersion} is incompatible with SDK ` +
-      `version ${sdkVersion}`;
+    throw (
+      `UPA contract version ${contractVersion} is incompatible with SDK ` +
+      `version ${sdkVersion}`
+    );
   }
 
   return {
@@ -195,7 +198,7 @@ export async function updateFeeOptions(
         gasPrice: options.maxFeePerGas,
         maxPriorityFeePerGas: undefined,
         maxFeePerGas: undefined,
-        gasLimit: 100_000
+        gasLimit: 100_000,
       };
     }
 

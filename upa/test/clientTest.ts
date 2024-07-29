@@ -2,7 +2,6 @@ import {
   loadFixture,
   mine,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { ethers } from "hardhat";
 import {
   deployUpaDummyVerifier,
   pf_a,
@@ -19,8 +18,8 @@ import {
   pi_f,
 } from "./upaTests";
 import { UpaClient, SubmissionHandle } from "../src/sdk/client";
-import { UpaInstance, dummyProofData, updateFeeOptions, upaInstanceFromDescriptor } from "../src/sdk/upa";
-import { loadAppVK, upaFromInstanceFile } from "../src/tool/config";
+import { UpaInstance, dummyProofData, updateFeeOptions } from "../src/sdk/upa";
+import { loadAppVK } from "../src/tool/config";
 import { CircuitIdProofAndInputs } from "../src/sdk/application";
 import { Signer } from "ethers";
 import { expect } from "chai";
@@ -101,7 +100,7 @@ async function deployAndSubmit(): Promise<DeployAndSubmitResult> {
 
 // UpaClient tests
 describe("UPA Client", async () => {
-  it.only("Fails to initialize if contract version is out of date", async() => {
+  it("Fails to init if contract version is out of date", async () => {
     let thrown = false;
     try {
       await deployUpaDummyVerifier("0.3.0");

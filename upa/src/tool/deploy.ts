@@ -250,7 +250,7 @@ export async function deployUpa(
     versionString = pkg.version;
   }
   assert(versionString);
-  let versionNum = utils.versionStringToUint(versionString);
+  const versionNum = utils.versionStringToUint(versionString);
 
   const addrP = signer.getAddress();
   const nonceP = signer.getNonce();
