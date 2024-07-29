@@ -106,7 +106,13 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
   // Write call that sets the version of the contract.
   const setVersionFragment =
     newUpaVerifierFactory.interface.getFunction("setVersion")!;
+  // Encoding for OpenZeppelin `upgradeProxy` method
   const call = { fn: setVersionFragment, args: [versionNum] };
+  // Encoding for proxy contract's `upgradeToAndCall` method
+  const encodedCall = newUpaVerifierFactory.interface.encodeFunctionData(
+    call.fn,
+    call.args
+  );
 
   const proxyAddress = oldUpaVerifierDescriptor.verifier;
   // The signer doing this upgrade comes from `UpaVerifierV2Factory`.
@@ -128,7 +134,7 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
 
       const txReq = await verifier.upgradeToAndCall.populateTransaction(
         newImplAddress,
-        "0x",
+        encodedCall,
         {} /*overrides*/
       );
       console.log("Tx for updating the proxy contract:");

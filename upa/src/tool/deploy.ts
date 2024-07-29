@@ -31,6 +31,13 @@ import {
 import { strict as assert } from "assert";
 import { UpaInstanceDescriptor } from "../sdk/upa";
 import { spawn } from "child_process";
+// eslint-disable-next-line
+import { getInitializerData } from "@openzeppelin/hardhat-upgrades/dist/utils/initializer-data";
+// eslint-disable-next-line
+import ERC1967Proxy from "@openzeppelin/upgrades-core/artifacts/@openzeppelin/contracts-v5/proxy/ERC1967/ERC1967Proxy.sol/ERC1967Proxy.json";
+
+export const create3DeploySalt =
+  "NEBRA UPA! Salt-n-Pepa and Heavy D up in the limousine";
 
 // Only import if the env var HARDHAT_CONFIG is set.
 // eslint-disable-next-line
@@ -55,6 +62,7 @@ type DeployArgs = {
   upaConfigFile: string;
   useTestConfig: boolean;
   maxRetries: number;
+  prepare: boolean;
   owner?: string;
   worker?: string;
   feeRecipient?: string;
@@ -94,6 +102,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     groth16VerifierAddress,
     fixedReimbursementInWei,
     maxRetries,
+    prepare,
   } = args;
 
   const provider = new ethers.JsonRpcProvider(endpoint);
@@ -126,6 +135,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     contract_hex,
     maxNumInputs,
     maxRetries,
+    prepare,
     groth16Verifier,
     owner,
     worker,
@@ -134,7 +144,9 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     collateral,
     fixedReimbursement
   );
-  fs.writeFileSync(instance, JSON.stringify(upaInstance));
+  if (!prepare) {
+    fs.writeFileSync(instance, JSON.stringify(upaInstance));
+  }
 };
 
 export const deploy = command({
@@ -203,6 +215,11 @@ export const deploy = command({
       defaultValue: () => 1,
       description: "The number of times to retry verifier deployment",
     }),
+    prepare: flag({
+      type: boolean,
+      long: "prepare",
+      description: "Only deploy the implementation contract",
+    }),
   },
   description: "Deploy the UPA contracts for a given configuration",
   handler: deployHandler,
@@ -236,6 +253,7 @@ export async function deployUpa(
   outer_verifier_hex: string,
   maxNumInputs: number,
   maxRetries: number,
+  prepare: boolean,
   groth16Verifier?: IGroth16Verifier,
   owner?: string,
   worker?: string,
@@ -244,7 +262,7 @@ export async function deployUpa(
   aggregatorCollateral?: bigint,
   fixedReimbursement?: bigint,
   versionString?: string
-): Promise<UpaInstanceDescriptor> {
+): Promise<UpaInstanceDescriptor | undefined> {
   // Decode version string
   if (!versionString) {
     versionString = pkg.version;
@@ -306,60 +324,115 @@ export async function deployUpa(
 
   // Deploy UPA
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
+  const deployArgs = [
+    owner,
+    worker,
+    feeRecipient,
+    binVerifierAddr,
+    groth16VerifierAddr,
+    fixedReimbursement,
+    feeInGas,
+    aggregatorCollateral,
+    maxNumInputs,
+    versionNum,
+  ];
 
   const deployFn = async () =>
-    upgrades.deployProxy(
+    upgrades.deployProxy(UpaVerifierFactory, deployArgs, {
+      kind: "uups",
+      unsafeAllowLinkedLibraries: true,
+    });
+
+  const prepareDeployFn = async () => {
+    const implAddress: string = upgrades.deployImplementation(
       UpaVerifierFactory,
-      [
-        owner,
-        worker,
-        feeRecipient,
-        binVerifierAddr,
-        groth16VerifierAddr,
-        fixedReimbursement,
-        feeInGas,
-        aggregatorCollateral,
-        maxNumInputs,
-        versionNum,
-      ],
+      deployArgs,
       {
         kind: "uups",
         unsafeAllowLinkedLibraries: true,
       }
     );
-
-  const upaVerifier: ethers.Contract = await utils.requestWithRetry(
-    deployFn,
-    "UPA contract upgrade",
-    maxRetries,
-    undefined /*timeoutMs*/,
-    UpaVerifierFactory.interface
-  );
-
-  await upaVerifier.waitForDeployment();
-  const upaVerifierAddr = await upaVerifier.getAddress();
-  const deployTxResponse = upaVerifier.deploymentTransaction()!;
-  const deploymentTx = (await deployTxResponse.wait())!;
-  const deploymentBlockNumber: number = deploymentTx.blockNumber;
-  assert(
-    deploymentBlockNumber,
-    `failed getting deployBlockNumber: ${deploymentTx} ${deploymentBlockNumber}`
-  );
-
-  // Top up the aggregator collateral
-  const topUpCollateralTx = await signer.sendTransaction({
-    to: upaVerifierAddr,
-    value: aggregatorCollateral,
-  });
-  await topUpCollateralTx.wait();
-
-  // Return the instance data
-  return {
-    verifier: upaVerifierAddr,
-    deploymentBlockNumber,
-    deploymentTx: deploymentTx.hash,
-    chainId: chainId.toString(),
+    return implAddress;
   };
+
+  if (prepare) {
+    const implAddress = await utils.requestWithRetry(
+      prepareDeployFn,
+      "UPA contract impl deployment",
+      maxRetries,
+      undefined /*timeoutMs*/,
+      UpaVerifierFactory.interface
+    );
+
+    console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
+
+    console.log("Dumping tx to deploy proxy contract");
+    const initializerData = getInitializerData(
+      UpaVerifierFactory.interface,
+      deployArgs
+    );
+
+    const ProxyFactory = new ethers.ContractFactory(
+      ERC1967Proxy.abi,
+      ERC1967Proxy.bytecode
+    );
+    const proxyDeployTx = await ProxyFactory.getDeployTransaction(
+      implAddress,
+      initializerData
+    );
+    console.log(`proxyDeployTx (pass this into initcode arg):`);
+    console.log(proxyDeployTx.data);
+
+    // We set the first 20 bytes to be equal to the multi-sig address. CreateX
+    // uses this for permissioned deploy protection. (See the `_guard`
+    // function in CreateX.sol) The 21st byte is `00` to turn off cross-chain
+    // redeploy protection. The last 11 bytes are free for us to set.
+    const safeDeployer = "0xb463603469Bf31f189E3F6625baf8378880Df14e";
+    const saltSuffix = ethers
+      .keccak256(ethers.toUtf8Bytes(create3DeploySalt))
+      .slice(2, 24);
+    const salt = safeDeployer + "00" + saltSuffix;
+    console.log("salt");
+    console.log(salt);
+
+    console.log(
+      `Verifier needs to be sent ${aggregatorCollateral} Wei as` +
+        ` aggregator collateral.`
+    );
+  } else {
+    const upaVerifier: ethers.Contract = await utils.requestWithRetry(
+      deployFn,
+      "UPA contract deployment",
+      maxRetries,
+      undefined /*timeoutMs*/,
+      UpaVerifierFactory.interface
+    );
+    await upaVerifier.waitForDeployment();
+    const upaVerifierAddr = await upaVerifier.getAddress();
+    const deployTxResponse = upaVerifier.deploymentTransaction()!;
+    const deploymentTx = (await deployTxResponse.wait())!;
+    const deploymentBlockNumber: number = deploymentTx.blockNumber;
+    assert(
+      deploymentBlockNumber,
+      `failed getting deployBlockNumber:` +
+        ` ${deploymentTx} ${deploymentBlockNumber}`
+    );
+
+    // Top up the aggregator collateral
+    const topUpCollateralTx = await signer.sendTransaction({
+      to: upaVerifierAddr,
+      value: aggregatorCollateral,
+    });
+    await topUpCollateralTx.wait();
+
+    // Return the instance data
+    return {
+      verifier: upaVerifierAddr,
+      deploymentBlockNumber,
+      deploymentTx: deploymentTx.hash,
+      chainId: chainId.toString(),
+    };
+  }
 }
 
 // Only used with OpenZeppelin's upgradeable contracts library.
