@@ -142,6 +142,7 @@ export async function deployUpaWithVerifier(
     contract_hex,
     maxNumPublicInputs,
     3 /*maxRetries*/,
+    false /*prepare*/,
     undefined /*groth16Verifier*/,
     owner.address,
     worker.address,
@@ -151,9 +152,9 @@ export async function deployUpaWithVerifier(
     undefined /* fixedReimbursement */,
     version
   );
-  const upa = await upaInstanceFromDescriptor(upaDesc, owner);
+  const upa = await upaInstanceFromDescriptor(upaDesc!, owner);
 
-  return { upa, upaDesc, owner, worker, user1, user2 };
+  return { upa, upaDesc: upaDesc!, owner, worker, user1, user2 };
 }
 
 export async function deployUpaDummyVerifier(version?: string) {
