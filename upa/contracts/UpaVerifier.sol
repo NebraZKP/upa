@@ -225,6 +225,10 @@ contract UpaVerifier is
         return _getVerifierStorage().version;
     }
 
+    function setVersion(uint32 newVersion) external onlyOwner {
+        _getVerifierStorage().version = newVersion;
+    }
+
     /// Only the owner is authorized to upgrade this contract. Required to
     /// inherit from UUPSUpgradeable.
     function _authorizeUpgrade(address) internal view override onlyOwner {
