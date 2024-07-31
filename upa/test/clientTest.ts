@@ -108,6 +108,14 @@ describe("UPA Client", async () => {
       thrown = true;
     }
     expect(thrown).to.be.true;
+
+    thrown = false;
+    try {
+      await deployUpaDummyVerifier("1.1.0");
+    } catch (e) {
+      thrown = true;
+    }
+    expect(thrown).to.be.true;
   });
 
   it("Throws error if submission was skipped", async () => {

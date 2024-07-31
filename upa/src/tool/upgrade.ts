@@ -101,10 +101,10 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
     newUpaVerifierFactory.interface.getFunction("setVersion")!;
   const call = { fn: setVersionFragment, args: [versionNum] };
 
-  const upaVerifierV1Address = oldUpaVerifierDescriptor.verifier;
+  const proxyAddress = oldUpaVerifierDescriptor.verifier;
   // The signer doing this upgrade comes from `UpaVerifierV2Factory`.
   const upgradeFn = async () =>
-    upgrades.upgradeProxy(upaVerifierV1Address, newUpaVerifierFactory, {
+    upgrades.upgradeProxy(proxyAddress, newUpaVerifierFactory, {
       redeployImplementation: "always",
       unsafeAllowLinkedLibraries: true,
       call,
@@ -119,8 +119,10 @@ export async function upgradeVerifierContract<T extends ContractFactory>(
   );
 
   const deployedVerifier = await verifier.waitForDeployment();
-  const address = await deployedVerifier.getAddress();
-  console.log(`Upgraded UpaVerifier impl has been deployed to ${address}`);
+  const newImplAddress = await deployedVerifier.getAddress();
+  console.log(
+    `Upgraded UpaVerifier impl has been deployed to ${newImplAddress}`
+  );
 
   return;
 }
