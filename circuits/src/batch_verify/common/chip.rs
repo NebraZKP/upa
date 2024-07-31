@@ -331,6 +331,8 @@ where
     }
 
     /// Applies the Frobenius endomorphism to `point`.
+    /// This is the untwist-Frobenius-twist `\psi = \phi^{-1} \circ \pi \circ \phi`
+    /// automorphism as mentioned in https://eprint.iacr.org/2022/352.pdf page 4.
     pub(crate) fn apply_g2_endomorphism(
         &self,
         ctx: &mut Context<F>,
@@ -349,7 +351,8 @@ where
 
     /// Asserts that `point` belongs to the subgroup of G2 of order
     /// equal to that of `F`. This is the fully optimized check that asserts
-    /// `[x+1]P + \psi([x]P) + \psi^2([x]P) = \psi^3([2x]P)`.
+    /// `[x+1]P + \psi([x]P) + \psi^2([x]P) = \psi^3([2x]P)` as in
+    /// https://eprint.iacr.org/2022/348.pdf.
     pub fn assert_g2_subgroup_membership(
         &self,
         ctx: &mut Context<F>,
@@ -372,7 +375,7 @@ where
         // [2x]P
         let two_xp = ec_chip.double(ctx, xp.clone());
         // [x+1]P
-        let xp_plus_one = ec_chip.add_unequal(ctx, xp.clone(), point, false);
+        let xp_plus_one = ec_chip.add_unequal(ctx, xp.clone(), point, true);
         // \psi([x]P)
         let psi_xp = self.apply_g2_endomorphism(ctx, &xp);
         // \psi^2([x]P)
@@ -395,7 +398,7 @@ where
     /// equal to that of `F`. This is a partially optimized check that asserts
     /// `[6x^2]P = \psi(P)`.
     #[allow(dead_code)] // kept for testing and benchmarking
-    fn assert_g2_subgroup_membership_glv(
+    pub(crate) fn assert_g2_subgroup_membership_glv(
         &self,
         ctx: &mut Context<F>,
         point: &G2Point<F>,
@@ -429,7 +432,7 @@ where
     /// equal to that of `F`. This is the naive check that asserts
     /// `[r]P = O`.
     #[allow(dead_code)] // kept for testing and benchmarking
-    fn assert_g2_subgroup_membership_naive(
+    pub(crate) fn assert_g2_subgroup_membership_naive(
         &self,
         ctx: &mut Context<F>,
         point: &G2Point<F>,

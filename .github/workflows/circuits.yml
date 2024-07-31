@@ -26,6 +26,9 @@ jobs:
       run:
         working-directory: circuits
 
+    strategy:
+      fail-fast: false
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -60,4 +63,4 @@ jobs:
           
       - name: Run unit tests
         run: |
-          cargo test -- --test-threads=1 --show-output
+          cargo test --release -- --test-threads=1 --show-output
