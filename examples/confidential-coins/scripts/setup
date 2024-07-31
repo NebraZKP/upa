@@ -81,7 +81,7 @@ if ! [ -e ${UPAVKFILE} ] || ! [ -e ${VERIFIERCONTRACT} ] ; then
 
     # Convert to a UPA verification key using the upa tool
     SNARKJSVKFILE="$TEST_DIR/../circuits/snarkjs_verification_key.json"
-    upa convert-vk-snarkjs \
+    upa convert vk-snarkjs \
         --snarkjs-vk ${SNARKJSVKFILE} \
         --vk-file ${UPAVKFILE}
 

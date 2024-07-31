@@ -77,7 +77,7 @@ pushd _test_confidential_coins
 
     # Deploy UPA using DEPLOYER_KEYFILE and then confidential-coins using
     # APP_KEYFILE.
-    upa deploy \
+    upa owner deploy \
            --keyfile ${DEPLOYER_KEYFILE} \
            --verifier ${UPA_CONTRACTS}/test/data/test.bin \
            --instance ${UPAINSTANCE} \

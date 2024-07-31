@@ -244,7 +244,10 @@ export function singleProofAsCircuitIdProofAndInputs(
     return CircuitIdProofAndInputs.from_json(parsedJSON);
   }
 
-  throw Error("Incorrect single proof format.");
+  throw Error(
+    "Incorrect single proof format. Must be { vk, proof, inputs }" +
+      " or { circuitId, proof, inputs }."
+  );
 }
 
 /// Loads the file formats:
@@ -282,7 +285,10 @@ export function proofArrayAsCircuitIdProofAndInputs(
   if (typeof circuitIdProofsAndInputs[0].circuitId === "string") {
     return parsedJSON.map((obj) => CircuitIdProofAndInputs.from_json(obj));
   }
-  throw Error("Incorrect proof array format.");
+  throw Error(
+    "Incorrect proof array format. Must be [{ vk, proof, inputs }]" +
+      " or [{ circuitId, proof, inputs }]."
+  );
 }
 
 /// Loads the JSON file formats:

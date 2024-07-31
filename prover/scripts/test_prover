@@ -24,7 +24,7 @@ pushd _test_prover
     cp ../../circuits/src/tests/data/vk.json vk.json
 
     # Check native and Typescript cids match
-    cid_evm=`upa compute-circuit-id vk.json`
+    cid_evm=`upa compute circuit-id vk.json`
     cid_native=`prover universal-batch-verifier compute-circuit-id --app-vk=vk.json`
     if ! [ "${cid_evm}" == "${cid_native}" ] ; then
         echo "cid_evm: ${cid_native}"

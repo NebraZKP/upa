@@ -47,7 +47,7 @@ pushd _test_upa
     upa dev interval-mining 500
 
     # Deploy UPA using this key. We set a fixed fee per proof of 20 Wei.
-    KEYFILE_PASSWORD=${DUMMY_PW} upa deploy \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy \
                     --keyfile ${KEYFILE} \
                     --verifier ${UPA_DIR}/upa/test/data/test.bin \
                     --use-test-config \
@@ -56,25 +56,25 @@ pushd _test_upa
     upa dev interval-mining 0
 
     # Deploy a second agg proof verifier contract and use this.
-    orig_agg_verifier=`upa get-aggregated-proof-verifier`
-    orig_max_num_inputs=`upa get-max-num-public-inputs`
-    KEYFILE_PASSWORD=${DUMMY_PW} upa deploy-binary \
+    orig_agg_verifier=`upa query aggregated-proof-verifier`
+    orig_max_num_inputs=`upa query max-num-public-inputs`
+    KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy-binary \
                     --keyfile ${KEYFILE} \
                     --dump-tx \
                     ${UPA_DIR}/upa/test/data/test.bin \
                     > new_agg_proof_verifier.tx
-    KEYFILE_PASSWORD=${DUMMY_PW} upa deploy-binary \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy-binary \
                     --keyfile ${KEYFILE} \
                     ${UPA_DIR}/upa/test/data/test.bin \
                     > new_agg_proof_verifier.addr
-    KEYFILE_PASSWORD=${DUMMY_PW} upa set-aggregated-proof-verifier \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa owner set-aggregated-proof-verifier \
                     --keyfile ${KEYFILE} \
                     `cat new_agg_proof_verifier.addr` \
                     ${orig_max_num_inputs} --wait
-    [ `cat new_agg_proof_verifier.addr` == `upa get-aggregated-proof-verifier` ]
+    [ `cat new_agg_proof_verifier.addr` == `upa query aggregated-proof-verifier` ]
 
     # Print the config
-    upa get-config > config.upa.json
+    upa query config > config.upa.json
 
     # Test data:
     #   vk
@@ -85,7 +85,7 @@ pushd _test_upa
     UNIVERSAL_PROOFS_8=${UPA_DIR}/circuits/src/tests/data/universal_batch_verifier_8_proofs.json
     #   Convert to {circuitId, proof, inputs} format
     CONVERTED_UNIVERSAL_PROOFS_8=universal_batch_verifier_8_proofs_converted.json
-    upa convert-vk-proofs-inputs \
+    upa convert vk-proofs-inputs \
                     --vk-proofs-inputs-file ${UNIVERSAL_PROOFS_8} \
                     --circuitid-proofs-inputs-file ${CONVERTED_UNIVERSAL_PROOFS_8}
 
@@ -100,18 +100,18 @@ pushd _test_upa
     done
 
     # Check that pausing works as expected
-    KEYFILE_PASSWORD=${DUMMY_PW} upa pause --keyfile ${KEYFILE}
+    KEYFILE_PASSWORD=${DUMMY_PW} upa owner pause --keyfile ${KEYFILE}
     KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk \
               --password ${DUMMY_PW} \
               --vk-file ${TEST_VK} \
               --wait > /dev/null 2>&1 || true
     ## Check that no vk was registered via stats
-    upa stats > stats.0
+    upa query stats > stats.0
      if ! [ "null"  == "`jq -r .circuitIds stats.0`" ] ; then
         echo "FAILURE: expected registervk to fail"
         exit 1
     fi
-    KEYFILE_PASSWORD=${DUMMY_PW} upa unpause --keyfile ${KEYFILE}
+    KEYFILE_PASSWORD=${DUMMY_PW} upa owner unpause --keyfile ${KEYFILE}
 
     # Register all VKs
     KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk \
@@ -128,7 +128,7 @@ pushd _test_upa
               --wait
 
     # Check stats and record
-    upa stats > stats.0
+    upa query stats > stats.0
     if ! [ "1"  == "`jq -r .nextSubmissionIdx stats.0`" ] ; then
         echo "FAILURE: next_idx expected to be 1"
         exit 1
@@ -143,7 +143,7 @@ pushd _test_upa
     fi
 
     # Check the single proof is valid
-    upa groth16-verify \
+    upa dev groth16-verify \
             --proof-file ${TEST_SINGLE_PROOF}
 
     # Submit a single proof: proof1.json for vk.json
@@ -160,15 +160,6 @@ pushd _test_upa
            --submission-file submit-multi-4.submission.json \
            --wait > submit-multi-4.tx.hash
 
-    # Test extracting submission from tx hash
-    upa submission-from-tx \
-           `cat submit-multi-4.tx.hash` \
-           --submission-file submit-multi-4.extracted.submission.json
-    if ! (cmp submit-multi-4.submission.json submit-multi-4.extracted.submission.json) ; then
-        echo "Extracted and created submission files differ"
-        exit 1
-    fi
-
     # Submission from universal_batch_verifier_8_proofs.json. We will verify
     # this as an off-chain submission- we only use `submit-proofs` to generate
     # the submission and proofId files.
@@ -180,23 +171,23 @@ pushd _test_upa
             --dry-run
 
     # There will be two aggregations, each containing 4 off-chain proofs.
-    upa compute-submission-markers \
+    upa aggregator compute-submission-markers \
             --submission-files off-chain-submission.json \
             --start-idx 0 \
             --num-proofs 4 > off-chain-submission-markers-1.json
-    upa compute-submission-markers \
+    upa aggregator compute-submission-markers \
             --submission-files off-chain-submission.json \
             --start-idx 4 \
             --num-proofs 4 > off-chain-submission-markers-2.json
 
     # Allocate the fees for the submitted proofs.
-    KEYFILE_PASSWORD=${DUMMY_PW} upa allocate-aggregator-fee \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator allocate-aggregator-fee \
            --keyfile ${KEYFILE} \
            --wait
 
     # Extract proof refs, cids and inputs
     for i in {0..3} ; do
-        upa compute-proof-ref \
+        upa compute proof-ref \
                --submission-file submit-multi-4.submission.json \
                --proof-idx $i \
                --proof-ref-file submit-multi-4.ref-$i.json
@@ -205,7 +196,7 @@ pushd _test_upa
 
     # Extract proof refs, cids and inputs from converted proofs file
     for i in {0..7} ; do
-        upa compute-proof-ref \
+        upa compute proof-ref \
                --submission-file off-chain-submission.json \
                --proof-idx $i \
                --proof-ref-file off-chain-submission.ref-$i.json
@@ -214,16 +205,16 @@ pushd _test_upa
     done
 
     # Check that no proofs are verified
-    (! upa is-verified \
+    (! upa query is-verified \
             --proof-file ${TEST_SINGLE_PROOF})
     for i in {0..3} ; do
-        (! upa is-verified \
+        (! upa query is-verified \
                 --proof-file submit-multi-4.proof-$i.json \
                 --proof-ref-file submit-multi-4.ref-$i.json)
     done
 
     # Check stats.  Expect 2 submissions, 0 verified.
-    upa stats > stats.1
+    upa query stats > stats.1
     if ! [ "3"  == "`jq -r .nextSubmissionIdx stats.1`" ] ; then
         echo "FAILURE: next_idx expected to be 3" #
         exit 1
@@ -249,19 +240,19 @@ pushd _test_upa
     jq -s 'add' temp_agg.pids.json > agg.pids.json
 
     # Compute the calldata
-    upa compute-final-digest \
+    upa aggregator compute-final-digest \
            --proof-ids-file agg.pids.json \
            --calldata-file agg.proof.calldata
 
     # Compute the SubmissionProof
-    upa compute-submission-proof \
+    upa compute submission-proof \
            --submission-file submit-multi-4.submission.json \
            --start-idx 0 \
            --num-proofs 1 \
            > submit-multi-4.submission-proof.0.1.json
 
     # Test several modes of execution.
-    KEYFILE_PASSWORD=${DUMMY_PW} upa submit-aggregated-proof \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
            --dump-tx \
            --keyfile ${KEYFILE} \
            --calldata-file agg.proof.calldata \
@@ -269,7 +260,7 @@ pushd _test_upa
            --proof-ids-file agg.pids.json \
            --submission-markers-file off-chain-submission-markers-1.json \
            > submit-aggregated-proof.tx
-    KEYFILE_PASSWORD=${DUMMY_PW} upa submit-aggregated-proof \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
            --estimate-gas \
            --keyfile ${KEYFILE} \
            --calldata-file agg.proof.calldata \
@@ -277,7 +268,7 @@ pushd _test_upa
            --proof-ids-file agg.pids.json \
            --submission-markers-file off-chain-submission-markers-1.json \
            > submit-aggregated-proof.tx.gas
-    KEYFILE_PASSWORD=${DUMMY_PW} upa submit-aggregated-proof \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
            --keyfile ${KEYFILE} \
            --calldata-file agg.proof.calldata \
            --submission-proof-file submit-multi-4.submission-proof.0.1.json \
@@ -289,12 +280,12 @@ pushd _test_upa
     upa dev trace `cat agg-proof.hash` --trace-file agg-proof.trace.json
 
     # Check proof is verified as expected
-    upa is-verified --proof-file ${TEST_SINGLE_PROOF}
+    upa query is-verified --proof-file ${TEST_SINGLE_PROOF}
 
     # This submission is only partially verified so no proofs should be marked
     # as verified yet.
     for i in {0..3} ; do
-        (! upa is-verified \
+        (! upa query is-verified \
                 --proof-file submit-multi-4.proof-$i.json \
                 --proof-ref-file submit-multi-4.ref-$i.json)
     done
@@ -302,13 +293,13 @@ pushd _test_upa
     # This off-chain submission is only partially verified so no proofs should
     # be marked as verified yet.
     for i in {0..7} ; do
-        (! upa is-verified \
+        (! upa query is-verified \
                 --proof-file off-chain-submission.proof-$i.json \
                 --proof-ref-file off-chain-submission.ref-$i.json)
     done
 
     # Expected state: { nextSubmissionIdxToVerify: 2, nextSubmissionIdx: 3 }
-    upa stats > stats.2
+    upa query stats > stats.2
     if ! [ "3"  == "`jq -r .nextSubmissionIdx stats.2`" ] ; then
         echo "FAILURE: next_idx expected to be 3" #
         exit 1
@@ -324,11 +315,11 @@ pushd _test_upa
     fi
 
     # Check conversion of snarkjs proofs and vks
-    upa convert-vk-snarkjs \
+    upa convert vk-snarkjs \
         --snarkjs-vk ${SNARKJS_TEST_DIR}/test_snarkjs_vk.json \
         --vk-file test_snarkjs_vk.upa.json
 
-    upa convert-proof-snarkjs \
+    upa convert proof-snarkjs \
         --snarkjs-proof ${SNARKJS_TEST_DIR}/test_snarkjs_proof.json \
         --proof-file test_snarkjs_proof.upa.json
 
@@ -336,12 +327,12 @@ pushd _test_upa
     jq --slurpfile vk test_snarkjs_vk.upa.json '.vk = $vk[0]' test_snarkjs_proof.upa.json > tmp_upa.json
     mv tmp_upa.json test_snarkjs_proof.upa.json
 
-    upa groth16-verify \
+    upa dev groth16-verify \
             --proof-file test_snarkjs_proof.upa.json
 
     # Perform a verifier contract upgrade
     upa dev interval-mining 500
-    upa upgrade --keyfile ${KEYFILE} --password ${DUMMY_PW} --retries 3
+    upa owner upgrade --keyfile ${KEYFILE} --password ${DUMMY_PW} --retries 3
     upa dev interval-mining 0
 
     # Submit (fake) aggregated proof (from the deployer).  Cover
@@ -352,15 +343,15 @@ pushd _test_upa
     # Flatten proofIds into one array.
     jq -s 'add' temp_agg.pids.json > agg.pids.json
 
-    upa compute-final-digest \
+    upa aggregator compute-final-digest \
            --proof-ids-file agg.pids.json \
            --calldata-file agg.proof.calldata
-    upa compute-submission-proof \
+    upa compute submission-proof \
            --submission-file submit-multi-4.submission.json \
            --start-idx 1 \
            --num-proofs 3 \
            > submit-multi-4.submission-proof.2.3.4.json
-    KEYFILE_PASSWORD=${DUMMY_PW} upa submit-aggregated-proof \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
            --keyfile ${KEYFILE} \
            --calldata-file agg.proof.calldata \
            --submission-proof-file submit-multi-4.submission-proof.2.3.4.json \
@@ -369,26 +360,26 @@ pushd _test_upa
            --wait > agg-proof.hash
 
     # Claim aggregator fees
-    KEYFILE_PASSWORD=${DUMMY_PW} upa claim-aggregator-fee \
+    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator claim-aggregator-fee \
            --keyfile ${KEYFILE} \
            --wait
 
     # Check proofs from the submission are verified now that the full
     # submission is verified.
     for i in {0..3} ; do
-        upa is-verified \
+        upa query is-verified \
                 --proof-file submit-multi-4.proof-$i.json \
                 --proof-ref-file submit-multi-4.ref-$i.json
     done
 
     # Proofs from the off-chain submission should also be verified now.
     for i in {0..7} ; do
-        upa is-verified \
+        upa query is-verified \
                 --proof-file off-chain-submission.proof-$i.json \
                 --proof-ref-file off-chain-submission.ref-$i.json
     done
     # Check stats
-    upa stats > stats.3
+    upa query stats > stats.3
     if ! [ "3"  == "`jq -r .nextSubmissionIdx stats.3`" ] ; then
         echo "FAILURE: next_idx expected to be 3" #
         exit 1

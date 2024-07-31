@@ -5,13 +5,23 @@ import {
   option,
   positional,
   optional,
+  flag,
+  boolean,
 } from "cmd-ts";
-import { loadWallet, readAddressFromKeyfile } from "./config";
+import {
+  loadAppVkProofInputsFile,
+  loadWallet,
+  readAddressFromKeyfile,
+} from "./config";
 import { endpoint, keyfile, password, getPassword } from "./options";
 import * as log from "./log";
 import * as ethers from "ethers";
 import * as fs from "fs";
 import { execSync } from "child_process";
+import { devAggregator } from "./devAggregator";
+import { options } from ".";
+import { Groth16Verifier } from "../sdk";
+import { getLogger } from "./log";
 
 export const ethkeygen = command({
   name: "ethkeygen",
@@ -285,9 +295,49 @@ const describe = command({
   },
 });
 
+const groth16Verify = command({
+  name: "groth16-verify",
+  description: "Verify a groth16 proof",
+  args: {
+    proofFile: options.proofFile(),
+    doLog: flag({
+      type: boolean,
+      long: "log",
+      short: "l",
+      description: "Log groth16 verification",
+    }),
+  },
+  handler: async function ({ proofFile, doLog }): Promise<void> {
+    const { vk, proof, inputs } = loadAppVkProofInputsFile(proofFile);
+    const processedInputs = inputs.map((input) => {
+      if (typeof input === "number") {
+        return BigInt(input);
+      } else {
+        return input;
+      }
+    });
+    const groth16Verifier = await Groth16Verifier.initialize();
+    const logger = doLog ? getLogger() : undefined;
+    const verified = await groth16Verifier.verifyGroth16Proof(
+      vk,
+      proof,
+      processedInputs,
+      logger
+    );
+
+    if (!verified.result) {
+      log.info(`Verification error: ${verified.error!}`);
+    }
+
+    // write 1/0 to stdout and use exit status to indicate validity
+    console.log(verified ? "1" : "0");
+    process.exit(verified ? 0 : 1);
+  },
+});
+
 export const dev = subcommands({
   name: "dev",
-  description: "Utilities for development and maintenance",
+  description: "Utilities for local development",
   cmds: {
     ethkeygen,
     fund,
@@ -300,5 +350,7 @@ export const dev = subcommands({
     describe,
     "set-block-base-fee": setBlockBaseFee,
     "get-block-base-fee": getBlockBaseFee,
+    aggregator: devAggregator,
+    "groth16-verify": groth16Verify,
   },
 });

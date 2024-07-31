@@ -19,22 +19,22 @@ pushd _upa_format
 # 2 - (optional) has commitment flag
 function convert() {
     if ! [ "$2" = "" ] ; then
-        upa convert-vk-gnark \
+        upa convert vk-gnark \
                 --gnark-vk ../$1.vk.json \
                 --has-commitment \
                 --vk-file $1.upa-vk.json
     else
-        upa convert-vk-gnark \
+        upa convert vk-gnark \
                 --gnark-vk ../$1.vk.json \
                 --vk-file $1.upa-vk.json
     fi
 
-    upa convert-proof-gnark \
+    upa convert proof-gnark \
             --gnark-proof ../$1.proof.json \
             --gnark-inputs ../$1.inputs.json \
             --proof-file $1.upa-proof-inputs.json
     # Check its validity
-    upa groth16-verify \
+    upa dev groth16-verify \
             --vk-file $1.upa-vk.json \
             --proof-file $1.upa-proof-inputs.json \
             --log

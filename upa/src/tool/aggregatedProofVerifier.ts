@@ -4,30 +4,16 @@ import * as options from "./options";
 import * as ethers from "ethers";
 
 export const getAggregatedProofVerifier = command({
-  name: "get-aggregated-proof-verifier",
+  name: "aggregated-proof-verifier",
   args: {
     endpoint: options.endpoint(),
     instance: options.instance(),
   },
-  description: "Get the current aggregated proof verifier",
+  description: "Get the current aggregated proof verifier address",
   handler: async function ({ endpoint, instance }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
     const { verifier } = await config.upaFromInstanceFile(instance, provider);
     console.log(await verifier.outerVerifier());
-  },
-});
-
-export const getMaxNumPublicInputs = command({
-  name: "get-max-num-public-inputs",
-  args: {
-    endpoint: options.endpoint(),
-    instance: options.instance(),
-  },
-  description: "Get the current maximum number of public inputs supported",
-  handler: async function ({ endpoint, instance }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = await config.upaFromInstanceFile(instance, provider);
-    console.log(await verifier.maxNumPublicInputs());
   },
 });
 
