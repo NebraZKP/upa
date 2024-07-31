@@ -62,7 +62,7 @@ export const submit = command({
     const publicInputs: bigint[] = proofData.publicSignals.map(BigInt);
 
     // Initialize a `UpaClient` for submitting proofs to the UPA.
-    const upaClient = new UpaClient(wallet, loadInstance(upaInstance));
+    const upaClient = await UpaClient.init(wallet, loadInstance(upaInstance));
 
     // Wrap `circuitId`, `proof`, and `publicInputs` in a type
     const circuitIdProofAndInputs: CircuitIdProofAndInputs[] = [

@@ -56,7 +56,7 @@ export const devAggregator = command({
       provider
     );
     let nonce = await wallet.getNonce();
-    const upaInstance = config.upaFromInstanceFile(instance, wallet);
+    const upaInstance = await config.upaFromInstanceFile(instance, wallet);
 
     let lastBlockSeen =
       Number(await upaInstance.verifier.lastVerifiedSubmissionHeight()) - 1;

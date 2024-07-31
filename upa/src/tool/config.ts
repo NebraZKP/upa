@@ -29,10 +29,10 @@ export function loadInstance(instanceFile: string): UpaInstanceDescriptor {
 
 /// Load an instance descriptor file and initialize and instance.  Optionally
 /// connect to an ethers.Provider or etheres.Signer.
-export function upaFromInstanceFile(
+export async function upaFromInstanceFile(
   instanceFile: string,
   provider: ethers.ContractRunner
-): UpaInstance {
+): Promise<UpaInstance> {
   const instanceDesc = loadInstance(instanceFile);
   return upaInstanceFromDescriptor(instanceDesc, provider);
 }

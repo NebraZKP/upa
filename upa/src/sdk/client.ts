@@ -27,13 +27,15 @@ export type SubmissionHandle = {
  * with the UPA deployment on-chain.
  */
 export class UpaClient {
-  upaInstance: UpaInstance;
+  private constructor(public upaInstance: UpaInstance) {}
 
-  constructor(
+  public static async init(
     signer: ethers.ethers.ContractRunner,
     upaInstanceDescriptor: UpaInstanceDescriptor
-  ) {
-    this.upaInstance = upaInstanceFromDescriptor(upaInstanceDescriptor, signer);
+  ): Promise<UpaClient> {
+    return new UpaClient(
+      await upaInstanceFromDescriptor(upaInstanceDescriptor, signer)
+    );
   }
 
   // Submit one or more `(circuitId, proof, instance)` tuples to be verified

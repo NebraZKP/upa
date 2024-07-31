@@ -202,7 +202,7 @@ export const events = command({
     maxBlockPerQuery,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const upa = upaFromInstanceFile(instance, provider);
+    const upa = await upaFromInstanceFile(instance, provider);
 
     // Event getters
     const verifiedEventGetter = new SubmissionVerifiedEventGetter(upa.verifier);
@@ -260,7 +260,7 @@ export const eventCounts = command({
     outputFile,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const upa = upaFromInstanceFile(instance, provider);
+    const upa = await upaFromInstanceFile(instance, provider);
 
     // Event getters
     const verifiedEventGetter = new SubmissionVerifiedEventGetter(upa.verifier);
@@ -340,7 +340,7 @@ export const monitor = command({
     verbose,
   }): Promise<undefined> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const upa = upaFromInstanceFile(instance, provider);
+    const upa = await upaFromInstanceFile(instance, provider);
 
     // Event getters
     const submittedEventGetter = new ProofSubmittedEventGetter(upa.verifier);

@@ -50,7 +50,7 @@ export const submitInvalid = command({
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, password, provider);
-    const upaClient = new UpaClient(wallet, loadInstance(upaInstance));
+    const upaClient = await UpaClient.init(wallet, loadInstance(upaInstance));
 
     const demoAppInstance = loadDemoAppInstance(demoAppInstanceFile);
     const circuitId = demoAppInstance.circuitId;

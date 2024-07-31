@@ -23,7 +23,7 @@ export const getConfig = command({
   description: "Query the UPA config",
   handler: async function ({ endpoint, instance }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = upaFromInstanceFile(instance, provider);
+    const { verifier } = await upaFromInstanceFile(instance, provider);
 
     const output: ConfigJSON = {
       owner: await verifier.owner(),

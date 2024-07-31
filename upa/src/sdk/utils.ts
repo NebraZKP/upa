@@ -349,3 +349,22 @@ export function weiToEther(wei: bigint, numDecimalPlaces: number): number {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export function versionStringToUint(versionString: string): bigint {
+  const [major, minor, patch] = versionString.split(".").map(BigInt);
+  assert(
+    typeof major === "bigint" &&
+      typeof minor === "bigint" &&
+      typeof patch === "bigint",
+    `badly formed version string: ${versionString}`
+  );
+
+  return patch + minor * 100n + major * 10000n;
+}
+
+export function versionUintToString(versionUint: bigint): string {
+  const patch = versionUint % 100n;
+  const minor = (versionUint / 100n) % 100n;
+  const major = (versionUint / 10000n) % 100n;
+  return `${major}.${minor}.${patch}`;
+}

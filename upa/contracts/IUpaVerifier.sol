@@ -42,6 +42,10 @@ interface IUpaVerifier {
     /// for proofs in the corresponding submission.
     event SubmissionVerified(bytes32 indexed submissionId);
 
+    /// Return the version of this contract. vXX.YY.ZZ is always encoded as
+    /// DECIMAL XXYYZZ.
+    function version() external view returns (uint32);
+
     // Functions to look up verification status from public inputs. If the app
     // contract takes in public inputs as calldata, then these will be more
     // gas-efficient than looking up using a proofId or submissionId.

@@ -11,6 +11,7 @@ import { UpaFixedGasFee__factory } from "../../typechain-types";
 /// The json data output from this command.
 type StateJSON = {
   blockNumber: number;
+  upaContractVersion: bigint;
   nextSubmissionIdxToVerify: bigint;
   lastVerifiedSubmissionHeight: bigint;
   nextSubmissionIdx: bigint;
@@ -50,9 +51,10 @@ export const stats = command({
     showvks,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = upaFromInstanceFile(instance, provider);
+    const { verifier } = await upaFromInstanceFile(instance, provider);
 
     const blockNumberP = provider.getBlockNumber();
+    const contractVersionP = verifier.version();
     const nextSubmissionIdxP = verifier.getNextSubmissionIdx();
     const nextSubmissionIdxToVerifyP = verifier.nextSubmissionIdxToVerify();
     const lastVerifiedSubmissionHeightP =
@@ -106,6 +108,7 @@ export const stats = command({
 
     const output: StateJSON = {
       blockNumber: await blockNumberP,
+      upaContractVersion: await contractVersionP,
       nextSubmissionIdxToVerify: await nextSubmissionIdxToVerifyP,
       lastVerifiedSubmissionHeight: await lastVerifiedSubmissionHeightP,
       nextSubmissionIdx: await nextSubmissionIdxP,

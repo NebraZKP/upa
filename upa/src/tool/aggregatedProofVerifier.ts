@@ -12,7 +12,7 @@ export const getAggregatedProofVerifier = command({
   description: "Get the current aggregated proof verifier",
   handler: async function ({ endpoint, instance }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = config.upaFromInstanceFile(instance, provider);
+    const { verifier } = await config.upaFromInstanceFile(instance, provider);
     console.log(await verifier.outerVerifier());
   },
 });
@@ -26,7 +26,7 @@ export const getMaxNumPublicInputs = command({
   description: "Get the current maximum number of public inputs supported",
   handler: async function ({ endpoint, instance }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = config.upaFromInstanceFile(instance, provider);
+    const { verifier } = await config.upaFromInstanceFile(instance, provider);
     console.log(await verifier.maxNumPublicInputs());
   },
 });
@@ -71,7 +71,7 @@ export const setAggregatedProofVerifier = command({
       options.getPassword(password),
       provider
     );
-    const { verifier } = config.upaFromInstanceFile(instance, wallet);
+    const { verifier } = await config.upaFromInstanceFile(instance, wallet);
 
     const txReq = await verifier.setOuterVerifier.populateTransaction(
       newVerifier,

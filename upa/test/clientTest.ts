@@ -47,7 +47,7 @@ async function deployAndRegister(): Promise<DeployAndRegisterResult> {
   const vk = loadAppVK("../circuits/src/tests/data/vk.json");
   const deployResult = await deployUpaDummyVerifier();
   const { upa, upaDesc, worker } = deployResult;
-  const upaClient = new UpaClient(worker, upaDesc);
+  const upaClient = await UpaClient.init(worker, upaDesc);
   const { verifier } = upa;
   await verifier.registerVK(vk);
   const cid_a = computeCircuitId(vk);
@@ -100,6 +100,24 @@ async function deployAndSubmit(): Promise<DeployAndSubmitResult> {
 
 // UpaClient tests
 describe("UPA Client", async () => {
+  it("Fails to init if contract version is out of date", async () => {
+    let thrown = false;
+    try {
+      await deployUpaDummyVerifier("0.3.0");
+    } catch (e) {
+      thrown = true;
+    }
+    expect(thrown).to.be.true;
+
+    thrown = false;
+    try {
+      await deployUpaDummyVerifier("1.1.0");
+    } catch (e) {
+      thrown = true;
+    }
+    expect(thrown).to.be.true;
+  });
+
   it("Throws error if submission was skipped", async () => {
     const deployResult = await loadFixture(deployAndSubmit);
     const {

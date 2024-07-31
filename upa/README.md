@@ -50,6 +50,13 @@ from `UpaClient` and is now available as a standalone function in the
 `ProofVerified` events are no longer emitted. Instead, `SubmissionVerified`
 events are emitted.
 
+The `UpaClient` is now initialized using a static async `init` function.  Its
+contructor is private.
+
+The `upa submit-proofs` command now takes in four possible JSON proof file
+formats: [(circuitId, proof, inputs)], (circuitId, proof, inputs),
+[(vk, proof, inputs)], or (vk, proof, inputs).
+
 ### V1.1.2
 
 Added the `upa` tool command `upa convert-proof-snarkjs`.

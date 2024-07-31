@@ -161,7 +161,10 @@ export const submitProofsFromFile = command({
     });
     if (waitForVerified) {
       console.log(`Waiting for proofs to be verified by the UPA contract...`);
-      const upaClient = new UpaClient(wallet, config.loadInstance(upaInstance));
+      const upaClient = await UpaClient.init(
+        wallet,
+        config.loadInstance(upaInstance)
+      );
       await Promise.all(
         submissionHandles.map(async (submissionHandle) => {
           await upaClient.waitForSubmissionVerified(submissionHandle);
@@ -199,7 +202,10 @@ export async function submitProofs(
     : undefined;
 
   // Initialize a `UpaClient` for submitting proofs to the UPA.
-  const upaClient = new UpaClient(wallet, config.loadInstance(upaInstance));
+  const upaClient = await UpaClient.init(
+    wallet,
+    config.loadInstance(upaInstance)
+  );
 
   // Estimate the fee due for submission.
   const submissionSize = submission.length;

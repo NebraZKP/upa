@@ -124,7 +124,8 @@ export type DeployResult = {
 
 export async function deployUpaWithVerifier(
   verifier?: string,
-  maxNumPublicInputs?: number
+  maxNumPublicInputs?: number,
+  version?: string
 ): Promise<DeployResult> {
   const [deployer, owner, worker, user1, user2] = await ethers.getSigners();
 
@@ -139,15 +140,20 @@ export async function deployUpaWithVerifier(
     3 /*maxRetries*/,
     undefined /*groth16Verifier*/,
     owner.address,
-    worker.address
+    worker.address,
+    undefined /* feeRecipient */,
+    undefined /* feeInGas */,
+    undefined /* aggregatorCollateral */,
+    undefined /* fixedReimbursement */,
+    version
   );
-  const upa = upaInstanceFromDescriptor(upaDesc, owner);
+  const upa = await upaInstanceFromDescriptor(upaDesc, owner);
 
   return { upa, upaDesc, owner, worker, user1, user2 };
 }
 
-export async function deployUpaDummyVerifier() {
-  return deployUpaWithVerifier("test/data/test.bin");
+export async function deployUpaDummyVerifier(version?: string) {
+  return deployUpaWithVerifier("test/data/test.bin", undefined, version);
 }
 
 export async function deployAndUpgradeUpa() {

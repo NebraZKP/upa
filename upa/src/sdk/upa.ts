@@ -1,3 +1,4 @@
+import * as pkg from "../../package.json";
 import * as ethers from "ethers";
 import {
   UpaVerifier,
@@ -21,6 +22,7 @@ import {
   bigintToHex32,
   computeFinalDigest,
   digestAsFieldElements,
+  versionStringToUint,
 } from "./utils";
 
 // Function lookup strings
@@ -89,13 +91,25 @@ export type TestUpgradedUpaInstance = {
   deploymentBlockNumber: number;
 };
 
-export function upaInstanceFromDescriptor(
+export async function upaInstanceFromDescriptor(
   instanceDescriptor: UpaInstanceDescriptor,
   provider: ethers.ContractRunner
-): UpaInstance {
-  const verifier = UpaVerifier__factory.connect(instanceDescriptor.verifier);
+): Promise<UpaInstance> {
+  const verifierContract = UpaVerifier__factory.connect(
+    instanceDescriptor.verifier
+  );
+  const verifier = verifierContract.connect(provider);
+  const contractVersion = await verifier.version();
+  const sdkVersion = versionStringToUint(pkg.version);
+  if (contractVersion / 100n !== sdkVersion / 100n) {
+    throw (
+      `UPA contract version ${contractVersion} is incompatible with SDK ` +
+      `version ${sdkVersion}`
+    );
+  }
+
   return {
-    verifier: verifier.connect(provider),
+    verifier,
     deploymentBlockNumber: instanceDescriptor.deploymentBlockNumber,
     deploymentTx: instanceDescriptor.deploymentTx,
     chainId: instanceDescriptor.chainId,
@@ -184,7 +198,7 @@ export async function updateFeeOptions(
         gasPrice: options.maxFeePerGas,
         maxPriorityFeePerGas: undefined,
         maxFeePerGas: undefined,
-        gasLimit: 100_000
+        gasLimit: 100_000,
       };
     }
 

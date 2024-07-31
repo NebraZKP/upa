@@ -74,7 +74,7 @@ export async function submitProofToUpa(
   await changeNetwork();
   await provider.send("eth_requestAccounts", []); // Prompt user to connect their wallet
   const signer = await provider.getSigner();
-  const upaClient = new UpaClient(signer, upaInstanceDescriptor);
+  const upaClient = await UpaClient.init(signer, upaInstanceDescriptor);
 
   // TODO: Web version of UpaClient
   const submissionHandle = await upaClient.submitProofs([
@@ -108,7 +108,7 @@ export async function aggregatingProofOnUpa(
   await changeNetwork();
   const signer = await provider.getSigner();
 
-  const upaClient = new UpaClient(signer, upaInstanceDescriptor);
+  const upaClient = await UpaClient.init(signer, upaInstanceDescriptor);
 
   const proofId = await utils.computeProofId(
     proofData.circuitId,
