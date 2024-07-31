@@ -141,4 +141,7 @@ pub mod constants {
 
     /// BN254 curve parameter
     pub const BN254_CURVE_PARAMETER: u64 = 4965661367192848881;
+
+    /// BN245 curve parameter bits
+    pub const BN254_CURVE_PARAMETER_BITS: usize = 63;
 }
