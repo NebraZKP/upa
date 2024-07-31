@@ -14,6 +14,7 @@ halo2-ecc = { git = "https://github.com/axiom-crypto/halo2-lib.git", version = "
 hex = { version = "0.4.3" }
 itertools = { version = "0.10", default-features = false }
 log = { version = "0.4.20", default-features = false }
+num-bigint = { version = "=0.4", features = ["rand"] }
 poseidon = { git = "https://github.com/NebraZKP/halo2-lib", tag = "v0.3.0-ce-poseidon", package = "poseidon" }
 poseidon_native = { git = "https://github.com/axiom-crypto/halo2.git", branch = "axiom/dev", package = "poseidon" }
 rand = { version = "0.8", default-features = false }
