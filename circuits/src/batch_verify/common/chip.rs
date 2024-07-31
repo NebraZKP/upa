@@ -1,6 +1,7 @@
 extern crate alloc;
 
 use self::fp2_selectable_chip::Fp2SelectableChip;
+use super::ecc::constants::BN254_CURVE_PARAMETER_BITS;
 use crate::{
     batch_verify::common::{
         ecc::{
@@ -39,6 +40,7 @@ use halo2_ecc::{
 use itertools::Itertools;
 
 pub const WINDOW_BITS: usize = 4;
+pub const WINDOW_BITS_G2_SUBGROUP_CHECK: usize = 3;
 
 pub struct BatchVerifierChip<'a, F>
 where
@@ -364,8 +366,8 @@ where
             ctx,
             point.clone(),
             vec![x],
-            F::NUM_BITS as usize,
-            WINDOW_BITS,
+            BN254_CURVE_PARAMETER_BITS,
+            WINDOW_BITS_G2_SUBGROUP_CHECK,
         );
         // [2x]P
         let two_xp = ec_chip.double(ctx, xp.clone());
@@ -402,17 +404,19 @@ where
         let chip = Fp2Chip::new(self.fp_chip());
         let selectable_chip = Fp2SelectableChip { fp2_chip: &chip };
         let ec_chip = EccChip::new(&selectable_chip);
-        // Load and assign the BN254_CURVE_PARAMETER
+        // Load and assign the BN254_CURVE_PARAMETER.
+        // TODO: load the constant 6x^2 in one go directly
         let x = ctx.load_constant(F::from(BN254_CURVE_PARAMETER));
         let x_2 = self.fp_chip().gate().mul(ctx, x, x);
         let six = ctx.load_constant(F::from(6));
         let six_x_2 = self.fp_chip().gate().mul(ctx, six, x_2);
+        const SIX_X_2_BITS: usize = 127;
         // [6x^2]P
         let six_x_2_p = ec_chip.scalar_mult::<G2Affine>(
             ctx,
             point.clone(),
             vec![six_x_2],
-            F::NUM_BITS as usize,
+            SIX_X_2_BITS,
             WINDOW_BITS,
         );
         // \psi(P)
@@ -647,6 +651,7 @@ pub mod fp2_selectable_chip {
 
     type Fp2FieldPoint<F> = FieldVector<ProperCrtUint<F>>;
 
+    /// Wrapper of a [`Fp2Chip`] implementing [`Selectable`].
     #[derive(Clone, Copy, Debug)]
     pub struct Fp2SelectableChip<'a, F>
     where
@@ -875,7 +880,7 @@ pub mod fp2_selectable_chip {
             // TODO: why am I getting memory errors if I simply transmute
             // here? The extra constraints shouldn't be necessary here.
             // See the implementation of the trait
-            // impl<'range, F: PrimeField, Fp: PrimeField> Selectable<F, ProperCrtUint<F>>
+            // impl<'range, F, Fp> Selectable<F, ProperCrtUint<F>>
             // for FpChip<'range, F, Fp>
 
             let c_0 = self.fp2_chip.fp_chip().carry_mod(ctx, c_0_crt);
