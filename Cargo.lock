@@ -2599,6 +2599,7 @@ dependencies = [
  "hex",
  "itertools 0.10.5",
  "log",
+ "num-bigint",
  "poseidon 0.1.0",
  "poseidon 0.2.0",
  "rand",

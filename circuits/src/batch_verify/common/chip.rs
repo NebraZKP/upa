@@ -1,8 +1,10 @@
 extern crate alloc;
 
+use self::fp2_selectable_chip::Fp2SelectableChip;
 use crate::{
     batch_verify::common::{
         ecc::{
+            constants::{BN254_CURVE_PARAMETER, XI_Q_2, XI_Q_3},
             g1_input_point_to_inner, g2_input_point_to_inner,
             get_assigned_value_g1point, get_assigned_value_g2point,
             G1InputPoint, G1Point, G2InputPoint, G2Point,
@@ -15,6 +17,7 @@ use crate::{
             FieldElementRepresentation, InCircuitHash, InCircuitPartialHash,
             PoseidonHasher,
         },
+        reduced::FromReduced,
     },
     EccPrimeField,
 };
@@ -26,7 +29,7 @@ use halo2_base::{
 use halo2_ecc::{
     bigint::ProperCrtUint,
     bn254::{self, pairing::PairingChip, Fp12Chip, Fp2Chip, FqPoint},
-    ecc::{check_is_on_curve, scalar_multiply, EcPoint},
+    ecc::{check_is_on_curve, scalar_multiply, EcPoint, EccChip},
     fields::{
         fp::{FpChip, Reduced},
         vector::FieldVector,
@@ -202,6 +205,12 @@ where
         self.assert_g1_point_is_on_curve(ctx, &proof.c);
         self.assert_g1_point_is_on_curve(ctx, &proof.m);
         self.assert_g1_point_is_on_curve(ctx, &proof.pok);
+
+        // Subgroup check for the g2 point
+        self.assert_g2_subgroup_membership(
+            ctx,
+            &FromReduced::from_reduced(&proof.b),
+        );
     }
 
     /// Asserts that all points in a [`VerificationKey`] are valid affine
@@ -225,6 +234,19 @@ where
         }
         self.assert_g2_point_is_on_curve(ctx, &vk.h1);
         self.assert_g2_point_is_on_curve(ctx, &vk.h2);
+
+        // Subgroup check for G2 points
+        let beta = FromReduced::from_reduced(&vk.beta);
+        let gamma = FromReduced::from_reduced(&vk.gamma);
+        let delta = FromReduced::from_reduced(&vk.delta);
+        let h1 = FromReduced::from_reduced(&vk.h1);
+        let h2 = FromReduced::from_reduced(&vk.h2);
+
+        self.assert_g2_subgroup_membership(ctx, &beta);
+        self.assert_g2_subgroup_membership(ctx, &gamma);
+        self.assert_g2_subgroup_membership(ctx, &delta);
+        self.assert_g2_subgroup_membership(ctx, &h1);
+        self.assert_g2_subgroup_membership(ctx, &h2);
     }
 
     /// Return r^0, r, ... r^{len - 1}
@@ -304,6 +326,128 @@ where
         let fp12_chip = Fp12Chip::<F>::new(self.fp_chip);
         let fp12_one = fp12_chip.load_constant(ctx, Fq12::one());
         fp12_chip.assert_equal(ctx, final_exp_out, fp12_one);
+    }
+
+    /// Applies the Frobenius endomorphism to `point`.
+    pub(crate) fn apply_g2_endomorphism(
+        &self,
+        ctx: &mut Context<F>,
+        point: &G2Point<F>,
+    ) -> G2Point<F> {
+        let chip = Fp2Chip::new(self.fp_chip());
+        let EcPoint { x, y, .. } = point;
+        let xi_q_3 = chip.load_constant(ctx, XI_Q_3);
+        let xi_q_2 = chip.load_constant(ctx, XI_Q_2);
+        let frob_x = chip.conjugate(ctx, x.clone());
+        let frob_y = chip.conjugate(ctx, y.clone());
+        let new_x = chip.mul(ctx, frob_x, xi_q_3);
+        let new_y = chip.mul(ctx, frob_y, xi_q_2);
+        EcPoint::new(new_x, new_y)
+    }
+
+    /// Asserts that `point` belongs to the subgroup of G2 of order
+    /// equal to that of `F`. This is the fully optimized check that asserts
+    /// `[x+1]P + \psi([x]P) + \psi^2([x]P) = \psi^3([2x]P)`.
+    pub fn assert_g2_subgroup_membership(
+        &self,
+        ctx: &mut Context<F>,
+        point: &G2Point<F>,
+    ) {
+        // Load the ECC and Fp2 chips
+        let chip = Fp2Chip::new(self.fp_chip());
+        let selectable_chip = Fp2SelectableChip { fp2_chip: &chip };
+        let ec_chip = EccChip::new(&selectable_chip);
+        // Load and assign the BN254_CURVE_PARAMETER
+        let x = ctx.load_constant(F::from(BN254_CURVE_PARAMETER));
+        // [x]P
+        let xp = ec_chip.scalar_mult::<G2Affine>(
+            ctx,
+            point.clone(),
+            vec![x],
+            F::NUM_BITS as usize,
+            WINDOW_BITS,
+        );
+        // [2x]P
+        let two_xp = ec_chip.double(ctx, xp.clone());
+        // [x+1]P
+        let xp_plus_one = ec_chip.add_unequal(ctx, xp.clone(), point, false);
+        // \psi([x]P)
+        let psi_xp = self.apply_g2_endomorphism(ctx, &xp);
+        // \psi^2([x]P)
+        let psi2_xp = self.apply_g2_endomorphism(ctx, &psi_xp);
+        // \psi([2x]P)
+        let psi_two_xp = self.apply_g2_endomorphism(ctx, &two_xp);
+        // \psi^2([2x]P)
+        let psi2_two_xp = self.apply_g2_endomorphism(ctx, &psi_two_xp);
+        // \psi^3([2x]P)
+        let psi3_two_xp = self.apply_g2_endomorphism(ctx, &psi2_two_xp);
+        // [x+1]P + \psi([x]P)
+        let lhs = ec_chip.add_unequal(ctx, xp_plus_one, psi_xp, true);
+        // [x+1]P + \psi([x]P) + \psi^2([x]P)
+        let lhs = ec_chip.add_unequal(ctx, lhs, psi2_xp, true);
+        // [x+1]P + \psi([x]P) + \psi^2([x]P) = \psi^3([2x]P)
+        ec_chip.assert_equal(ctx, lhs, psi3_two_xp);
+    }
+
+    /// Asserts that `point` belongs to the subgroup of G2 of order
+    /// equal to that of `F`. This is a partially optimized check that asserts
+    /// `[6x^2]P = \psi(P)`.
+    #[allow(dead_code)] // kept for testing and benchmarking
+    fn assert_g2_subgroup_membership_glv(
+        &self,
+        ctx: &mut Context<F>,
+        point: &G2Point<F>,
+    ) {
+        // Load the ECC and Fp2 chips
+        let chip = Fp2Chip::new(self.fp_chip());
+        let selectable_chip = Fp2SelectableChip { fp2_chip: &chip };
+        let ec_chip = EccChip::new(&selectable_chip);
+        // Load and assign the BN254_CURVE_PARAMETER
+        let x = ctx.load_constant(F::from(BN254_CURVE_PARAMETER));
+        let x_2 = self.fp_chip().gate().mul(ctx, x, x);
+        let six = ctx.load_constant(F::from(6));
+        let six_x_2 = self.fp_chip().gate().mul(ctx, six, x_2);
+        // [6x^2]P
+        let six_x_2_p = ec_chip.scalar_mult::<G2Affine>(
+            ctx,
+            point.clone(),
+            vec![six_x_2],
+            F::NUM_BITS as usize,
+            WINDOW_BITS,
+        );
+        // \psi(P)
+        let psi_p = self.apply_g2_endomorphism(ctx, point);
+        // \psi(P) = [6x^2]P
+        ec_chip.assert_equal(ctx, six_x_2_p, psi_p);
+    }
+
+    /// Asserts that `point` belongs to the subgroup of G2 of order
+    /// equal to that of `F`. This is the naive check that asserts
+    /// `[r]P = O`.
+    #[allow(dead_code)] // kept for testing and benchmarking
+    fn assert_g2_subgroup_membership_naive(
+        &self,
+        ctx: &mut Context<F>,
+        point: &G2Point<F>,
+    ) {
+        // Load the ECC and Fp2 chips
+        let chip = Fp2Chip::new(self.fp_chip());
+        let selectable_chip = Fp2SelectableChip { fp2_chip: &chip };
+        let ec_chip = EccChip::new(&selectable_chip);
+        // Load and assign `r-1`
+        let r_minus_one = ctx.load_constant(F::zero() - F::one());
+        // [r-1]P
+        let r_minus_one_p = ec_chip.scalar_mult::<G2Affine>(
+            ctx,
+            point.clone(),
+            vec![r_minus_one],
+            F::NUM_BITS as usize,
+            WINDOW_BITS,
+        );
+        // - P
+        let minus_p = ec_chip.negate(ctx, point.clone());
+        // [r-1] P = - P
+        ec_chip.assert_equal(ctx, r_minus_one_p, minus_p);
     }
 }
 
@@ -487,5 +631,303 @@ impl<F: EccPrimeField> IntoIterator for AssignedPublicInputs<F> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+/// Implementation of the [`Selectable`] trait for [`Fp2Chip`].
+pub mod fp2_selectable_chip {
+    use crate::EccPrimeField;
+    use halo2_base::{self, AssignedValue, Context};
+    use halo2_ecc::{
+        bigint::{select, select_by_indicator, CRTInteger, ProperCrtUint},
+        bn254::Fp2Chip,
+        fields::{vector::FieldVector, FieldChip, Selectable},
+    };
+    use num_bigint::BigUint;
+
+    type Fp2FieldPoint<F> = FieldVector<ProperCrtUint<F>>;
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct Fp2SelectableChip<'a, F>
+    where
+        F: EccPrimeField,
+    {
+        pub fp2_chip: &'a Fp2Chip<'a, F>,
+    }
+
+    impl<'a, F> FieldChip<F> for Fp2SelectableChip<'a, F>
+    where
+        F: EccPrimeField,
+    {
+        const PRIME_FIELD_NUM_BITS: u32 =
+            <Fp2Chip<'a, F> as FieldChip<F>>::PRIME_FIELD_NUM_BITS;
+        type FieldPoint = <Fp2Chip<'a, F> as FieldChip<F>>::FieldPoint;
+        type UnsafeFieldPoint =
+            <Fp2Chip<'a, F> as FieldChip<F>>::UnsafeFieldPoint;
+        type FieldType = <Fp2Chip<'a, F> as FieldChip<F>>::FieldType;
+        type RangeChip = <Fp2Chip<'a, F> as FieldChip<F>>::RangeChip;
+        type ReducedFieldPoint =
+            <Fp2Chip<'a, F> as FieldChip<F>>::ReducedFieldPoint;
+
+        fn native_modulus(&self) -> &BigUint {
+            self.fp2_chip.native_modulus()
+        }
+
+        fn range(&self) -> &Self::RangeChip {
+            self.fp2_chip.range()
+        }
+
+        fn limb_bits(&self) -> usize {
+            self.fp2_chip.limb_bits()
+        }
+
+        fn get_assigned_value(
+            &self,
+            x: &Self::UnsafeFieldPoint,
+        ) -> Self::FieldType {
+            self.fp2_chip.get_assigned_value(x)
+        }
+
+        fn load_private(
+            &self,
+            ctx: &mut Context<F>,
+            fe: Self::FieldType,
+        ) -> Self::FieldPoint {
+            self.fp2_chip.load_private(ctx, fe)
+        }
+
+        fn load_constant(
+            &self,
+            ctx: &mut Context<F>,
+            fe: Self::FieldType,
+        ) -> Self::FieldPoint {
+            self.fp2_chip.load_constant(ctx, fe)
+        }
+
+        fn add_no_carry(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::UnsafeFieldPoint>,
+            b: impl Into<Self::UnsafeFieldPoint>,
+        ) -> Self::UnsafeFieldPoint {
+            self.fp2_chip.add_no_carry(ctx, a, b)
+        }
+
+        fn add_constant_no_carry(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::UnsafeFieldPoint>,
+            c: Self::FieldType,
+        ) -> Self::UnsafeFieldPoint {
+            self.fp2_chip.add_constant_no_carry(ctx, a, c)
+        }
+
+        fn sub_no_carry(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::UnsafeFieldPoint>,
+            b: impl Into<Self::UnsafeFieldPoint>,
+        ) -> Self::UnsafeFieldPoint {
+            self.fp2_chip.sub_no_carry(ctx, a, b)
+        }
+
+        fn negate(
+            &self,
+            ctx: &mut Context<F>,
+            a: Self::FieldPoint,
+        ) -> Self::FieldPoint {
+            self.fp2_chip.negate(ctx, a)
+        }
+
+        fn scalar_mul_no_carry(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::UnsafeFieldPoint>,
+            c: i64,
+        ) -> Self::UnsafeFieldPoint {
+            self.fp2_chip.scalar_mul_no_carry(ctx, a, c)
+        }
+
+        fn scalar_mul_and_add_no_carry(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::UnsafeFieldPoint>,
+            b: impl Into<Self::UnsafeFieldPoint>,
+            c: i64,
+        ) -> Self::UnsafeFieldPoint {
+            self.fp2_chip.scalar_mul_and_add_no_carry(ctx, a, b, c)
+        }
+
+        fn mul_no_carry(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::UnsafeFieldPoint>,
+            b: impl Into<Self::UnsafeFieldPoint>,
+        ) -> Self::UnsafeFieldPoint {
+            self.fp2_chip.mul_no_carry(ctx, a, b)
+        }
+
+        fn check_carry_mod_to_zero(
+            &self,
+            ctx: &mut Context<F>,
+            a: Self::UnsafeFieldPoint,
+        ) {
+            self.fp2_chip.check_carry_mod_to_zero(ctx, a)
+        }
+
+        fn carry_mod(
+            &self,
+            ctx: &mut Context<F>,
+            a: Self::UnsafeFieldPoint,
+        ) -> Self::FieldPoint {
+            self.fp2_chip.carry_mod(ctx, a)
+        }
+
+        fn range_check(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::UnsafeFieldPoint>,
+            max_bits: usize,
+        ) {
+            self.fp2_chip.range_check(ctx, a, max_bits)
+        }
+
+        fn enforce_less_than(
+            &self,
+            ctx: &mut Context<F>,
+            a: Self::FieldPoint,
+        ) -> Self::ReducedFieldPoint {
+            self.fp2_chip.enforce_less_than(ctx, a)
+        }
+
+        fn is_soft_zero(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::FieldPoint>,
+        ) -> AssignedValue<F> {
+            self.fp2_chip.is_soft_zero(ctx, a)
+        }
+
+        fn is_soft_nonzero(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::FieldPoint>,
+        ) -> AssignedValue<F> {
+            self.fp2_chip.is_soft_nonzero(ctx, a)
+        }
+
+        fn is_zero(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::FieldPoint>,
+        ) -> AssignedValue<F> {
+            self.fp2_chip.is_zero(ctx, a)
+        }
+
+        fn is_equal_unenforced(
+            &self,
+            ctx: &mut Context<F>,
+            a: Self::ReducedFieldPoint,
+            b: Self::ReducedFieldPoint,
+        ) -> AssignedValue<F> {
+            self.fp2_chip.is_equal_unenforced(ctx, a, b)
+        }
+
+        fn assert_equal(
+            &self,
+            ctx: &mut Context<F>,
+            a: impl Into<Self::FieldPoint>,
+            b: impl Into<Self::FieldPoint>,
+        ) {
+            self.fp2_chip.assert_equal(ctx, a, b)
+        }
+    }
+
+    impl<'a, F> Selectable<F, Fp2FieldPoint<F>> for Fp2SelectableChip<'a, F>
+    where
+        F: EccPrimeField,
+    {
+        fn select(
+            &self,
+            ctx: &mut Context<F>,
+            a: Fp2FieldPoint<F>,
+            b: Fp2FieldPoint<F>,
+            sel: AssignedValue<F>,
+        ) -> Fp2FieldPoint<F> {
+            assert_eq!(
+                a.0.len(),
+                2,
+                "Fp2 field points should have two Fp coordinates"
+            );
+            assert_eq!(
+                b.0.len(),
+                2,
+                "Fp2 field points should have two Fp coordinates"
+            );
+            let a_0 = &a.0[0];
+            let a_1 = &a.0[1];
+            let b_0 = &b.0[0];
+            let b_1 = &b.0[1];
+            let c_0_crt =
+                select::crt(self.gate(), ctx, a_0.into(), b_0.into(), sel);
+            let c_1_crt =
+                select::crt(self.gate(), ctx, a_1.into(), b_1.into(), sel);
+            // TODO: why am I getting memory errors if I simply transmute
+            // here? The extra constraints shouldn't be necessary here.
+            // See the implementation of the trait
+            // impl<'range, F: PrimeField, Fp: PrimeField> Selectable<F, ProperCrtUint<F>>
+            // for FpChip<'range, F, Fp>
+
+            let c_0 = self.fp2_chip.fp_chip().carry_mod(ctx, c_0_crt);
+            let c_1 = self.fp2_chip.fp_chip().carry_mod(ctx, c_1_crt);
+
+            FieldVector(vec![c_0, c_1])
+        }
+
+        fn select_by_indicator(
+            &self,
+            ctx: &mut Context<F>,
+            a: &impl AsRef<[Fp2FieldPoint<F>]>,
+            coeffs: &[AssignedValue<F>],
+        ) -> Fp2FieldPoint<F> {
+            let points = a.as_ref();
+            let num_points = points.len();
+            let mut first_coordinate: Vec<CRTInteger<F>> =
+                Vec::with_capacity(num_points);
+            let mut second_coordinate: Vec<CRTInteger<F>> =
+                Vec::with_capacity(num_points);
+            for point in points {
+                assert_eq!(
+                    point.0.len(),
+                    2,
+                    "Fp2 field points should have two Fp coordinates"
+                );
+                let p_0 = &point.0[0];
+                let p_1 = &point.0[1];
+                first_coordinate.push(p_0.into());
+                second_coordinate.push(p_1.into());
+            }
+            let c_0_crt = select_by_indicator::crt(
+                self.gate(),
+                ctx,
+                &first_coordinate,
+                coeffs,
+                &self.fp2_chip.fp_chip().limb_bases,
+            );
+            let c_1_crt = select_by_indicator::crt(
+                self.gate(),
+                ctx,
+                &second_coordinate,
+                coeffs,
+                &self.fp2_chip.fp_chip().limb_bases,
+            );
+
+            // TODO: why am I getting memory errors if I simply transmute
+            // here? The extra constraints shouldn't be necessary here.
+            let c_0 = self.fp2_chip.fp_chip().carry_mod(ctx, c_0_crt);
+            let c_1 = self.fp2_chip.fp_chip().carry_mod(ctx, c_1_crt);
+
+            FieldVector(vec![c_0, c_1])
+        }
     }
 }
