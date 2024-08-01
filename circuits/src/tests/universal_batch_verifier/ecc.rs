@@ -259,6 +259,18 @@ where
     }
 }
 
+#[test]
+fn clear_cofactor_test() {
+    let g2_generator = G2Affine::generator();
+    let g = g2_generator.to_curve();
+    let g_clear_affine = G2Affine::from(g.clear_cofactor());
+    if g2_generator != g_clear_affine {
+        println!("g2_generator: {:?}", g2_generator);
+        println!("g_clear_affine: {:?}", g_clear_affine);
+        panic!("G2 generator not in the subgroup");
+    }
+}
+
 /// Tests that: the circuit is satisfied for `subgroup_check` for a valid
 /// G2 point, it fails for a point not on the curve, and it fails for a point
 /// on the curve but not in the subgroup unless we skip the subgroup check.
