@@ -132,6 +132,7 @@ where
 {
     let num_bytes = num_bytes::<F>();
     assert_eq!(num_bytes, bytes.len(), "Wrong number of bytes");
+    assert_eq!(num_bytes % NUM_PARTS, 0);
     let num_bytes_in_part = num_bytes / NUM_PARTS;
     let powers = byte_decomposition_powers()
         .into_iter()
@@ -174,6 +175,7 @@ where
     F: EccPrimeField,
 {
     let num_bytes = num_bytes::<F>();
+    assert_eq!(num_bytes % NUM_PARTS, 0);
     let num_bytes_in_part = num_bytes / NUM_PARTS;
     let num_bits_in_part = num_bytes_in_part * BYTE_SIZE_IN_BITS;
     let parts = assigned_field_element_bytes_into_parts::<F, NUM_PARTS>(
