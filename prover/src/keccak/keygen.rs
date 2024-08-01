@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use circuits::{
-    keccak::{KeccakCircuit, KeccakConfig, KeccakInputType},
+    keccak::{KeccakCircuit, KeccakConfig},
     SafeCircuit,
 };
 use clap::Parser;
@@ -67,10 +67,7 @@ pub fn keygen(params: KeygenParams) {
         panic_if_file_exists(&params.gate_config);
     }
 
-    let circuit = KeccakCircuit::<_, G1Affine>::keygen(
-        &keccak_config,
-        &KeccakInputType::Variable,
-    );
+    let circuit = KeccakCircuit::<_, G1Affine>::keygen(&keccak_config, &());
     let gate_config = circuit.gate_config();
 
     save_gate_config(&params.gate_config, &gate_config);

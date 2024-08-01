@@ -82,7 +82,6 @@ fn check_words() {
     };
     // This input has `app_public_inputs` of length `len` + `filler_len`.
     let keccak_input = KeccakPaddedCircuitInput {
-        is_fixed: false,
         len: len_fr,
         app_vk: PaddedVerifyingKeyLimbs::dummy(&config),
         has_commitment: Fr::zero(),

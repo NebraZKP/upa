@@ -6,7 +6,7 @@
 extern crate alloc;
 
 use self::{
-    inputs::{KeccakCircuitInputs, KeccakFixedInput, KeccakVarLenInput},
+    inputs::{KeccakCircuitInputs, KeccakVarLenInput},
     utils::{
         byte_decomposition, byte_decomposition_list,
         compose_into_field_element, compute_final_digest, compute_proof_id,
@@ -67,7 +67,7 @@ use halo2_base::{
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use snark_verifier_sdk::CircuitExt;
-use std::env::{set_var, var, VarError};
+use std::env::{set_var, var};
 use zkevm_keccak::{util::eth_types::Field, KeccakConfig as KeccakBaseConfig};
 
 pub mod chip;
@@ -149,43 +149,6 @@ impl fmt::Display for KeccakConfig {
         writeln!(f, "Num app public inputs: {}", self.num_app_public_inputs)?;
         writeln!(f, "Inner batch size: {}", self.inner_batch_size)?;
         write!(f, "Outer batch size: {}", self.outer_batch_size)
-    }
-}
-
-/// A single public input to the keccak circuit, consisting of the vk_hash of
-/// an application circuit together with a vector of public inputs for a
-/// single proof.
-/// Keccak Input Type
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum KeccakInputType {
-    /// Fixed Length Type
-    Fixed,
-    /// Variable Length Type
-    Variable,
-}
-
-impl KeccakInputType {
-    /// Returns true if `self` is fixed.
-    pub const fn is_fixed(&self) -> bool {
-        match self {
-            Self::Fixed => true,
-            Self::Variable => false,
-        }
-    }
-
-    /// Returns true is `self` is variable.
-    pub const fn is_var(&self) -> bool {
-        !self.is_fixed()
-    }
-
-    /// Tries to load a [`KeccakInputType`] from the environment.
-    pub fn load_from_env() -> Result<Self, VarError> {
-        match var("KECCAK_INPUT_TYPE")?.to_uppercase().as_str() {
-            "FIXED" | "F" => Ok(KeccakInputType::Fixed),
-            "VARIABLE" | "VAR" | "V" => Ok(KeccakInputType::Variable),
-            // We consider an improperly set variable as not present
-            _ => Err(VarError::NotPresent),
-        }
     }
 }
 
@@ -344,9 +307,6 @@ pub(crate) struct KeccakPaddedCircuitInput<F>
 where
     F: EccPrimeField<Repr = [u8; 32]>,
 {
-    /// Is fixed flag.
-    pub is_fixed: bool,
-
     /// Length of the application public input, in field elements
     pub len: F,
 
@@ -380,14 +340,6 @@ where
     /// flag, commitment hash, commitment point limbs, and
     /// public inputs.
     pub fn to_instance_values(&self) -> Vec<F> {
-        /*
-        let mut result = if self.is_fixed {
-            vec![self.app_vk_hash]
-        } else {
-            vec![self.len, self.app_vk_hash]
-        };
-        */
-        assert!(self.is_var(), "Fixed length keccak no longer supported");
         let mut result = vec![self.len];
         result.extend_from_slice(&self.app_vk.flatten());
         result.push(self.has_commitment);
@@ -397,19 +349,8 @@ where
         result
     }
 
-    /// Returns true if `self` is fixed.
-    pub const fn is_fixed(&self) -> bool {
-        self.is_fixed
-    }
-
-    /// Returns true if `self` is variable.
-    pub const fn is_var(&self) -> bool {
-        !self.is_fixed
-    }
-
     /// Generates a dummy [`KeccakPaddedCircuitInput`] for `config` with a given `input_type`.
-    pub fn dummy(config: &KeccakConfig, input_type: KeccakInputType) -> Self {
-        let is_fixed = input_type.is_fixed();
+    pub fn dummy(config: &KeccakConfig) -> Self {
         let app_vk = PaddedVerifyingKeyLimbs::dummy(config);
         let has_commitment = F::zero();
         let app_public_inputs = (0..config.num_app_public_inputs)
@@ -418,7 +359,6 @@ where
         let commitment_hash = Default::default();
         let commitment_point_limbs = vec![Default::default(); NUM_LIMBS * 2];
         Self {
-            is_fixed,
             len: F::from(config.num_app_public_inputs as u64),
             app_vk,
             has_commitment,
@@ -436,11 +376,8 @@ where
 
     /// Checks if `self` is a valid public input for `config`.
     pub fn is_well_constructed(&self, config: &KeccakConfig) -> bool {
-        let length_condition = if self.is_fixed {
-            self.len.get_lower_32() == config.num_app_public_inputs
-        } else {
-            self.len.get_lower_32() <= config.num_app_public_inputs
-        };
+        let length_condition =
+            self.len.get_lower_32() <= config.num_app_public_inputs;
         let has_commitment_condition =
             self.commitment_point_limbs.len() == 2 * NUM_LIMBS;
         (config.num_app_public_inputs == self.app_public_inputs.len() as u32)
@@ -520,7 +457,6 @@ where
         let app_vk = PaddedVerifyingKeyLimbs::from_vk(&vk);
 
         KeccakPaddedCircuitInput {
-            is_fixed: false,
             len: F::from(var_len_input.app_public_inputs.len() as u64),
             has_commitment: F::from(has_commitment),
             app_vk,
@@ -528,15 +464,6 @@ where
             commitment_hash,
             commitment_point_limbs,
         }
-    }
-}
-
-impl<F> From<KeccakFixedInput<F>> for KeccakPaddedCircuitInput<F>
-where
-    F: EccPrimeField<Repr = [u8; 32]>,
-{
-    fn from(_value: KeccakFixedInput<F>) -> Self {
-        todo!()
     }
 }
 
@@ -569,62 +496,29 @@ where
         KeccakPaddedCircuitInputs(circuit_inputs)
     }
 
-    pub(crate) fn from_fixed_or_var_len_inputs(
+    pub(crate) fn from_keccak_circuit_inputs(
         value: &KeccakCircuitInputs<F>,
         max_num_public_inputs: usize,
     ) -> Self {
-        match value {
-            KeccakCircuitInputs::Fixed(fixed_inputs) => {
-                KeccakPaddedCircuitInputs::from(fixed_inputs.clone())
-            }
-            KeccakCircuitInputs::VarLen(var_len_inputs) => {
-                KeccakPaddedCircuitInputs::from_var_len_inputs(
-                    var_len_inputs,
-                    max_num_public_inputs,
-                )
-            }
-        }
-    }
-}
-
-impl<F> From<Vec<KeccakFixedInput<F>>> for KeccakPaddedCircuitInputs<F>
-where
-    F: EccPrimeField<Repr = [u8; 32]>,
-{
-    fn from(value: Vec<KeccakFixedInput<F>>) -> Self {
-        Self(value.into_iter().map(|value| value.into()).collect())
+        KeccakPaddedCircuitInputs::from_var_len_inputs(
+            &value.0,
+            max_num_public_inputs,
+        )
     }
 }
 
 impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakPaddedCircuitInputs<F> {
     /// Creates some dummy [`KeccakPaddedCircuitInputs`] for `config` with `input_type`.
-    pub fn dummy(config: &KeccakConfig, input_type: KeccakInputType) -> Self {
+    pub fn dummy(config: &KeccakConfig) -> Self {
         Self(
             (0..config.inner_batch_size * config.outer_batch_size)
-                .map(|_| KeccakPaddedCircuitInput::dummy(config, input_type))
+                .map(|_| KeccakPaddedCircuitInput::dummy(config))
                 .collect(),
         )
     }
 
-    /// Returns `true` if `self` is fixed, i.e., if every [`KeccakPaddedCircuitInput`] in `self`
-    /// is fixed.
-    pub fn is_fixed(&self) -> bool {
-        self.0.iter().all(KeccakPaddedCircuitInput::is_fixed)
-    }
-
-    /// Returns `true` if `self` is var, i.e., if every [`KeccakPaddedCircuitInput`] in `self`
-    /// is var.
-    pub fn is_var(&self) -> bool {
-        self.0.iter().all(KeccakPaddedCircuitInput::is_var)
-    }
-
     /// Checks if `self` consists of valid public inputs for `config`.
     pub fn is_well_constructed(&self, config: &KeccakConfig) -> bool {
-        // Either all inputs are fixed or all inputs are var.
-        if !(self.is_fixed() ^ self.is_var()) {
-            return false;
-        }
-
         // Total number of inputs should match `inner_batch_size` * `outer_batch_size`
         if config.inner_batch_size * config.outer_batch_size
             != self.0.len() as u32
@@ -704,9 +598,6 @@ where
 /// Assigned Keccak Input
 #[derive(Clone, Debug)]
 pub(crate) struct AssignedKeccakInput<F: ScalarField> {
-    /// Is fixed flag
-    is_fixed: bool,
-
     /// Length of the application public input, in field elements
     len: AssignedValue<F>,
 
@@ -749,11 +640,6 @@ pub(crate) struct AssignedKeccakInput<F: ScalarField> {
 }
 
 impl<F: ScalarField> AssignedKeccakInput<F> {
-    /// Returns `true` if `self` is fixed.
-    pub fn is_fixed(&self) -> bool {
-        self.is_fixed
-    }
-
     /// Returns the length of `self`.
     pub fn len(&self) -> &AssignedValue<F> {
         &self.len
@@ -804,7 +690,6 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
         let is_len_zero = range.gate.is_zero(ctx, len);
         range.gate.assert_is_const(ctx, &is_len_zero, &F::zero());
         Self {
-            is_fixed: input.is_fixed,
             len,
             app_vk,
             has_commitment,
@@ -825,32 +710,12 @@ impl<F> AssignedKeccakInputs<F>
 where
     F: Field,
 {
-    /// Returns `true` if `self` is fixed, i.e., if every [`AssignedKeccakInput`] in `self`
-    /// is fixed.
-    pub fn is_fixed(&self) -> bool {
-        self.0.iter().all(AssignedKeccakInput::is_fixed)
-    }
-
-    /// Returns the [`KeccakInputType`] of `self`.
-    pub fn input_type(&self) -> KeccakInputType {
-        if self.is_fixed() {
-            KeccakInputType::Fixed
-        } else {
-            KeccakInputType::Variable
-        }
-    }
-
     /// Flattens `self`, disregarding the length if `self` is fixed, and keeping it otherwise.
     pub fn to_instance_values(&self) -> Vec<AssignedValue<F>> {
-        let flattening_function = match self.input_type() {
-            KeccakInputType::Fixed => {
-                panic!("Fixed keccak input not allowed");
-            }
-            KeccakInputType::Variable => {
-                AssignedKeccakInput::to_instance_values
-            }
-        };
-        self.0.iter().flat_map(flattening_function).collect()
+        self.0
+            .iter()
+            .flat_map(AssignedKeccakInput::to_instance_values)
+            .collect()
     }
 }
 
@@ -1043,27 +908,6 @@ where
         keccak.keccak_var_len(ctx, range, byte_repr, byte_len);
     }
 
-    /// For `assigned_input`, computes:
-    /// 1) its byte decomposition
-    /// 2) its word decomposition
-    /// 3) its keccak hash as a [`keccak_fixed_len`](KeccakChip::keccak_fixed_len) query.
-    ///
-    /// The resulting query added to the keccak chip will be processed later
-    /// by [`assign_keccak_cells`](KeccakChip::assign_keccak_cells).
-    #[deprecated]
-    fn compute_proof_id_fixed_length(
-        ctx: &mut Context<F>,
-        range: &RangeChip<F>,
-        keccak: &mut KeccakChip<F>,
-        assigned_input: &AssignedKeccakInput<F>,
-    ) {
-        // Byte decomposition
-        let field_elements = assigned_input.public_inputs();
-        let byte_repr = byte_decomposition_list(ctx, range, &field_elements);
-        // Keccak fixed length computation
-        keccak.keccak_fixed_len(ctx, range, byte_repr);
-    }
-
     /// For `assigned_input.commitment_point_limbs`, computes:
     /// 1) Its byte decomposition
     /// 2) Its word decomposition
@@ -1103,7 +947,6 @@ where
         inputs: KeccakPaddedCircuitInputs<F>,
     ) -> Self {
         let witness_gen_only = builder.witness_gen_only();
-        let is_fixed = inputs.is_fixed();
         let ctx = builder.main(0);
         let lookup_bits = config.lookup_bits;
         let range = RangeChip::default(lookup_bits);
@@ -1119,24 +962,14 @@ where
                 &mut keccak,
                 &assigned_input,
             );
-            if is_fixed {
-                Self::compute_proof_id_fixed_length(
-                    ctx,
-                    &range,
-                    &mut keccak,
-                    &assigned_input,
-                );
-                panic!("Keccak fixed length no longer supported");
-            } else {
-                // Specification: Proof ID Computation
-                Self::compute_proof_id(
-                    ctx,
-                    &range,
-                    &mut keccak,
-                    &circuit_id,
-                    &assigned_input,
-                );
-            }
+            // Specification: Proof ID Computation
+            Self::compute_proof_id(
+                ctx,
+                &range,
+                &mut keccak,
+                &circuit_id,
+                &assigned_input,
+            );
             // Specification: Curve-to-Field Hash
             Self::commitment_point_hash_query(
                 ctx,
@@ -1382,7 +1215,7 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
     type CircuitConfig = KeccakConfig;
     type GateConfig = KeccakGateConfig;
     type CircuitInputs = KeccakCircuitInputs<Fr>;
-    type KeygenInputs = KeccakInputType;
+    type KeygenInputs = ();
     type InstanceInputs = KeccakCircuitInputs<Fr>;
 
     fn mock(
@@ -1390,7 +1223,7 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
         inputs: &Self::CircuitInputs,
     ) -> Self {
         let circuit_inputs =
-            KeccakPaddedCircuitInputs::from_fixed_or_var_len_inputs(
+            KeccakPaddedCircuitInputs::from_keccak_circuit_inputs(
                 inputs,
                 config.num_app_public_inputs as usize,
             );
@@ -1405,10 +1238,11 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
         config: &Self::CircuitConfig,
         inputs: &Self::KeygenInputs,
     ) -> Self {
+        let _ = inputs;
         Self::new(
             config,
             GateThreadBuilder::keygen(),
-            KeccakPaddedCircuitInputs::dummy(config, *inputs),
+            KeccakPaddedCircuitInputs::dummy(config),
         )
     }
 
@@ -1419,7 +1253,7 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
         inputs: &Self::CircuitInputs,
     ) -> Self {
         let circuit_inputs =
-            KeccakPaddedCircuitInputs::from_fixed_or_var_len_inputs(
+            KeccakPaddedCircuitInputs::from_keccak_circuit_inputs(
                 inputs,
                 config.num_app_public_inputs as usize,
             );
@@ -1487,42 +1321,35 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
         let (proof_ids, padded_inputs): (
             Vec<[u8; 32]>,
             Vec<KeccakPaddedCircuitInput<Fr>>,
-        ) = match inputs {
-            KeccakCircuitInputs::Fixed(_) => {
-                panic!("fixed length inputs not supported");
-            }
-            KeccakCircuitInputs::VarLen(varlen) => {
-                let proof_ids: Vec<[u8; 32]> = varlen
+        ) = {
+            let input_slice = &inputs.0;
+            let proof_ids: Vec<[u8; 32]> = input_slice
+                .iter()
+                .map(|i| {
+                    let circuit_id =
+                        universal::native::compute_circuit_id(&i.app_vk);
+                    compute_proof_id(&circuit_id, i.app_public_inputs.iter())
+                })
+                .collect();
+
+            // [
+            //   len_0, vk_limbs_0, has_commitment_0, commitment_hash_0, commitment_limbs_0, padded_inputs_0
+            //   len_1, vk_limbs_1, has_commitment_1, commitment_hash_1, commitment_limbs_1, padded_inputs_1
+            //   ...
+            //   final_digest_0, final_digest_1
+            // ]
+            (
+                proof_ids,
+                input_slice
                     .iter()
                     .map(|i| {
-                        let circuit_id =
-                            universal::native::compute_circuit_id(&i.app_vk);
-                        compute_proof_id(
-                            &circuit_id,
-                            i.app_public_inputs.iter(),
+                        KeccakPaddedCircuitInput::from_var_len_input(
+                            i,
+                            config.num_app_public_inputs as usize,
                         )
                     })
-                    .collect();
-
-                // [
-                //   len_0, vk_limbs_0, has_commitment_0, commitment_hash_0, commitment_limbs_0, padded_inputs_0
-                //   len_1, vk_limbs_1, has_commitment_1, commitment_hash_1, commitment_limbs_1, padded_inputs_1
-                //   ...
-                //   final_digest_0, final_digest_1
-                // ]
-                (
-                    proof_ids,
-                    varlen
-                        .iter()
-                        .map(|i| {
-                            KeccakPaddedCircuitInput::from_var_len_input(
-                                i,
-                                config.num_app_public_inputs as usize,
-                            )
-                        })
-                        .collect::<Vec<_>>(),
-                )
-            }
+                    .collect::<Vec<_>>(),
+            )
         };
 
         let final_digest = compute_final_digest(proof_ids);

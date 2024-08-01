@@ -9,7 +9,7 @@ use crate::{
 };
 use circuits::{
     keccak::{
-        utils::keccak_inputs_from_bv_instances, KeccakCircuit, KeccakConfig,
+        utils::keccak_inputs_from_ubv_instances, KeccakCircuit, KeccakConfig,
         KeccakGateConfig,
     },
     SafeCircuit,
@@ -42,9 +42,9 @@ pub struct ProveParams {
     /// Circuit specs file (KeccakGateConfig)
     gate_config: String,
 
-    #[arg(short = 'i', long, value_name = "bv-inputs-file")]
+    #[arg(short = 'i', long, value_name = "ubv-inputs-file")]
     /// Public input files for each BV circuit
-    bv_instances: Vec<String>,
+    ubv_instances: Vec<String>,
 
     #[arg(long, value_name = "proof-file")]
     /// Output proof file
@@ -72,14 +72,14 @@ pub fn prove(params: ProveParams) {
 
     let keccak_inputs = {
         // Outer Vec indexes BV proof, inner vec is inputs to given BV proof
-        let bv_instances: Vec<Vec<Fr>> = params
-            .bv_instances
+        let ubv_instances: Vec<Vec<Fr>> = params
+            .ubv_instances
             .iter()
             .map(|input_file| load_instance(input_file.as_str()))
             .collect();
-        let bv_instances = bv_instances.iter().map(|inputs| &inputs[..]);
-        keccak_inputs_from_bv_instances(
-            bv_instances,
+        let ubv_instances = ubv_instances.iter().map(|inputs| &inputs[..]);
+        keccak_inputs_from_ubv_instances(
+            ubv_instances,
             keccak_config.num_app_public_inputs as usize,
             keccak_config.inner_batch_size as usize,
         )

@@ -33,7 +33,7 @@ use upa_circuits::{
     },
     keccak::{
         inputs::KeccakCircuitInputs, utils::keccak_inputs_from_ubv_instances,
-        KeccakCircuit, KeccakConfig, KeccakInputType,
+        KeccakCircuit, KeccakConfig,
     },
     outer::{
         universal, utils::gen_outer_evm_verifier, OuterCircuitInputs,
@@ -137,11 +137,7 @@ pub fn bench(c: &mut Criterion) {
             .into();
         let keccak_srs = gen_srs(keccak_config.degree_bits);
         let (keccak_pk, keccak_gate_config, keccak_break_points) =
-            keygen::<KeccakCircuit>(
-                &keccak_config,
-                &KeccakInputType::Variable,
-                &keccak_srs,
-            );
+            keygen::<KeccakCircuit>(&keccak_config, &(), &keccak_srs);
         println!("Keccak gate config {keccak_gate_config:?}");
         let (keccak_proof, keccak_instances) = {
             let keccak_timer = Instant::now();
