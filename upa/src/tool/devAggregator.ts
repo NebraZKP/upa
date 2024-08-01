@@ -19,7 +19,7 @@ import {
 } from "../sdk/submissionIntervals";
 
 export const devAggregator = command({
-  name: "dev-aggregator",
+  name: "aggregator",
   args: {
     batchSize: option({
       type: number,

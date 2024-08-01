@@ -77,7 +77,7 @@ pushd _test_demo_app
     upa dev fund ${AGGREGATOR_ADDRESS}
 
     # Deploy UPA using DEPLOYER_KEYFILE and then demo-app using APP_KEYFILE.
-    upa deploy \
+    upa owner deploy \
            --keyfile ${DEPLOYER_KEYFILE} \
            --verifier ${UPA_CONTRACTS}/test/data/test.bin \
            --instance ${UPAINSTANCE} \
@@ -155,7 +155,7 @@ pushd _test_demo_app
     demo-app multi-submit --keyfile ${APP_KEYFILE} -n 2
 
     # Check UPA contract state. 3 submissions, so `next_id` should be 4.
-    next_id=`upa stats | jq -r .nextSubmissionIdx`
+    next_id=`upa query stats | jq -r .nextSubmissionIdx`
     expected_next_id="4"
     if ! [ "${next_id}" == "${expected_next_id}" ] ; then
         echo "FAILURE: expected next_id '${expected_next_id}' but saw '${next_id}'."
@@ -182,7 +182,7 @@ pushd _test_demo_app
 
     # Check UPA contract state. 5 total submissions, so `next_id` should be 6.
 
-    next_id=`upa stats | jq -r .nextSubmissionIdx`
+    next_id=`upa query stats | jq -r .nextSubmissionIdx`
     expected_next_id="6"
     if ! [ "${next_id}" == "${expected_next_id}" ] ; then
         echo "FAILURE: expected next_id '${expected_next_id}' but saw '${next_id}'."

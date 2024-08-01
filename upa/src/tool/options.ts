@@ -127,6 +127,11 @@ export function vkFile(): Option {
   });
 }
 
+/// A JSON file in one of the formats:
+/// - An array of { vk, proof, inputs }
+/// - An array of { circuitId, proof, inputs }
+/// - A single object { vk, proof, inputs }
+/// - A single object { circuitId, proof, inputs }
 export function proofsFile(): Option {
   return option({
     type: string,

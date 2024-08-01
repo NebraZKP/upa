@@ -64,7 +64,7 @@ pushd _test_dev_aggregator
     fund ${user_addr}
 
     # Deploy using this key
-    upa deploy \
+    upa owner deploy \
             --keyfile ${KEYFILE} \
             --verifier ${UPA_DIR}/upa/test/data/test.bin \
             --use-test-config \
@@ -83,7 +83,7 @@ pushd _test_dev_aggregator
     KEYFILE=${KEYFILE} upa registervk --vk-file ${VK_3} --wait
 
     # Check stats and record
-    upa stats > stats.0
+    upa query stats > stats.0
     if ! [ "1"  == "`jq -r .nextSubmissionIdx stats.0`" ] ; then
         echo "FAILURE: nextSubmissionIdx expected to be 0"
         exit 1
@@ -105,7 +105,7 @@ pushd _test_dev_aggregator
 
     # Extract proof refs, cids
     for i in {0..1} ; do
-        upa compute-proof-ref \
+        upa compute proof-ref \
                 --submission-file submission.json \
                 --proof-idx $i \
                 --proof-ref-file submission.ref-$i.json
@@ -118,19 +118,19 @@ pushd _test_dev_aggregator
     jq '.[0:1]' pids.json > agg.pids.json
 
     # Compute calldata
-    upa compute-final-digest \
+    upa aggregator compute-final-digest \
             --proof-ids-file agg.pids.json \
             --calldata-file agg.proof.calldata
 
     # Compute SubmissionProof
-    upa compute-submission-proof \
+    upa compute submission-proof \
             --submission-file submission.json \
             --start-idx 0 \
             --num-proofs 1 \
             > submission-proof.0.json
 
     # Submit aggregated proof
-    upa submit-aggregated-proof \
+    upa aggregator submit-aggregated-proof \
             --keyfile ${KEYFILE} \
             --calldata-file agg.proof.calldata \
             --submission-proof-file submission-proof.0.json \
@@ -139,15 +139,15 @@ pushd _test_dev_aggregator
 
     # Submission has not been verified, so proofs are not marked as verified
     # yet.
-    (! upa is-verified \
+    (! upa query is-verified \
             --proof-file submission.proof-0.json \
             --proof-ref-file submission.ref-0.json)
-    (! upa is-verified \
+    (! upa query is-verified \
             --proof-file submission.proof-1.json \
             --proof-ref-file submission.ref-1.json)
 
     # Check stats
-    upa stats > stats.1
+    upa query stats > stats.1
     if ! [ "2"  == "`jq -r .nextSubmissionIdx stats.1`" ] ; then
         echo "FAILURE: nextSubmissionIdx expected to be 2"
         exit 1
@@ -166,7 +166,7 @@ pushd _test_dev_aggregator
     sleep ${LATENCY_PLUS_ONE}
 
     # Check stats
-    upa stats > stats.2
+    upa query stats > stats.2
     if ! [ "2"  == "`jq -r .nextSubmissionIdx stats.2`" ] ; then
         echo "FAILURE: nextSubmissionIdx expected to be 2"
         exit 1
@@ -201,7 +201,7 @@ pushd _test_dev_aggregator
     sleep ${LATENCY_PLUS_ONE}
 
     # Check that two more submissions have been verified
-    upa stats > stats.3
+    upa query stats > stats.3
     if ! [ "4"  == "`jq -r .nextSubmissionIdx stats.3`" ] ; then
         echo "FAILURE: nextSubmissionIdx expected to be 4" #
         exit 1

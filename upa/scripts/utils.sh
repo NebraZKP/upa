@@ -155,7 +155,7 @@ function start_dev_aggregator() {
     if ! [ "$4" == "" ] ; then
         flags="--password $4"
     fi
-    upa dev-aggregator \
+    upa dev aggregator \
         --batch-size $1 \
         --latency $2 \
         --keyfile $3 \

@@ -61,9 +61,7 @@ export const submitProofs = command({
     }),
   },
   description:
-    "Make a submission of proofs to UPA.  Outputs Tx hash to stdout.  " +
-    "<proofs-file> must be either a list of { circuitId, proof, inputs }" +
-    "or a list of { vk, proof, inputs }",
+    "Make a submission of proofs to UPA.  Outputs Tx hash to stdout.  ",
   handler: async function ({
     endpoint,
     keyfile,

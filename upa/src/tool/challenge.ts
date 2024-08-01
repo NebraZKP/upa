@@ -23,11 +23,7 @@ export const challenge = command({
       description: "Submit only the first unverified proof in the submission.",
     }),
   },
-  description:
-    "Make a censorship challenge of a submission to UPA.\n" +
-    "<proofs-file> must be JSON list of objects { vk, proof, inputs }.\n" +
-    "The options --estimate-gas and --dump-tx can only be used for a" +
-    "single proof challenge or with the --next-proof-only flag",
+  description: "Make a censorship challenge of a submission to UPA.\n",
   handler: async function ({
     endpoint,
     keyfile,
@@ -45,7 +41,8 @@ export const challenge = command({
     const numProofs = circuitIdProofAndInputs.length;
     if (!onlyOne && numProofs > 1 && (estimateGas || dumpTx)) {
       throw Error(
-        "--estimateGas and --dumpTx only allowed for single proof challenges"
+        "--estimateGas and --dumpTx only allowed for single proof challenges" +
+          " or with the --next-proof-only flag."
       );
     }
 
