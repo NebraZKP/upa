@@ -20,14 +20,11 @@ env:
 jobs:
   # Build, check and test the circuit test code
   circuit-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
 
     defaults:
       run:
         working-directory: circuits
-
-    strategy:
-      fail-fast: false
 
     steps:
       - name: Checkout
