@@ -1,0 +1,4 @@
+- [ ] Set a valid title
+- [ ] Use branch-name `[<ref>-]<feature-description>`
+- [ ] Brief description of the changes
+- [ ] Create matching PRs in dependent repos
