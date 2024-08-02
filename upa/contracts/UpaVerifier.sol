@@ -95,11 +95,11 @@ contract UpaVerifier is
         IGroth16Verifier groth16Verifier;
         /// The submissionIdx of the next submission expected.  Subsequent
         /// proofs to be verified must be from this, or a later submission.
-        uint64 nextSubmissionIdxToVerify;
+        uint40 nextSubmissionIdxToVerify;
         /// The height at which the last verified proof was submitted.
         /// This intended so that off-chain aggregators can quickly detect
         /// from which height they should start reading proofs.
-        uint64 lastVerifiedSubmissionHeight;
+        uint40 lastVerifiedSubmissionHeight;
         /// Open censorship challenges. The key is the `submissionId`, the
         /// value is the amount to refund if the challenge is sucessful.
         mapping(bytes32 => uint256) openChallengeRefundAmounts;
@@ -165,11 +165,11 @@ contract UpaVerifier is
         return _getVerifierStorage().outerVerifier;
     }
 
-    function nextSubmissionIdxToVerify() public view returns (uint64) {
+    function nextSubmissionIdxToVerify() public view returns (uint40) {
         return _getVerifierStorage().nextSubmissionIdxToVerify;
     }
 
-    function lastVerifiedSubmissionHeight() public view returns (uint64) {
+    function lastVerifiedSubmissionHeight() public view returns (uint40) {
         return _getVerifierStorage().lastVerifiedSubmissionHeight;
     }
 
@@ -208,7 +208,7 @@ contract UpaVerifier is
         verifierStorage.outerVerifier = _outerVerifier;
         verifierStorage.groth16Verifier = IGroth16Verifier(_groth16Verifier);
         verifierStorage.nextSubmissionIdxToVerify = 1;
-        verifierStorage.lastVerifiedSubmissionHeight = (uint64)(block.number);
+        verifierStorage.lastVerifiedSubmissionHeight = uint40(block.number);
         verifierStorage.fixedReimbursement = _fixedReimbursement;
         verifierStorage.version = _version;
 
@@ -239,8 +239,8 @@ contract UpaVerifier is
     /// necessary checks and marks it as verified. Returns the next
     /// submissionIdx.
     function handleSingleProofOnChainSubmission(
-        uint64 submissionIdx
-    ) private returns (uint64 nextSubmissionIdx) {
+        uint40 submissionIdx
+    ) private returns (uint40 nextSubmissionIdx) {
         VerifierStorage storage verifierStorage = _getVerifierStorage();
         require(
             submissionIdx >= verifierStorage.nextSubmissionIdxToVerify,
@@ -270,14 +270,14 @@ contract UpaVerifier is
     function handleMultiProofOnChainSubmission(
         SubmissionProof calldata submissionVerification,
         bytes32[] calldata proofIds,
-        uint64 nextSubmissionIdx,
+        uint40 nextSubmissionIdx,
         uint16 numOnchainProofs,
         uint16 proofIdIdx
     )
         private
         returns (
-            uint64 verifiedSubmissionHeight,
-            uint64 newNextSubmissionIdx,
+            uint40 verifiedSubmissionHeight,
+            uint40 newNextSubmissionIdx,
             uint16 proofsThisSubmission
         )
     {
@@ -285,8 +285,8 @@ contract UpaVerifier is
         // UpaProofReceiver.  Read numVerifiedInSubmission from
         // this contract.
         bytes32 submissionId = submissionVerification.submissionId;
-        uint64 submissionIdx;
-        uint64 submissionBlockNumber;
+        uint40 submissionIdx;
+        uint40 submissionBlockNumber;
         uint16 numProofsInSubmission;
         (
             submissionIdx,
@@ -418,8 +418,8 @@ contract UpaVerifier is
         // compatible with the algorithm described above.
 
         // Track the proof indices to ensure proofs are verified in order.
-        uint64 nextSubmissionIdx = verifierStorage.nextSubmissionIdxToVerify;
-        uint64 verifiedSubmissionHeight = verifierStorage
+        uint40 nextSubmissionIdx = verifierStorage.nextSubmissionIdxToVerify;
+        uint40 verifiedSubmissionHeight = verifierStorage
             .lastVerifiedSubmissionHeight;
 
         uint16 submissionProofIdx = 0; // idx into submissionProofs
@@ -445,8 +445,8 @@ contract UpaVerifier is
             // SubmissionProof.
             bytes32 submissionId = UpaLib.computeSubmissionId(proofId);
             (
-                uint64 submissionIdx,
-                uint64 submissionBlockNumber
+                uint40 submissionIdx,
+                uint40 submissionBlockNumber
             ) = getSubmissionIdxAndHeight(submissionId);
             if (submissionIdx != 0) {
                 nextSubmissionIdx = handleSingleProofOnChainSubmission(
@@ -583,7 +583,7 @@ contract UpaVerifier is
 
         bytes32 submissionId = UpaLib.computeSubmissionId(proofId);
 
-        uint64 submissionIdx = getSubmissionIdx(submissionId);
+        uint40 submissionIdx = getSubmissionIdx(submissionId);
         if (submissionIdx > 0) {
             // Found an on-chain single-proof submission for this proofId.
             uint16 verified = Uint16VectorLib.getUint16(
@@ -666,7 +666,7 @@ contract UpaVerifier is
     function isSubmissionVerified(
         bytes32 submissionId
     ) public view override returns (bool) {
-        (uint64 submissionIdx, uint16 numProofs) = getSubmissionIdxAndNumProofs(
+        (uint40 submissionIdx, uint16 numProofs) = getSubmissionIdxAndNumProofs(
             submissionId
         );
         VerifierStorage storage verifierStorage = _getVerifierStorage();
@@ -712,7 +712,7 @@ contract UpaVerifier is
 
         // Location of `proofId` in the Merkle tree. It should be the
         // number of proofs verified for this submission so far.
-        uint64 submissionIdx = submission.submissionIdx;
+        uint40 submissionIdx = submission.submissionIdx;
         uint16 location = Uint16VectorLib.getUint16(
             verifierStorage.numVerifiedInSubmission,
             submissionIdx
@@ -920,7 +920,7 @@ contract UpaVerifier is
     /// Allocates the aggregator fee to be claimed once
     /// `lastSubmittedSubmissionIdx` in `proofReceiver` is verified.
     function allocateAggregatorFee() external {
-        uint64 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
+        uint40 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
         allocateAggregatorFee(lastSubmittedSubmissionIdx);
     }
 
@@ -935,7 +935,7 @@ contract UpaVerifier is
     /// Withdraws the worker's balance in the `feeModel` contract,
     /// including the collateral.
     function withdrawAggregatorBalance() external {
-        uint64 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
+        uint40 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
         withdraw(
             worker(),
             _getVerifierStorage().nextSubmissionIdxToVerify - 1,
@@ -945,7 +945,7 @@ contract UpaVerifier is
 
     // For testing
     function getNumVerifiedForSubmissionIdx(
-        uint64 submissionIdx
+        uint40 submissionIdx
     ) public view returns (uint16) {
         return
             Uint16VectorLib.getUint16(

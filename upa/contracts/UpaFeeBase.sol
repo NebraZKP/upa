@@ -48,7 +48,7 @@ abstract contract UpaFeeBase is
         /// successful censorship challenges.
         uint256 aggregatorCollateral;
         /// Verified proof index for total fee due.
-        uint256 verifiedSubmissionIdxForAllocatedFee;
+        uint40 verifiedSubmissionIdxForAllocatedFee;
     }
 
     // keccak256(abi.encode(uint256(keccak256("FeeBaseStorage")) - 1)) &
@@ -73,7 +73,7 @@ abstract contract UpaFeeBase is
     function verifiedSubmissionIdxForAllocatedFee()
         public
         view
-        returns (uint256)
+        returns (uint40)
     {
         return _getFeeBaseStorage().verifiedSubmissionIdxForAllocatedFee;
     }
@@ -107,7 +107,7 @@ abstract contract UpaFeeBase is
         return 0;
     }
 
-    function allocateAggregatorFee(uint64 lastSubmittedSubmissionIdx) internal {
+    function allocateAggregatorFee(uint40 lastSubmittedSubmissionIdx) internal {
         FeeBaseStorage storage feeBaseStorage = _getFeeBaseStorage();
 
         require(
@@ -135,7 +135,7 @@ abstract contract UpaFeeBase is
 
     function claimAggregatorFee(
         address aggregator,
-        uint64 lastVerifiedSubmissionIdx
+        uint40 lastVerifiedSubmissionIdx
     ) internal {
         // Check enough proofs have been verified
         require(
@@ -160,8 +160,8 @@ abstract contract UpaFeeBase is
 
     function withdraw(
         address aggregator,
-        uint64 lastVerifiedSubmissionIdx,
-        uint64 lastSubmittedSubmissionIdx
+        uint40 lastVerifiedSubmissionIdx,
+        uint40 lastSubmittedSubmissionIdx
     ) internal {
         require(
             lastVerifiedSubmissionIdx == lastSubmittedSubmissionIdx,

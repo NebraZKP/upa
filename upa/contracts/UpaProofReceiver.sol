@@ -77,9 +77,9 @@ contract UpaProofReceiver is
         /// Merkle root of the proof data digests as seen by the contract
         bytes32 proofDataDigest;
         /// Index of this submission
-        uint64 submissionIdx;
+        uint40 submissionIdx;
         /// Block number at which the submission was made
-        uint64 submissionBlockNumber;
+        uint40 submissionBlockNumber;
         /// The number of proofs in this submission
         uint16 numProofs;
     }
@@ -93,11 +93,11 @@ contract UpaProofReceiver is
         /// The full set of submissions, indexed by the submissionId.
         mapping(bytes32 => Submission) _submissions;
         /// The next submission index
-        uint64 _nextSubmissionIdx;
+        uint40 _nextSubmissionIdx;
         /// The next proof index.  (Proof index is not strictly required, but
         /// since it doesn't occupy any extra storage slots, we track this.  It
         /// can be useful for auditing off-chain DBs).
-        uint64 _nextProofIdx;
+        uint40 _nextProofIdx;
         /// Maximum number of public inputs
         uint8 _maxNumPublicInputs;
     }
@@ -117,7 +117,7 @@ contract UpaProofReceiver is
         }
     }
 
-    function nextProofIdx() public view returns (uint64) {
+    function nextProofIdx() public view returns (uint40) {
         return _getProofReceiverStorage()._nextProofIdx;
     }
 
@@ -139,7 +139,7 @@ contract UpaProofReceiver is
         return _getProofReceiverStorage()._circuitIds;
     }
 
-    function getNextSubmissionIdx() public view returns (uint64) {
+    function getNextSubmissionIdx() public view returns (uint40) {
         return _getProofReceiverStorage()._nextSubmissionIdx;
     }
 
@@ -268,8 +268,8 @@ contract UpaProofReceiver is
 
         ProofReceiverStorage
             storage proofReceiverStorage = _getProofReceiverStorage();
-        uint64 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
-        uint64 proofIdx = proofReceiverStorage._nextProofIdx;
+        uint40 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
+        uint40 proofIdx = proofReceiverStorage._nextProofIdx;
         uint256 _maxNumPublicInputs = proofReceiverStorage._maxNumPublicInputs;
 
         // Iterate through all proofs.  Emit events, compute the proofIds and
@@ -310,7 +310,7 @@ contract UpaProofReceiver is
         proofReceiverStorage._submissions[submissionId] = Submission(
             proofDataDigest,
             submissionIdx,
-            uint64(block.number),
+            uint40(block.number),
             numProofs
         );
     }
@@ -326,7 +326,7 @@ contract UpaProofReceiver is
 
     function getSubmissionIdx(
         bytes32 submissionId
-    ) public view returns (uint64 submissionIdx) {
+    ) public view returns (uint40 submissionIdx) {
         Submission storage submission = _getProofReceiverStorage()._submissions[
             submissionId
         ];
@@ -335,7 +335,7 @@ contract UpaProofReceiver is
 
     function getSubmissionIdxAndHeight(
         bytes32 submissionId
-    ) public view returns (uint64 submissionIdx, uint64 submissionBlockNumber) {
+    ) public view returns (uint40 submissionIdx, uint40 submissionBlockNumber) {
         Submission storage submission = _getProofReceiverStorage()._submissions[
             submissionId
         ];
@@ -345,7 +345,7 @@ contract UpaProofReceiver is
 
     function getSubmissionIdxAndNumProofs(
         bytes32 submissionId
-    ) public view returns (uint64 submissionIdx, uint16 numProofs) {
+    ) public view returns (uint40 submissionIdx, uint16 numProofs) {
         Submission storage submission = _getProofReceiverStorage()._submissions[
             submissionId
         ];
@@ -358,7 +358,7 @@ contract UpaProofReceiver is
     )
         public
         view
-        returns (uint64 submissionIdx, uint64 height, uint16 numProofs)
+        returns (uint40 submissionIdx, uint40 height, uint16 numProofs)
     {
         Submission storage submission = _getProofReceiverStorage()._submissions[
             submissionId
@@ -379,8 +379,8 @@ contract UpaProofReceiver is
     // avoid a "stack too deep" error in the compiler.
     function handleSubmittedProof(
         uint16 i,
-        uint64 proofIdx,
-        uint64 submissionIdx,
+        uint40 proofIdx,
+        uint40 submissionIdx,
         bytes32[] calldata circuitIds,
         Groth16CompressedProof[] calldata proofs,
         uint256[][] calldata publicInputs,
