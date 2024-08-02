@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.26;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 /**
  * @title CreateX Factory Smart Contract
@@ -462,7 +462,6 @@ contract CreateX {
             redeployProtectionFlag == RedeployProtectionFlag.False
         ) {
             // Configures solely a permissioned deploy protection.
-            console.log("Hit this path");
             guardedSalt = _efficientHash({
                 a: bytes32(uint256(uint160(msg.sender))),
                 b: salt

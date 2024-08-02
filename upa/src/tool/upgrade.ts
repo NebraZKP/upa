@@ -81,7 +81,7 @@ export const upgrade = command({
     prepare: flag({
       type: boolean,
       long: "prepare",
-      description: "Only deploy the implementation contract",
+      description: "Only deploy the implementation contract, not the proxy",
     }),
   },
   description: "Upgrade the UPA verifier contract. Keyfile must be the owner",

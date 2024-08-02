@@ -218,7 +218,7 @@ export const deploy = command({
     prepare: flag({
       type: boolean,
       long: "prepare",
-      description: "Only deploy the implementation contract",
+      description: "Only deploy the implementation contract, not the proxy",
     }),
   },
   description: "Deploy the UPA contracts for a given configuration",
@@ -366,7 +366,6 @@ export async function deployUpa(
 
     console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
 
-    console.log("Dumping tx to deploy proxy contract");
     const initializerData = getInitializerData(
       UpaVerifierFactory.interface,
       deployArgs
@@ -376,12 +375,12 @@ export async function deployUpa(
       ERC1967Proxy.abi,
       ERC1967Proxy.bytecode
     );
-    const proxyDeployTx = await ProxyFactory.getDeployTransaction(
+    const deployProxyTx = await ProxyFactory.getDeployTransaction(
       implAddress,
       initializerData
     );
-    console.log(`proxyDeployTx (pass this into initcode arg):`);
-    console.log(proxyDeployTx.data);
+    console.log(`deployProxyTx (pass this into initcode arg):`);
+    console.log(deployProxyTx.data);
 
     // We set the first 20 bytes to be equal to the multi-sig address. CreateX
     // uses this for permissioned deploy protection. (See the `_guard`
