@@ -92,16 +92,18 @@ export class Submission {
   public circuitIds: string[];
   public proofs: application.Groth16Proof[];
   public inputs: bigint[][];
-  proofIds: string[];
-  paddedProofIds: ethers.BytesLike[];
-  depth: number;
-  submissionId: ethers.BytesLike;
+  public submissionId: ethers.BytesLike;
+  public proofIds: string[];
+  private paddedProofIds: ethers.BytesLike[];
+  private depth: number;
+  private dupSubmissionIdx: number | undefined;
 
   private constructor(
     proofIds: ethers.BytesLike[],
     circuitIds: string[],
     proofs: application.Groth16Proof[],
-    inputs: bigint[][]
+    inputs: bigint[][],
+    dupSubmissionIdx: number | undefined
   ) {
     assert(proofIds.length > 0);
     assert(proofIds.length <= MAX_SUBMISSION_SIZE);
@@ -126,6 +128,7 @@ export class Submission {
     this.paddedProofIds = paddedProofIds;
     this.depth = depth;
     this.submissionId = computeSubmissionId(this.proofIds);
+    this.dupSubmissionIdx = dupSubmissionIdx;
   }
 
   public static fromCircuitIdsProofsAndInputs(
@@ -142,7 +145,7 @@ export class Submission {
       inputs.push(pubInputs);
       proofIds.push(computeProofId(cpi.circuitId, pubInputs));
     });
-    return new Submission(proofIds, circuitIds, proofs, inputs);
+    return new Submission(proofIds, circuitIds, proofs, inputs, undefined);
   }
 
   public static async fromTransactionReceipt(
@@ -177,17 +180,34 @@ export class Submission {
     // compute each proofId using the circuitId and public inputs from the tx
     // data.
 
+    let dupSubmissionIdx: number | undefined;
     const proofIds: ethers.BytesLike[] = [];
     txReceipt.logs.forEach((log, i) => {
       const parsed = proofReceiver.interface.parseLog(log as unknown as Log);
       if (parsed) {
         const proofId = parsed.args.proofId;
         assert(proofId === computeProofId(circuitIds[i], [...publicInputs[i]]));
+        if (dupSubmissionIdx) {
+          assert(dupSubmissionIdx == parsed.args.dupSubmissionIdx);
+        } else {
+          dupSubmissionIdx = Number(parsed.args.dupSubmissionIdx);
+          assert(
+            typeof dupSubmissionIdx === "number",
+            `typeof dupSubmissionIdx: ${typeof dupSubmissionIdx}`
+          );
+        }
         proofIds.push(proofId);
       }
     });
 
-    return new Submission(proofIds, circuitIds, groth16Proofs, publicInputs);
+    assert(typeof dupSubmissionIdx === "number");
+    return new Submission(
+      proofIds,
+      circuitIds,
+      groth16Proofs,
+      publicInputs,
+      dupSubmissionIdx
+    );
   }
 
   public static fromSubmittedEvents(
@@ -217,7 +237,13 @@ export class Submission {
       instance.map((x: string) => BigInt(x))
     );
     const proofIds: ethers.BytesLike[] = object.proofIds;
-    return new Submission(proofIds, object.circuitIds, proofs, inputs);
+    return new Submission(
+      proofIds,
+      object.circuitIds,
+      proofs,
+      inputs,
+      object.dupSubmissionIdx
+    );
   }
 
   public to_json(): string {
@@ -232,6 +258,14 @@ export class Submission {
       return this.proofIds.slice(startIdx, endIdx);
     }
     return this.proofIds;
+  }
+
+  /**
+   * Caller expects the dupSubmissionIdx to be present.
+   */
+  public getDupSubmissionIdx(): number {
+    assert(typeof this.dupSubmissionIdx === "number");
+    return this.dupSubmissionIdx;
   }
 
   public getSubmissionId(): ethers.BytesLike {

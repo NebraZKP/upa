@@ -147,7 +147,8 @@ describe("Censorship challenge tests", () => {
         proofIds,
         proofIds.length,
         submissionProof ? [submissionProof] : [],
-        packOffChainSubmissionMarkers([])
+        packOffChainSubmissionMarkers([]),
+        [0]
       );
   }
 
@@ -169,6 +170,7 @@ describe("Censorship challenge tests", () => {
         s1.proofs[0].solidity(),
         s1.inputs[0],
         s1.submissionId,
+        0,
         s1.computeProofIdMerkleProof(0),
         s1.computeProofDataMerkleProof(0)
       );
@@ -207,6 +209,7 @@ describe("Censorship challenge tests", () => {
           s2.proofs[i].solidity(),
           s2.inputs[i],
           s2.submissionId,
+          0,
           s2.computeProofIdMerkleProof(i),
           s2.computeProofDataMerkleProof(i)
         );
@@ -243,6 +246,7 @@ describe("Censorship challenge tests", () => {
           s1.proofs[0].solidity(),
           s1.inputs[0],
           s1.submissionId,
+          0,
           s1.computeProofIdMerkleProof(0),
           s1.computeProofDataMerkleProof(0)
         )
@@ -270,6 +274,7 @@ describe("Censorship challenge tests", () => {
           s1.proofs[0].solidity(),
           s1.inputs[0],
           s1.submissionId,
+          0,
           s1.computeProofIdMerkleProof(0),
           s1.computeProofDataMerkleProof(0)
         )
@@ -309,6 +314,7 @@ describe("Censorship challenge tests", () => {
             s3.proofs[i].solidity(),
             s3.inputs[i],
             s3.submissionId,
+            0,
             s3.computeProofIdMerkleProof(i),
             s3.computeProofDataMerkleProof(i)
           )
@@ -363,6 +369,7 @@ describe("Censorship challenge tests", () => {
           invalidSubmission.proofs[0].solidity(),
           invalidSubmission.inputs[0],
           invalidSubmission.submissionId,
+          0,
           invalidSubmission.computeProofIdMerkleProof(0),
           invalidSubmission.computeProofDataMerkleProof(0)
         )
@@ -379,6 +386,7 @@ describe("Censorship challenge tests", () => {
           proofs[5].solidity(),
           invalidSubmission.inputs[0],
           invalidSubmission.submissionId,
+          0,
           invalidSubmission.computeProofIdMerkleProof(0),
           invalidSubmission.computeProofDataMerkleProof(0)
         )

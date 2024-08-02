@@ -195,7 +195,8 @@ describe("Submissions verified in one aggregation", async () => {
         proofIds,
         numProofsInSubmission + numDummyProofs,
         onChainSubmissionProofs,
-        offChainSubmissionMarkers
+        offChainSubmissionMarkers,
+        [0]
       );
 
     await verifyAggProofTx.wait();
@@ -280,7 +281,8 @@ describe("Submissions verified in one aggregation", async () => {
         proofIds,
         numProofsInSubmission,
         onChainSubmissionProofs,
-        offChainSubmissionMarkers
+        offChainSubmissionMarkers,
+        [0]
       );
 
     await verifyAggProofTx.wait();
@@ -367,7 +369,8 @@ describe("Submissions verified in one aggregation", async () => {
         proofIds,
         numProofsInOnChainSubmission + numDummyProofs,
         onChainSubmissionProofs,
-        offChainSubmissionMarkers
+        offChainSubmissionMarkers,
+        [0]
       );
 
     await verifyAggProofTx.wait();
@@ -417,7 +420,8 @@ describe("Submissions verified in one aggregation", async () => {
         offChainSubmission.proofIds,
         0,
         [] /*onChainSubmissionProofs*/,
-        offChainSubmissionMarkers
+        offChainSubmissionMarkers,
+        [0]
       );
 
     await verifyAggProofTx.wait();
@@ -507,7 +511,8 @@ describe("Submissions verified over multiple aggregations", async () => {
         proofIds_1,
         3,
         onChainSubmissionProofs_1,
-        offChainSubmissionMarkers_1
+        offChainSubmissionMarkers_1,
+        [0]
       );
 
     await verifyAggProofTx_1.wait();
@@ -525,7 +530,8 @@ describe("Submissions verified over multiple aggregations", async () => {
         proofIds_2,
         3,
         onChainSubmissionProofs_2,
-        offChainSubmissionMarkers_2
+        offChainSubmissionMarkers_2,
+        [0]
       );
 
     await verifyAggProofTx_2.wait();
@@ -554,7 +560,8 @@ describe("Submissions verified over multiple aggregations", async () => {
         proofIds_3,
         3,
         onChainSubmissionProofs_3,
-        offChainSubmissionMarkers_3
+        offChainSubmissionMarkers_3,
+        [0]
       );
 
     await verifyAggProofTx_3.wait();
@@ -652,7 +659,8 @@ describe("Submissions verified over multiple aggregations", async () => {
         proofIds_1,
         3,
         onChainSubmissionProofs_1,
-        offChainSubmissionMarkers_1
+        offChainSubmissionMarkers_1,
+        [0]
       );
 
     await verifyAggProofTx_1.wait();
@@ -670,7 +678,8 @@ describe("Submissions verified over multiple aggregations", async () => {
         proofIds_2,
         numDummyProofsPerAgg,
         onChainSubmissionProofs_2,
-        offChainSubmissionMarkers_2
+        offChainSubmissionMarkers_2,
+        [0]
       );
 
     await verifyAggProofTx_2.wait();
@@ -699,7 +708,8 @@ describe("Submissions verified over multiple aggregations", async () => {
         proofIds_3,
         2 + numDummyProofsPerAgg,
         onChainSubmissionProofs_3,
-        offChainSubmissionMarkers_3
+        offChainSubmissionMarkers_3,
+        [0]
       );
 
     await verifyAggProofTx_3.wait();
@@ -857,7 +867,8 @@ describe("Aggregations containing multiple submissions", async () => {
         firstAggProofIds,
         7,
         firstAggSubmissionProofs,
-        firstAggMarkers
+        firstAggMarkers,
+        [0]
       );
 
     await verifyAggProofTx_1.wait();
@@ -911,7 +922,8 @@ describe("Aggregations containing multiple submissions", async () => {
         secondAggProofIds,
         8 + numDummyProofsPerAgg,
         secondAggSubmissionProofs,
-        secondAggMarkers
+        secondAggMarkers,
+        [0]
       );
 
     await verifyAggProofTx_2.wait();
@@ -986,7 +998,8 @@ describe("Offchain Benchmarks", async () => {
           submission.proofIds,
           0,
           [],
-          packedSubmissionMarkers
+          packedSubmissionMarkers,
+          [0]
         );
 
       const txReceipt = await txResponse.wait();
@@ -1081,7 +1094,8 @@ describe("Failure cases", async () => {
           proofIds,
           numProofsInOnChainSubmission,
           onChainSubmissionProofs,
-          offChainSubmissionMarkers
+          offChainSubmissionMarkers,
+          [0]
         )
     ).to.be.revertedWithCustomError(upa.verifier, "InvalidMerkleIntervalProof");
   });
@@ -1198,7 +1212,8 @@ describe("Failure cases", async () => {
           proofIds_1,
           3 + numDummyProofs,
           onChainSubmissionProofs_1,
-          offChainSubmissionMarkers
+          offChainSubmissionMarkers,
+          [0]
         )
     ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
 
@@ -1210,7 +1225,8 @@ describe("Failure cases", async () => {
           proofIds_2,
           8 + numDummyProofs,
           onChainSubmissionProofs_2,
-          offChainSubmissionMarkers
+          offChainSubmissionMarkers,
+          [0]
         )
     ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
   });

@@ -147,7 +147,8 @@ describe("UPA Client", async () => {
         agg1,
         agg1.length,
         [],
-        packOffChainSubmissionMarkers([])
+        packOffChainSubmissionMarkers([]),
+        [0]
       );
 
     await verifier
@@ -157,7 +158,8 @@ describe("UPA Client", async () => {
         agg3,
         agg3.length,
         [pf3.solidity()],
-        packOffChainSubmissionMarkers([])
+        packOffChainSubmissionMarkers([]),
+        [0]
       );
 
     await upaClient.waitForSubmissionVerified(submissionHandle_1);

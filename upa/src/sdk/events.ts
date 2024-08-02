@@ -156,6 +156,7 @@ export class ProofSubmittedEventGetter extends EventGetterBase<
       proofId: args.proofId,
       submissionIdx: args.submissionIdx,
       proofIdx: args.proofIdx,
+      dupSubmissionIdx: args.dupSubmissionIdx,
     };
   }
 
@@ -185,6 +186,7 @@ export class ProofSubmittedEventGetter extends EventGetterBase<
             proofId: ev.proofId,
             submissionIdx: ev.submissionIdx,
             proofIdx: ev.proofIdx,
+            dupSubmissionIdx: ev.dupSubmissionIdx,
             proof: proofs[i],
             publicInputs: publicInputs[i],
           };
