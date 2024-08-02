@@ -40,6 +40,7 @@ use rand_core::{CryptoRng, OsRng, RngCore};
 use snark_verifier_sdk::CircuitExt;
 
 pub mod component;
+pub mod ecc;
 pub mod native;
 
 /// Limb bits for non-native arithmetic
