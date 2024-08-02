@@ -46,6 +46,8 @@ export const challenge = command({
       );
     }
 
+    // TODO: do everything from the txid so we can parse the dupSubmissionIdx
+
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await config.loadWallet(
       keyfile,
@@ -57,8 +59,12 @@ export const challenge = command({
     const submission = Submission.fromCircuitIdsProofsAndInputs(
       circuitIdProofAndInputs
     );
+    throw "todo";
+
+    const dupSubmissionIdx = 0;
     const submissionIdx = await verifier.getSubmissionIdx(
-      submission.submissionId
+      submission.submissionId,
+      dupSubmissionIdx
     );
     const skip = Number(
       await verifier.getNumVerifiedForSubmissionIdx(submissionIdx)
@@ -80,6 +86,7 @@ export const challenge = command({
         cpi.proof.solidity(),
         cpi.inputs,
         submission.submissionId,
+        dupSubmissionIdx,
         submission.computeProofIdMerkleProof(i),
         submission.computeProofDataMerkleProof(i),
         optionsPayable

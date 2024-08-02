@@ -32,7 +32,8 @@ interface IUpaProofReceiver {
     event ProofSubmitted(
         bytes32 indexed proofId,
         uint64 submissionIdx,
-        uint64 proofIdx
+        uint64 proofIdx,
+        uint64 dupSubmissionIdx
     );
 
     /// Returns the maximum number of proofs that can be submitted at once.  0

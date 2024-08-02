@@ -290,8 +290,10 @@ export async function waitForSubmissionVerified(
     txReceipt
   );
   const submissionId = submission.submissionId;
+  const dupSubmissionIdx = submission.getDupSubmissionIdx();
   const submissionIdx = await upaInstance.verifier.getSubmissionIdx(
-    submissionId
+    submissionId,
+    dupSubmissionIdx
   );
 
   // Poll from submittedBlock onwards

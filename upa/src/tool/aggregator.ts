@@ -296,6 +296,7 @@ const submitAggregatedProof = command({
       numOnChainProofs,
       submissionProofsSolidity,
       packOffChainSubmissionMarkers(offChainSubmissionMarkers),
+      Array(32).fill(0),
       optionsPayable
     );
 

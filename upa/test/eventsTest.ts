@@ -141,7 +141,8 @@ describe("EventGetter for events", () => {
           proofIds,
           proofIds.length - 1,
           [sub_1.computeSubmissionProof(0, 1)!.solidity()],
-          submissionMarkers
+          submissionMarkers,
+          [0]
         );
       return agg1Tx.hash;
     })();
@@ -158,7 +159,8 @@ describe("EventGetter for events", () => {
             sub_1.computeSubmissionProof(1, 1)!.solidity(),
             sub_3.computeSubmissionProof(0, 1)!.solidity(),
           ],
-          packOffChainSubmissionMarkers([])
+          packOffChainSubmissionMarkers([]),
+          [0]
         );
       return agg2Tx.hash;
     })();
@@ -172,7 +174,8 @@ describe("EventGetter for events", () => {
           proofIds,
           proofIds.length,
           [sub_3.computeSubmissionProof(1, 2)!.solidity()],
-          packOffChainSubmissionMarkers([])
+          packOffChainSubmissionMarkers([]),
+          [0]
         );
       return agg3Tx.hash;
     })();

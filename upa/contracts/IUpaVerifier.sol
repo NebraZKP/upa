@@ -121,6 +121,7 @@ interface IUpaVerifier {
         Groth16Proof calldata proof,
         uint256[] calldata publicInputs,
         bytes32 submissionId,
+        uint8 dupSubmissionIdx,
         bytes32[] calldata proofIdMerkleProof,
         bytes32[] calldata proofDataMerkleProof
     ) external returns (bool challengeSuccessful);

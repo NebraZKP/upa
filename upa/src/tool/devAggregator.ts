@@ -187,6 +187,10 @@ async function submitBatch(
     )
     .filter((proof) => proof) as SubmissionProof[];
 
+  const dupSubmissionIdxs = batch.map((si) =>
+    si.submission.getDupSubmissionIdx()
+  );
+
   // Submit aggregated proof
   await upaInstance.verifier.verifyAggregatedProof(
     calldata,
@@ -194,6 +198,7 @@ async function submitBatch(
     proofIds.length,
     submissionProofs,
     packOffChainSubmissionMarkers([]) /* offChainSubmissionMarkers */,
+    dupSubmissionIdxs,
     options || {}
   );
 
