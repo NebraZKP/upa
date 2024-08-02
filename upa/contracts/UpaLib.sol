@@ -132,13 +132,4 @@ library UpaLib {
         uint256 digestUint = uint256(digest);
         return (digestUint & ((1 << 128) - 1), digestUint >> 128);
     }
-
-    // The stored proofDigestRoot is actually the keccak of the Merkle root
-    // and the submitter address.
-    function proofDataDigest(
-        bytes32 merkleRoot,
-        address sender
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(merkleRoot, sender));
-    }
 }

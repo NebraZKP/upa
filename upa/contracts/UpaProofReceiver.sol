@@ -75,7 +75,9 @@ contract UpaProofReceiver is
 
     struct Submission {
         /// Merkle root of the proof data digests as seen by the contract
-        bytes32 proofDataDigest;
+        bytes32 proofDigestRoot;
+        /// Submitter
+        address submitter;
         /// Index of this submission
         uint40 submissionIdx;
         /// Block number at which the submission was made
@@ -293,10 +295,7 @@ contract UpaProofReceiver is
 
         // Record the final submission
         submissionId = Merkle.computeMerkleRoot(proofIds);
-        bytes32 proofDataDigest = UpaLib.proofDataDigest(
-            Merkle.computeMerkleRoot(proofDigests),
-            msg.sender
-        );
+        bytes32 proofDigestRoot = Merkle.computeMerkleRoot(proofDigests);
 
         // Ensure there is no existing submission
         require(
@@ -308,7 +307,8 @@ contract UpaProofReceiver is
         onProofSubmitted(numProofs);
 
         proofReceiverStorage._submissions[submissionId] = Submission(
-            proofDataDigest,
+            proofDigestRoot,
+            msg.sender,
             submissionIdx,
             uint40(block.number),
             numProofs

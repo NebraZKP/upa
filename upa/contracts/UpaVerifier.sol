@@ -41,7 +41,8 @@ error UnauthorizedWorkerAccount();
 error InvalidNumberOfVerifiedProofs();
 error InvalidMerkleProofForProofId();
 error InvalidMerkleIntervalProof();
-error InvalidProofDataDigest();
+error InvalidProofDigest();
+error InvalidProofSubmitter();
 error InvalidProof();
 error SubmissionOutOfOrder();
 error ProofAlreadyVerified();
@@ -750,14 +751,11 @@ contract UpaVerifier is
             location,
             proofDataMerkleProof
         );
-        bytes32 claimedProofDataDigest = UpaLib.proofDataDigest(
-            claimedProofDigestRoot,
-            msg.sender
-        );
         require(
-            claimedProofDataDigest == submission.proofDataDigest,
-            InvalidProofDataDigest()
+            claimedProofDigestRoot == submission.proofDigestRoot,
+            InvalidProofDigest()
         );
+        require(msg.sender == submission.submitter, InvalidProofSubmitter());
 
         // Mark the proof as verified.
         uint16 nextLocation = location + 1;

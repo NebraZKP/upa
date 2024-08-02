@@ -246,7 +246,36 @@ describe("Censorship challenge tests", () => {
           s1.computeProofIdMerkleProof(0),
           s1.computeProofDataMerkleProof(0)
         )
-    ).to.be.revertedWithCustomError(verifier, "InvalidProofDataDigest");
+    ).to.be.revertedWithCustomError(verifier, "InvalidProofSubmitter");
+  }).timeout(100000);
+
+  it("wrong proof data should fail", async function () {
+    const { upa, worker, user2, s1, s2 } = await loadFixture(deployAndSubmit);
+    const { verifier } = upa;
+    // The aggregator will aggregate the second submission,
+    // skipping the first
+    await verifySubmission(verifier, worker, s2);
+    // Check the proof in s1 is not verified
+    const isProofVerifiedSingleFn = verifier.getFunction(isProofVerifiedSingle);
+    expect(await isProofVerifiedSingleFn(s1.circuitIds[0], s1.inputs[0])).to.be
+      .false;
+    // user2 submits a censorship challenge, which should
+    // fail because he wasn't the original submitter
+
+    const invalidProof: Groth16Proof = s1.proofs[0];
+    invalidProof.pi_a = ["0x00", "0x00"];
+    await expect(
+      verifier
+        .connect(user2)
+        .challenge(
+          s1.circuitIds[0],
+          invalidProof.solidity(),
+          s1.inputs[0],
+          s1.submissionId,
+          s1.computeProofIdMerkleProof(0),
+          s1.computeProofDataMerkleProof(0)
+        )
+    ).to.be.revertedWithCustomError(verifier, "InvalidProofDigest");
   }).timeout(100000);
 
   it("already verified proof should fail", async function () {
