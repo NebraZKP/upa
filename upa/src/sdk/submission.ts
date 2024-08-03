@@ -241,9 +241,12 @@ export class Submission {
   /// Extract a sub-interval of the CircuitIdProofAndInputs structures.  Used
   /// primarily by off-chain aggregators to form inner proof batches.
   public getCircuitIdsProofsAndInputs(
-    startIdx: number,
-    numProofs: number
+    startIdx?: number,
+    numProofs?: number
   ): application.CircuitIdProofAndInputs[] {
+    startIdx = startIdx ?? 0;
+    numProofs = numProofs ?? this.proofs.length;
+
     const cpis: application.CircuitIdProofAndInputs[] = [];
     const endIdx = startIdx + numProofs;
     assert(endIdx <= this.proofs.length);
@@ -311,9 +314,12 @@ export class Submission {
   /// Returns a Submission proof for the given slice of proofs.  `undefined`
   /// if not required (single-entry submission).
   public computeSubmissionProof(
-    offset: number,
-    numEntries: number
+    offset?: number,
+    numEntries?: number
   ): SubmissionProof | undefined {
+    offset = offset ?? 0;
+    numEntries = numEntries ?? this.circuitIds.length;
+
     assert(0 <= offset);
     assert(offset < this.proofIds.length);
     assert(0 < numEntries);
