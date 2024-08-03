@@ -293,13 +293,17 @@ contract UpaProofReceiver is
         proofReceiverStorage._nextProofIdx = proofIdx;
 
         // Compute the submissionIdx and submissionId, which in turn
-        // determines the duplicateSubmissionIdx (required to emit events)
-        uint64 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
-        submissionId = Merkle.computeMerkleRoot(proofIds);
+        // determines the duplicateSubmissionIdx (required to emit events).
+        // Note computeMerkleRoot overwrites the original buffer so we make a
+        // copy. (We need the proofIds in order to emit events, but we can't
+        // emit events until we know the dupSubmissionIdx, which requires the
+        // submissionId.
+        submissionId = Merkle.computeMerkleRootSafe(proofIds);
 
         Submission[] storage submissions = proofReceiverStorage._submissions[
             submissionId
         ];
+        uint64 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
         uint64 dupSubmissionIdx = uint64(submissions.length);
         require(
             dupSubmissionIdx < uint64(MAX_NUM_DUPLICATE_SUBMISSIONS),
@@ -308,7 +312,8 @@ contract UpaProofReceiver is
 
         // Emit events
         for (uint16 i = 0; i < numProofs; ++i) {
-            // TODO: Should we flag submissions separately and avoid all the duplicated data?
+            // TODO: Should we flag submissions separately in a Submission
+            // event and avoid the duplicated data?
             emit ProofSubmitted(
                 proofIds[i],
                 submissionIdx,
@@ -349,9 +354,10 @@ contract UpaProofReceiver is
         bytes32 submissionId,
         uint8 dupSubmissionIdx
     ) public view returns (uint64 submissionIdx) {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ][dupSubmissionIdx];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
     }
 
@@ -359,9 +365,10 @@ contract UpaProofReceiver is
         bytes32 submissionId,
         uint8 dupSubmissionIdx
     ) public view returns (uint64 submissionIdx, uint64 submissionBlockNumber) {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ][dupSubmissionIdx];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
         submissionBlockNumber = submission.submissionBlockNumber;
     }
@@ -370,9 +377,10 @@ contract UpaProofReceiver is
         bytes32 submissionId,
         uint8 dupSubmissionIdx
     ) public view returns (uint64 submissionIdx, uint16 numProofs) {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ][dupSubmissionIdx];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
         numProofs = submission.numProofs;
     }
@@ -385,22 +393,28 @@ contract UpaProofReceiver is
         view
         returns (uint64 submissionIdx, uint64 height, uint16 numProofs)
     {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ][dupSubmissionIdx];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
         height = submission.submissionBlockNumber;
         numProofs = submission.numProofs;
     }
 
-    function getSubmission(
+    // Unsafe access into the array of Submissions, as expected by the rest of
+    // the code.
+    function getSubmissionStorage(
         bytes32 submissionId,
         uint8 dupSubmissionIdx
-    ) public view returns (Submission memory submission) {
-        submission = _getProofReceiverStorage()._submissions[submissionId][
-            dupSubmissionIdx
-        ];
-        require(0 != submission.submissionIdx, SubmissionDoesNotExist());
+    ) internal view returns (Submission storage submission) {
+        Submission[] storage submissions = _getProofReceiverStorage()
+            ._submissions[submissionId];
+        assembly {
+            mstore(0, submissions.slot)
+            let offset := keccak256(0, 32)
+            submission.slot := add(offset, mul(dupSubmissionIdx, 2))
+        }
     }
 
     // Sub-section of the code in `submit`.  This function exists only to

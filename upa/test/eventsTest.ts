@@ -160,7 +160,7 @@ describe("EventGetter for events", () => {
             sub_3.computeSubmissionProof(0, 1)!.solidity(),
           ],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0, 0]
         );
       return agg2Tx.hash;
     })();

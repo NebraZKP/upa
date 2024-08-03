@@ -170,6 +170,79 @@ export async function deployAndUpgradeUpa() {
   };
 }
 
+export type DeployAndSubmitResult = DeployResult & {
+  s1: Submission;
+  s2: Submission;
+  s3: Submission;
+  s1_tx: ContractTransactionResponse;
+  s2_tx: ContractTransactionResponse;
+  s3_tx: ContractTransactionResponse;
+  cid_a: string;
+};
+
+/// Submit 3 submissions (all against cid_a):
+///   1: [ pf_a ]
+///   2: [ pf_b, pf_c, pf_d ]  (Merkle depth 2, not full)
+///   3: [ pf_e, pf_f ]        (Merkle depth 2, full)
+export async function makeSubmissions(
+  upa: UpaInstance
+): Promise<[Submission, Submission, Submission, string]> {
+  const { verifier } = upa;
+  const vk = loadAppVK("../circuits/src/tests/data/vk.json");
+  await verifier.registerVK(vk);
+  const cid_a = computeCircuitId(vk);
+
+  // Submissions
+  const submission_1 = Submission.fromCircuitIdsProofsAndInputs([
+    { circuitId: cid_a, proof: pf_a, inputs: pi_a },
+  ]);
+  const submission_2 = Submission.fromCircuitIdsProofsAndInputs([
+    { circuitId: cid_a, proof: pf_b, inputs: pi_b },
+    { circuitId: cid_a, proof: pf_c, inputs: pi_c },
+    { circuitId: cid_a, proof: pf_d, inputs: pi_d },
+  ]);
+  const submission_3 = Submission.fromCircuitIdsProofsAndInputs([
+    { circuitId: cid_a, proof: pf_e, inputs: pi_e },
+    { circuitId: cid_a, proof: pf_f, inputs: pi_f },
+  ]);
+
+  return [submission_1, submission_2, submission_3, cid_a];
+}
+
+async function deployAndSubmit(): Promise<DeployAndSubmitResult> {
+  const deployResult = await deployUpaDummyVerifier();
+  const { upa } = deployResult;
+
+  const [s1, s2, s3, cid_a] = await makeSubmissions(upa);
+  const { verifier } = upa;
+
+  // Submit 1
+  const s1_tx = await submitProof(
+    verifier,
+    s1.circuitIds[0],
+    s1.proofs[0],
+    s1.inputs[0]
+  );
+
+  // Submit 2
+  const s2_tx = await submitProofs(
+    verifier,
+    s2.circuitIds,
+    s2.proofs,
+    s2.inputs
+  );
+
+  // Submit 3
+  const s3_tx = await submitProofs(
+    verifier,
+    s3.circuitIds,
+    s3.proofs,
+    s3.inputs
+  );
+
+  return { ...deployResult, s1, s2, s3, s1_tx, s2_tx, s3_tx, cid_a };
+}
+
 // UPA tests
 describe("UPA", async () => {
   const vk = loadAppVK("../circuits/src/tests/data/vk.json");
@@ -269,6 +342,7 @@ describe("UPA", async () => {
         expect(parsedLogs?.args.proofId).eql(pid_a_c0);
         expect(parsedLogs?.args.submissionIdx).eql(1n);
         expect(parsedLogs?.args.proofIdx).eql(1n);
+        expect(parsedLogs?.args.dupSubmissionIdx).eql(0n);
       }
 
       // Check records for the submission
@@ -279,12 +353,6 @@ describe("UPA", async () => {
       expect(submissionBlockNumber).greaterThan(0n);
 
       // Next proof idx should be 2
-      expect(await verifier.getNextSubmissionIdx()).eql(2n);
-
-      // Same proof, same CID - should be rejected.  Proof idx should still be
-      // 2.
-      await expect(submitProof(verifier, circuitIds[0], pf_a, pi_a)).to.be
-        .reverted;
       expect(await verifier.getNextSubmissionIdx()).eql(2n);
 
       // 2 more proofs (pf_b, pf_c) with cid[0], so we should have
@@ -315,7 +383,7 @@ describe("UPA", async () => {
           2,
           [],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0]
         );
       const vapReceipt = await vapTx.wait();
       console.log(
@@ -565,78 +633,6 @@ describe("UPA", async () => {
   });
 
   describe("Complex Submissions", () => {
-    type DeployAndSubmitResult = DeployResult & {
-      s1: Submission;
-      s2: Submission;
-      s3: Submission;
-      s1_tx: ContractTransactionResponse;
-      s2_tx: ContractTransactionResponse;
-      s3_tx: ContractTransactionResponse;
-      cid_a: string;
-    };
-
-    /// Submit 3 submissions (all against cid_a):
-    ///   1: [ pf_a ]
-    ///   2: [ pf_b, pf_c, pf_d ]  (Merkle depth 2, not full)
-    ///   3: [ pf_e, pf_f ]        (Merkle depth 2, full)
-    async function makeSubmissions(
-      upa: UpaInstance
-    ): Promise<[Submission, Submission, Submission, string]> {
-      const { verifier } = upa;
-      await verifier.registerVK(vk);
-      const cid_a = computeCircuitId(vk);
-
-      // Submissions
-      const submission_1 = Submission.fromCircuitIdsProofsAndInputs([
-        { circuitId: cid_a, proof: pf_a, inputs: pi_a },
-      ]);
-      const submission_2 = Submission.fromCircuitIdsProofsAndInputs([
-        { circuitId: cid_a, proof: pf_b, inputs: pi_b },
-        { circuitId: cid_a, proof: pf_c, inputs: pi_c },
-        { circuitId: cid_a, proof: pf_d, inputs: pi_d },
-      ]);
-      const submission_3 = Submission.fromCircuitIdsProofsAndInputs([
-        { circuitId: cid_a, proof: pf_e, inputs: pi_e },
-        { circuitId: cid_a, proof: pf_f, inputs: pi_f },
-      ]);
-
-      return [submission_1, submission_2, submission_3, cid_a];
-    }
-
-    async function deployAndSubmit(): Promise<DeployAndSubmitResult> {
-      const deployResult = await deployUpaDummyVerifier();
-      const { upa } = deployResult;
-
-      const [s1, s2, s3, cid_a] = await makeSubmissions(upa);
-      const { verifier } = upa;
-
-      // Submit 1
-      const s1_tx = await submitProof(
-        verifier,
-        s1.circuitIds[0],
-        s1.proofs[0],
-        s1.inputs[0]
-      );
-
-      // Submit 2
-      const s2_tx = await submitProofs(
-        verifier,
-        s2.circuitIds,
-        s2.proofs,
-        s2.inputs
-      );
-
-      // Submit 3
-      const s3_tx = await submitProofs(
-        verifier,
-        s3.circuitIds,
-        s3.proofs,
-        s3.inputs
-      );
-
-      return { ...deployResult, s1, s2, s3, s1_tx, s2_tx, s3_tx, cid_a };
-    }
-
     it("submitMultipleRaw", async () => {
       const { upa } = await loadFixture(deployUpaDummyVerifier);
       const { verifier } = upa;
@@ -835,7 +831,7 @@ describe("UPA", async () => {
             s3.computeSubmissionProof(0, 2)!.solidity(),
           ],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0, 0]
         );
       expect(await verifier.nextSubmissionIdxToVerify()).eql(4n);
 
@@ -1027,7 +1023,7 @@ describe("UPA", async () => {
           agg1.length,
           [pf2_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0]
         );
 
       // Check the UpaVerifier state.
@@ -1054,7 +1050,7 @@ describe("UPA", async () => {
           agg2.length,
           [pf2_2.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0]
         );
 
       // Check the UpaVerifier state.
@@ -1143,7 +1139,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            [0, 0]
           );
       }
 
@@ -1279,7 +1275,7 @@ describe("UPA", async () => {
           agg1.length,
           [pf2_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0]
         );
 
       const agg2 = [pid_c, pid_d, pid_e, pid_f];
@@ -1294,7 +1290,7 @@ describe("UPA", async () => {
           agg2.length,
           [pf2_2.solidity(), pf3_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0]
         );
       expect(await verifier.nextSubmissionIdxToVerify()).eql(4n);
 
@@ -1371,7 +1367,7 @@ describe("UPA", async () => {
           agg1.length,
           [pf3_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0]
         );
       expect(await verifier.nextSubmissionIdxToVerify()).eql(4n);
 
@@ -1571,13 +1567,14 @@ describe("UPA", async () => {
             return s.computeSubmissionProof(0, submissionSize);
           })
           .filter((x) => x) as SubmissionProof[];
+        const dupSubmissionIdxs = submissions.map(() => 0);
         const verifyTx = await verifier.connect(worker).verifyAggregatedProof(
           calldata,
           proofIds,
           proofIds.length,
           submitPfs.map((s) => s.solidity()),
           packOffChainSubmissionMarkers([]),
-          [0]
+          dupSubmissionIdxs
         );
         const verifyReceipt = await verifyTx.wait();
         console.log(
@@ -1616,27 +1613,6 @@ describe("UPA", async () => {
       await verifySubmissions(32);
     }).timeout(60000);
 
-    it("rejects submissions with repeated submission id", async () => {
-      const { upa, s1, s2 } = await loadFixture(deployAndSubmit);
-      const { verifier } = upa;
-
-      // Submit 3 submissions (all against cid_a):
-      //
-      //   1: [ pf_a ]
-      //   2: [ pf_b, pf_c, pf_d ]  (Merkle depth 2, not full)
-      //   3: [ pf_e, pf_f ]        (Merkle depth 2, full)
-
-      // Resubmit 1 and 2.  Both should fail.
-
-      await expect(
-        submitProofs(verifier, s1.circuitIds, s1.proofs, s1.inputs)
-      ).to.be.revertedWithCustomError(verifier, "SubmissionAlreadyExists");
-
-      await expect(
-        submitProofs(verifier, s2.circuitIds, s2.proofs, s2.inputs)
-      ).to.be.revertedWithCustomError(verifier, "SubmissionAlreadyExists");
-    });
-
     it("rejects aggregated proofs with invalid final digest", async () => {
       const { upa, worker, s1, s2 } = await loadFixture(deployAndSubmit);
       const { verifier } = upa;
@@ -1666,7 +1642,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            [0, 0]
           )
       ).to.be.rejected;
     });
@@ -1701,7 +1677,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            [0, 0]
           )
       ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
     });
@@ -1735,7 +1711,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            [0, 0]
           )
       ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
     });
@@ -1767,7 +1743,7 @@ describe("UPA", async () => {
             agg1.length,
             [],
             packOffChainSubmissionMarkers([]),
-            [0]
+            [0, 0]
           )
       ).to.be.revertedWithCustomError(verifier, "MissingSubmissionProof");
     });
@@ -1804,7 +1780,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf3_1.solidity(), pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            [0, 0, 0]
           )
       ).to.be.revertedWithCustomError(verifier, "SubmissionOutOfOrder");
     });
@@ -1837,7 +1813,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            [0, 0]
           )
       ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
     });
@@ -1874,7 +1850,7 @@ describe("UPA", async () => {
           agg1.length,
           [],
           packOffChainSubmissionMarkers([]),
-          [0]
+          [0, 0]
         );
 
       await verifier

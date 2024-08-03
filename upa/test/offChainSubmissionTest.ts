@@ -868,7 +868,7 @@ describe("Aggregations containing multiple submissions", async () => {
         7,
         firstAggSubmissionProofs,
         firstAggMarkers,
-        [0]
+        [0, 0]
       );
 
     await verifyAggProofTx_1.wait();
@@ -923,7 +923,7 @@ describe("Aggregations containing multiple submissions", async () => {
         8 + numDummyProofsPerAgg,
         secondAggSubmissionProofs,
         secondAggMarkers,
-        [0]
+        [0, 0]
       );
 
     await verifyAggProofTx_2.wait();
