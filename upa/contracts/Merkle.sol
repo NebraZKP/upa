@@ -56,7 +56,7 @@ library Merkle {
     }
 
     /// Hashes the proofIds in the `entries` array in-place.
-    function hashEntries(bytes32[] memory entries) internal pure {
+    function hashEntriesInPlace(bytes32[] memory entries) internal pure {
         uint256 length = entries.length;
 
         // The following assembly is equivalent to this for-loop:
@@ -80,6 +80,38 @@ library Merkle {
         }
     }
 
+    // Hash entries into a new buffer.
+    function hashEntries(
+        bytes32[] memory entries
+    ) internal pure returns (bytes32[] memory digests) {
+        uint256 length = entries.length;
+        digests = new bytes32[](length);
+
+        // The following assembly is equivalent to this for-loop:
+        //
+        // for (uint16 i = 0; i < length; ++i) {
+        //     digests[i] = keccak256(abi.encodePacked(entries[i]));
+        // }
+        //
+        assembly {
+            let dstPtr := add(digests, 0x20)
+            let srcPtr := add(entries, 0x20)
+            let srcEndPtr := add(srcPtr, mul(length, 0x20))
+            for {
+
+            } lt(srcPtr, srcEndPtr) {
+
+            } {
+                let hashResult := keccak256(srcPtr, 0x20)
+                mstore(dstPtr, hashResult)
+                srcPtr := add(srcPtr, 0x20)
+                dstPtr := add(dstPtr, 0x20)
+            }
+        }
+    }
+
+    /// WARNING: overwrites the `interval` buffer.
+    ///
     /// Given a sequence of contiguous leaf digests, and a proof for the
     /// sequence, compute the Merkle root.
     ///
@@ -126,7 +158,7 @@ library Merkle {
         // Typescript code, except for some Solidity-specific lines.
 
         // Hash the proofIds in the `interval` array in-place.
-        hashEntries(interval);
+        hashEntriesInPlace(interval);
 
         // Cached constant over the course of the loop below
         uint16 intervalProofLength = (uint16)(intervalProof.length);
@@ -258,29 +290,24 @@ library Merkle {
         return interval[0];
     }
 
-    // Note: this could be implemented in terms of computeMerkleIntervalRoot,
-    // with a small gas-overhead.  Since this is used for clients to verify
-    // individual proofs we use this implementation specialized for single
+    // Intended to be used internall in `computeMerkleRoot*`.  Overwrites
     // leaves.
-    function computeMerkleRoot(
-        bytes32[] memory entries
+    function computeMerkleRootFromLeaves(
+        bytes32[] memory leaves
     ) internal pure returns (bytes32) {
-        uint256 numEntries = entries.length;
+        uint256 numEntries = leaves.length;
         require(((numEntries - 1) & numEntries) == 0, NonPowerOfTwoLeaves());
-
-        // Hash the proofIds in the `entries` array in-place
-        hashEntries(entries);
 
         while (numEntries > 1) {
             // The below assembly is equivalent to this for-loop:
             //
             // for (uint16 i = 0; i < numEntries; i += 2) {
-            //     entries[i/2] = hash(entries[i], entries[i + 1]);
+            //     leaves[i/2] = hash(leaves[i], leaves[i + 1]);
             // }
             //
             // This loop calculates the internal Merkle hashes layer-by-layer.
             // Each loop iteration writes the hashes of the next layer into
-            // the beginning of the `entries` array. For example, if there
+            // the beginning of the `leaves` array. For example, if there
             // were 4 entries then the array would transform as follows:
             //
             // Start:
@@ -293,7 +320,7 @@ library Merkle {
             // [hash(hash(l0, l1), hash(l2, l3)), hash(l2, l3), l2, l3]
             //
             assembly {
-                let dstPtr := add(entries, 0x20)
+                let dstPtr := add(leaves, 0x20)
                 let srcPtr := dstPtr
                 let srcEndPtr := add(srcPtr, mul(numEntries, 0x20))
                 for {
@@ -311,7 +338,30 @@ library Merkle {
             numEntries = numEntries >> 1;
         }
 
-        return entries[0];
+        return leaves[0];
+    }
+
+    // WARNING: Overwrites the original entries array.
+    //
+    // Note: this could be implemented in terms of computeMerkleIntervalRoot,
+    // with a small gas-overhead.  Since this is used for clients to verify
+    // individual proofs we use this implementation specialized for single
+    // leaves.
+    function computeMerkleRoot(
+        bytes32[] memory entries
+    ) internal pure returns (bytes32) {
+        // Hash in-place and avoid allocation.
+        hashEntriesInPlace(entries);
+        return computeMerkleRootFromLeaves(entries);
+    }
+
+    // Note: "Safe" here means it does not overwrite the original array.
+    function computeMerkleRootSafe(
+        bytes32[] memory entries
+    ) internal pure returns (bytes32) {
+        // Hash proofIds into a new array. Compute the Merkle root in-place.
+        bytes32[] memory leaves = hashEntries(entries);
+        return computeMerkleRootFromLeaves(leaves);
     }
 
     function computeMerkleRootFromProof(
