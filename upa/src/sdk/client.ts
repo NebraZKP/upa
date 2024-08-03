@@ -56,9 +56,9 @@ export class UpaClient {
       options
     );
 
-    console.log(
-      `SubmissionId ${submission.getSubmissionId()} (txid: ${txResponse.hash})`
-    );
+    // console.log(
+    //   `SubmissionId ${submission.getSubmissionId()} (txid: ${txResponse.hash})`
+    // );
 
     return { submission, txResponse };
   }
