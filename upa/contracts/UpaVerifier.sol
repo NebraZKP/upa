@@ -475,7 +475,7 @@ contract UpaVerifier is
             0 /* submissionProofIdx */
         );
 
-        HandleMultiProofOnChainSubmissionParams
+        HandleMultiProofOnChainSubmissionParams // solhint-disable-next-line
             memory multiProofSubParams = HandleMultiProofOnChainSubmissionParams(
                 0,
                 0,
@@ -485,7 +485,7 @@ contract UpaVerifier is
 
         // Process the on-chain proofIds.
         while (state.proofIdIdx < numOnchainProofs) {
-            // console.log(" proofIdIdx: %s", proofIdIdx);
+            // console.log(" proofIdIdx: %s", state.proofIdIdx);
 
             bytes32 proofId = proofIds[state.proofIdIdx];
 
@@ -502,14 +502,23 @@ contract UpaVerifier is
             // the proof was submitted alone, hence and we do not need a
             // SubmissionProof.
             bytes32 submissionId = UpaLib.computeSubmissionId(proofId);
+            // console.log(
+            //   " submissionInAggProofIdx: %s",
+            //   state.submissionInAggProofIdx
+            // );
             uint8 dupSubmissionIdx = duplicateSubmissionIndices[
                 state.submissionInAggProofIdx
             ];
+
+            // console.log(" dupSubmissionIdx: %s", dupSubmissionIdx);
 
             (
                 uint64 submissionIdx,
                 uint64 submissionBlockNumber
             ) = getSubmissionIdxAndHeight(submissionId, dupSubmissionIdx);
+            // console.log(" submissionIdx: %s", submissionIdx);
+            // console.log(" submissionBlockNumber: %s", submissionBlockNumber);
+
             if (submissionIdx != 0) {
                 nextSubmissionIdx = handleSingleProofOnChainSubmission(
                     submissionIdx
@@ -547,6 +556,7 @@ contract UpaVerifier is
 
                 multiProofSubParams.proofIdIdx = state.proofIdIdx;
                 multiProofSubParams.nextSubmissionIdx = nextSubmissionIdx;
+                multiProofSubParams.dupSubmissionIdx = dupSubmissionIdx;
                 // Could be set just once. Kept for readability.
                 multiProofSubParams.numOnchainProofs = numOnchainProofs;
 
@@ -785,16 +795,18 @@ contract UpaVerifier is
     ) private returns (bool isLastProof) {
         VerifierStorage storage verifierStorage = _getVerifierStorage();
 
-        // Checks to be made if dupSubmissionIdx != 0
-        if (params.dupSubmissionIdx != 0) {
-            require(
-                !isSubmissionVerified(params.submissionId),
-                SubmissionAlreadyVerified()
-            );
-        }
+        // If ANY of the entries in numVerifiedInSubmission[idx] for idx with
+        // this submissionId, then the whole submission should be marked as
+        // verified.  Therefore, if it is not marked as verified, logically no
+        // such numVerifiedInSubmission[idx] (including the one for this
+        // particular Submission) should be >= numProofs.
+        require(
+            !isSubmissionVerified(params.submissionId),
+            SubmissionAlreadyVerified()
+        );
 
         // Retrieve the submission
-        UpaProofReceiver.Submission memory submission = getSubmission(
+        UpaProofReceiver.Submission storage submission = getSubmissionStorage(
             params.submissionId,
             params.dupSubmissionIdx
         );
@@ -808,7 +820,8 @@ contract UpaVerifier is
         );
 
         // Check `location` is not already beyond the number of proofs in the
-        // submission (meaning the submission is already verified).
+        // submission (meaning the submission is already verified).  By the
+        // above, this should never happen, but we check to be sure.
         uint16 numProofs = submission.numProofs;
         require(location < numProofs, SubmissionAlreadyVerified());
 

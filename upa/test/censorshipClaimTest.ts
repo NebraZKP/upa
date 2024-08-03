@@ -278,7 +278,7 @@ describe("Censorship challenge tests", () => {
           s1.computeProofIdMerkleProof(0),
           s1.computeProofDataMerkleProof(0)
         )
-    ).to.be.revertedWithCustomError(verifier, "LocationOutOfRange");
+    ).to.be.revertedWithCustomError(verifier, "SubmissionAlreadyVerified");
   }).timeout(100000);
 
   it("not yet skipped proof should fail", async function () {
