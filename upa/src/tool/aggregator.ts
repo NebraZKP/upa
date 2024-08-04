@@ -22,6 +22,13 @@ import {
 import { config, options } from ".";
 import { PayableOverrides } from "../../typechain-types/common";
 import assert from "assert";
+import {
+  siComputeSubmissionProof,
+  siNumProofs,
+  siProofIds,
+  sisFromSubmissions,
+} from "../sdk/submissionIntervals";
+import { JSONstringify } from "../sdk/utils";
 
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",
@@ -128,47 +135,6 @@ const claimAggregatorFee = command({
   },
 });
 
-const computeSubmissionMarkers = command({
-  name: "compute-submission-markers",
-  args: {
-    submissionFiles: multioption({
-      type: array(string),
-      long: "submission-files",
-    }),
-    startIdx: option({
-      type: number,
-      long: "start-idx",
-      short: "s",
-      description: "Start index of proofs within the list of submissions",
-    }),
-    numProofs: option({
-      type: number,
-      long: "num-proofs",
-      short: "n",
-      description: "Number of proofs, over all submissions, to be marked",
-    }),
-  },
-  description:
-    "Compute unpacked off-chain submission markers for the given submissions.",
-  handler: async function ({
-    submissionFiles,
-    startIdx,
-    numProofs,
-  }): Promise<void> {
-    const submissions = submissionFiles.map((submissionFile) =>
-      Submission.from_json(readFileSync(submissionFile, "ascii"))
-    );
-
-    const submissionMarkers = computeUnpackedOffChainSubmissionmarkers(
-      submissions,
-      startIdx,
-      numProofs
-    );
-
-    console.log(JSON.stringify(submissionMarkers));
-  },
-});
-
 const computeFinalDigest = command({
   name: "compute-final-digest",
   args: {
@@ -210,31 +176,55 @@ const submitAggregatedProof = command({
     estimateGas: options.estimateGas(),
     dumpTx: options.dumpTx(),
     maxFeePerGasGwei: options.maxFeePerGasGwei(),
+    dumpArguments: option({
+      type: optional(string),
+      long: "dump-arguments",
+      description: "Write a JSON representation of the arguments to a file",
+    }),
     calldataFile: option({
       type: string,
       long: "calldata-file",
       short: "p",
       description: "Proof file",
     }),
-    proofIdsFile: option({
-      type: string,
-      long: "proof-ids-file",
-      short: "i",
-      description: "file with JSON list of proofIds to be aggregated",
-    }),
-    onChainSubmissionProofFiles: multioption({
+    submissionFiles: multioption({
       type: array(string),
-      long: "submission-proof-file",
+      long: "submission",
       short: "s",
-      defaultValue: () => [],
-      description: "submission proof file(s)",
+      description: "on-chain submission files",
     }),
-    offChainSubmissionMarkersFile: option({
-      type: string,
-      long: "submission-markers-file",
-      short: "s",
-      defaultValue: () => "",
-      description: "Unpacked submission markers file containing a boolean[]",
+    offset: option({
+      type: number,
+      long: "offset",
+      short: "",
+      defaultValue: () => 0,
+      description: "skip proofs in first on-chain submission (default: 0)",
+    }),
+    finalCount: option({
+      type: optional(number),
+      long: "final-count",
+      short: "f",
+      description:
+        "include only leading proofs from final final submission" +
+        " (default: all)",
+    }),
+    offChainSubmissionFiles: multioption({
+      type: array(string),
+      long: "off-chain-submission",
+      description: "on-chain submission files",
+    }),
+    offChainOffset: option({
+      type: number,
+      long: "off-chain-offset",
+      defaultValue: () => 0,
+      description: "skip proofs in first on-chain submission (default: 0)",
+    }),
+    offChainFinalCount: option({
+      type: optional(number),
+      long: "off-chain-final-count",
+      description:
+        "include only leading proofs from final final submission" +
+        " (default: all)",
     }),
   },
   description: "Submit an aggregated proof to the UPA contract",
@@ -243,34 +233,94 @@ const submitAggregatedProof = command({
     keyfile,
     password,
     instance,
-    calldataFile,
-    proofIdsFile,
-    onChainSubmissionProofFiles,
-    offChainSubmissionMarkersFile,
     wait,
     estimateGas,
     dumpTx,
     maxFeePerGasGwei,
+    dumpArguments,
+    calldataFile,
+    submissionFiles,
+    offset,
+    finalCount,
+    offChainSubmissionFiles,
+    offChainOffset,
+    offChainFinalCount,
   }): Promise<void> {
+    assert(submissionFiles.length > 0 || offChainSubmissionFiles.length > 0);
+
     const calldata = readFileSync(calldataFile);
-    const proofIds: string[] = JSON.parse(readFileSync(proofIdsFile, "ascii"));
-    const onChainSubmissionProofs = onChainSubmissionProofFiles.map((f) => {
-      return SubmissionProof.from_json(readFileSync(f, "ascii"));
+
+    // Init the on-chain submission config
+
+    const submissions: Submission[] = submissionFiles.map((f) => {
+      const s = Submission.from_json(readFileSync(f, "ascii"));
+      assert(s.getDupSubmissionIdx() !== undefined);
+      return s;
     });
 
-    let offChainSubmissionMarkers: boolean[] = [];
-    if (offChainSubmissionMarkersFile != "") {
-      offChainSubmissionMarkers = JSON.parse(
-        readFileSync(offChainSubmissionMarkersFile, "ascii")
-      );
-    }
+    // Init the off-chain submission config
 
-    assert(
-      onChainSubmissionProofs.length > 0 || offChainSubmissionMarkers.length > 0
+    const offChainSubmissions: Submission[] = offChainSubmissionFiles.map((f) =>
+      Submission.from_json(readFileSync(f, "ascii"))
     );
 
-    // Infer the number of on-chain proofs
-    const numOnChainProofs = proofIds.length - offChainSubmissionMarkers.length;
+    // Create the submission intervals
+
+    const submissionIntervals = sisFromSubmissions(
+      submissions,
+      offset,
+      finalCount
+    );
+
+    const offChainSubmissionIntervals = sisFromSubmissions(
+      offChainSubmissions,
+      offChainOffset,
+      offChainFinalCount
+    );
+
+    log.debug(
+      `on-chain: ${submissions.length} submissions, offset: ${offset}, ` +
+        `finalCount: ${finalCount}`
+    );
+    log.debug(
+      `off-chain: ${offChainSubmissions.length} submissions, ` +
+        `offset: ${offChainOffset}, finalCount: ${offChainFinalCount}`
+    );
+
+    // Compute all arguments to verifyAggregatedProof
+
+    const allSubmissions = submissionIntervals.concat(
+      offChainSubmissionIntervals
+    );
+    const onChainNumProofs = siNumProofs(submissionIntervals);
+    const offChainNumProofs = siNumProofs(offChainSubmissionIntervals);
+    const proofIds = allSubmissions.flatMap(siProofIds);
+    const submissionProofs = submissionIntervals
+      .map(siComputeSubmissionProof)
+      .filter((p) => !!p) as SubmissionProof[];
+    const offChainSubmissionMarkers: boolean[] =
+      computeUnpackedOffChainSubmissionmarkers(
+        offChainSubmissions,
+        offChainOffset,
+        offChainNumProofs
+      );
+    const dupSubmissionIdxs = submissions.map((s) => s.getDupSubmissionIdx());
+
+    assert(onChainNumProofs + offChainNumProofs === proofIds.length);
+
+    if (dumpArguments) {
+      log.info(`Writing args file to ${dumpArguments}`);
+      const args = {
+        proofIds,
+        numOnChainProofs: onChainNumProofs,
+        submissionProofs,
+        offChainSubmissionMarkers,
+        dupSubmissionIdxs,
+      };
+      writeFileSync(dumpArguments, JSONstringify(args));
+    }
+
+    // Connect
 
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await config.loadWallet(
@@ -283,17 +333,16 @@ const submitAggregatedProof = command({
       wallet
     );
 
-    const submissionProofsSolidity = onChainSubmissionProofs.map((p) =>
-      p.solidity()
-    );
+    // Handle the tx
 
+    const submissionProofsSolidity = submissionProofs.map((p) => p.solidity());
     const optionsPayable: PayableOverrides = {
       maxFeePerGas: utils.parseGweiOrUndefined(maxFeePerGasGwei),
     };
     const txReq = await verifier.verifyAggregatedProof.populateTransaction(
       calldata,
       proofIds,
-      numOnChainProofs,
+      onChainNumProofs,
       submissionProofsSolidity,
       packOffChainSubmissionMarkers(offChainSubmissionMarkers),
       Array(32).fill(0),
@@ -318,7 +367,6 @@ export const aggregator = subcommands({
     "allocate-aggregator-fee": allocateAggregatorFee,
     "claim-aggregator-fee": claimAggregatorFee,
     "compute-final-digest": computeFinalDigest,
-    "compute-submission-markers": computeSubmissionMarkers,
     "submit-aggregated-proof": submitAggregatedProof,
   },
 });

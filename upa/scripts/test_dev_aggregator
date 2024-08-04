@@ -99,14 +99,14 @@ pushd _test_dev_aggregator
            --keyfile ${USER_KEYFILE} \
            --proofs-file ${TEST_PROOFS} \
            --proof-ids-file pids.json \
-           --submission-file submission.json \
            -N ${BATCH_SIZE} \
-           --wait
+           --wait > submit_1.tx.hash
+    upa get-submission `cat submit_1.tx.hash` > submit_1.submission.json
 
     # Extract proof refs, cids
     for i in {0..1} ; do
         upa compute proof-ref \
-                --submission-file submission.json \
+                --submission-file submit_1.submission.json \
                 --proof-idx $i \
                 --proof-ref-file submission.ref-$i.json
         jq ".[$i]" "$TEST_PROOFS" > "submission.proof-$i.json"
@@ -115,6 +115,7 @@ pushd _test_dev_aggregator
     # Manually submit (fake) aggregated proof containing only the first
     # submitted proof. (Later we test whether dev aggregator correctly starts
     # in the middle of previous submission.)
+
     jq '.[0:1]' pids.json > agg.pids.json
 
     # Compute calldata
@@ -122,19 +123,12 @@ pushd _test_dev_aggregator
             --proof-ids-file agg.pids.json \
             --calldata-file agg.proof.calldata
 
-    # Compute SubmissionProof
-    upa compute submission-proof \
-            --submission-file submission.json \
-            --start-idx 0 \
-            --num-proofs 1 \
-            > submission-proof.0.json
-
     # Submit aggregated proof
     upa aggregator submit-aggregated-proof \
             --keyfile ${KEYFILE} \
             --calldata-file agg.proof.calldata \
-            --submission-proof-file submission-proof.0.json \
-            --proof-ids-file agg.pids.json \
+            --submission submit_1.submission.json \
+            --final-count 1 \
             --wait > agg-proof.hash
 
     # Submission has not been verified, so proofs are not marked as verified

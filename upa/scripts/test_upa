@@ -150,15 +150,20 @@ pushd _test_upa
     upa submit-proofs \
            --keyfile ${USER_KEYFILE} \
            --proofs-file ${TEST_SINGLE_PROOF} \
-           --proof-ids-file proof_1.pid.json
+           --proof-ids-file proof_1.pid.json \
+           > submit-1.tx.hash
 
     # Submission of 4 proofs from universal_batch_verifier_4_proofs.json:
     upa submit-proofs \
            --keyfile ${USER_KEYFILE} \
            --proofs-file ${UNIVERSAL_PROOFS_4} \
            --proof-ids-file submit-multi-4.pids.json \
-           --submission-file submit-multi-4.submission.json \
            --wait > submit-multi-4.tx.hash
+           # --submission-file submit-multi-4.submission.json
+
+    # Extract the submissions
+    upa get-submission `cat submit-1.tx.hash` > submit-1.submission.json
+    upa get-submission `cat submit-multi-4.tx.hash` > submit-multi-4.submission.json
 
     # Submission from universal_batch_verifier_8_proofs.json. We will verify
     # this as an off-chain submission- we only use `submit-proofs` to generate
@@ -170,22 +175,14 @@ pushd _test_upa
             --submission-file off-chain-submission.json \
             --dry-run
 
-    # There will be two aggregations, each containing 4 off-chain proofs.
-    upa aggregator compute-submission-markers \
-            --submission-files off-chain-submission.json \
-            --start-idx 0 \
-            --num-proofs 4 > off-chain-submission-markers-1.json
-    upa aggregator compute-submission-markers \
-            --submission-files off-chain-submission.json \
-            --start-idx 4 \
-            --num-proofs 4 > off-chain-submission-markers-2.json
-
     # Allocate the fees for the submitted proofs.
     KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator allocate-aggregator-fee \
            --keyfile ${KEYFILE} \
            --wait
 
-    # Extract proof refs, cids and inputs
+    # There will be two aggregations, each containing 4 off-chain proofs.
+
+    # Extract proof refs, cids and inputs for the on-chain submission of 4
     for i in {0..3} ; do
         upa compute proof-ref \
                --submission-file submit-multi-4.submission.json \
@@ -194,7 +191,7 @@ pushd _test_upa
         jq ".[$i]" ${UNIVERSAL_PROOFS_4} > submit-multi-4.proof-$i.json
     done
 
-    # Extract proof refs, cids and inputs from converted proofs file
+    # Extract proof refs, cids and inputs for off-chain submission
     for i in {0..7} ; do
         upa compute proof-ref \
                --submission-file off-chain-submission.json \
@@ -204,7 +201,7 @@ pushd _test_upa
         jq ".[$i].circuitId" ${CONVERTED_UNIVERSAL_PROOFS_8} > off-chain-submission.cid-$i.json
     done
 
-    # Check that no proofs are verified
+    # Check that no proofs are verified yet
     (! upa query is-verified \
             --proof-file ${TEST_SINGLE_PROOF})
     for i in {0..3} ; do
@@ -239,41 +236,34 @@ pushd _test_upa
     # Flatten proofIds into one array.
     jq -s 'add' temp_agg.pids.json > agg.pids.json
 
-    # Compute the calldata
+    # Compute the dummy calldata using `compute-final-digest`
     upa aggregator compute-final-digest \
            --proof-ids-file agg.pids.json \
            --calldata-file agg.proof.calldata
 
-    # Compute the SubmissionProof
-    upa compute submission-proof \
-           --submission-file submit-multi-4.submission.json \
-           --start-idx 0 \
-           --num-proofs 1 \
-           > submit-multi-4.submission-proof.0.1.json
+    submit_aggregated_proof_flags="\
+           --calldata-file agg.proof.calldata \
+           --submission submit-1.submission.json \
+           --submission submit-multi-4.submission.json \
+           --final-count 1 \
+           --off-chain-submission off-chain-submission.json \
+           --off-chain-final-count 4 \
+    "
 
     # Test several modes of execution.
     KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
-           --dump-tx \
            --keyfile ${KEYFILE} \
-           --calldata-file agg.proof.calldata \
-           --submission-proof-file submit-multi-4.submission-proof.0.1.json \
-           --proof-ids-file agg.pids.json \
-           --submission-markers-file off-chain-submission-markers-1.json \
-           > submit-aggregated-proof.tx
-    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
-           --estimate-gas \
-           --keyfile ${KEYFILE} \
-           --calldata-file agg.proof.calldata \
-           --submission-proof-file submit-multi-4.submission-proof.0.1.json \
-           --proof-ids-file agg.pids.json \
-           --submission-markers-file off-chain-submission-markers-1.json \
-           > submit-aggregated-proof.tx.gas
+           ${submit_aggregated_proof_flags} \
+           --dump-tx > submit-aggregated-proof.tx
+
     KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
            --keyfile ${KEYFILE} \
-           --calldata-file agg.proof.calldata \
-           --submission-proof-file submit-multi-4.submission-proof.0.1.json \
-           --proof-ids-file agg.pids.json \
-           --submission-markers-file off-chain-submission-markers-1.json \
+           ${submit_aggregated_proof_flags} \
+           --estimate-gas > submit-aggregated-proof.tx.gas
+
+    KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
+           --keyfile ${KEYFILE} \
+           ${submit_aggregated_proof_flags} \
            --wait > agg-proof.hash
 
     # Create a dump of the aggregated tx.
@@ -346,18 +336,24 @@ pushd _test_upa
     upa aggregator compute-final-digest \
            --proof-ids-file agg.pids.json \
            --calldata-file agg.proof.calldata
-    upa compute submission-proof \
-           --submission-file submit-multi-4.submission.json \
-           --start-idx 1 \
-           --num-proofs 3 \
-           > submit-multi-4.submission-proof.2.3.4.json
+    # upa compute submission-proof \
+    #        --submission-file submit-multi-4.submission.json \
+    #        --start-idx 1 \
+    #        --num-proofs 3 \
+    #        > submit-multi-4.submission-proof.2.3.4.json
     KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator submit-aggregated-proof \
            --keyfile ${KEYFILE} \
            --calldata-file agg.proof.calldata \
-           --submission-proof-file submit-multi-4.submission-proof.2.3.4.json \
-           --proof-ids-file agg.pids.json \
-           --submission-markers-file off-chain-submission-markers-2.json \
+           --submission submit-multi-4.submission.json \
+           --offset 1 \
+           --off-chain-submission off-chain-submission.json \
+           --off-chain-offset 4 \
            --wait > agg-proof.hash
+
+           # --submission-proof-file submit-multi-4.submission-proof.2.3.4.json \
+           # --proof-ids-file agg.pids.json \
+           # --submission-markers-file off-chain-submission-markers-2.json \
+           # --wait > agg-proof.hash
 
     # Claim aggregator fees
     KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator claim-aggregator-fee \

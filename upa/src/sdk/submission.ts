@@ -132,7 +132,8 @@ export class Submission {
   }
 
   public static fromCircuitIdsProofsAndInputs(
-    cidProofsAndInputs: application.CircuitIdProofAndInputs[]
+    cidProofsAndInputs: application.CircuitIdProofAndInputs[],
+    dupSubmissionIdx?: number
   ): Submission {
     const circuitIds: string[] = [];
     const proofs: application.Groth16Proof[] = [];
@@ -145,7 +146,13 @@ export class Submission {
       inputs.push(pubInputs);
       proofIds.push(computeProofId(cpi.circuitId, pubInputs));
     });
-    return new Submission(proofIds, circuitIds, proofs, inputs, undefined);
+    return new Submission(
+      proofIds,
+      circuitIds,
+      proofs,
+      inputs,
+      dupSubmissionIdx
+    );
   }
 
   public static async fromTransactionReceipt(
@@ -220,7 +227,8 @@ export class Submission {
           proof: CompressedGroth16Proof.from_solidity(ev.proof).decompress(),
           inputs: ev.publicInputs,
         };
-      })
+      }),
+      Number(events.events[0].dupSubmissionIdx)
     );
 
     // TODO: check the proofIds in the events against the computed version.
@@ -355,8 +363,11 @@ export class Submission {
     numEntries = numEntries ?? this.circuitIds.length;
 
     assert(0 <= offset);
-    assert(offset < this.proofIds.length);
-    assert(0 < numEntries);
+    assert(
+      offset < this.proofIds.length,
+      `offset: ${offset}, length: ${this.proofIds.length}`
+    );
+    assert(0 < numEntries, `numEntries: ${numEntries} (expected > 0)`);
     assert(offset + numEntries <= this.proofIds.length);
 
     // If the submission has a single proof, we don't need a proof.
