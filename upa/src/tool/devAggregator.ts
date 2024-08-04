@@ -14,7 +14,7 @@ import {
   splitSubmissionInterval,
   submissionIntervalsFromEvents,
 } from "../sdk/submissionIntervals";
-import { computeAggreagtedProofParameters } from "../sdk/aggregatedProofParams";
+import { computeAggregatedProofParameters } from "../sdk/aggregatedProofParams";
 
 export const devAggregator = command({
   name: "aggregator",
@@ -179,7 +179,7 @@ async function submitBatch(
   // Compute the finalDigest
   const proofIds = batch.flatMap((si) => siProofIds(si));
   const calldata = dummyProofData(proofIds);
-  const aggProofParams = computeAggreagtedProofParameters(batch, []);
+  const aggProofParams = computeAggregatedProofParameters(batch, []);
 
   // Submit aggregated proof
   await upaInstance.verifier.verifyAggregatedProof(
