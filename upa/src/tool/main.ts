@@ -3,6 +3,7 @@
 
 import { subcommands, run } from "cmd-ts";
 import { challenge } from "./challenge";
+import { getSubmission } from "./getSubmission";
 import { dev } from "./dev";
 import { compute } from "./compute";
 import { convert } from "./convert";
@@ -18,6 +19,7 @@ const root = subcommands({
   cmds: {
     registervk,
     "submit-proofs": submitProofs,
+    "get-submission": getSubmission,
     challenge,
     version,
     compute,

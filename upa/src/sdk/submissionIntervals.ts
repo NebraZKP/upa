@@ -1,7 +1,7 @@
 // eslint-disable-next-line
 import { EventSet, ProofSubmittedEventWithProofData } from "./events";
 import { UpaInstance } from "./upa";
-import { Submission } from "./submission";
+import { Submission, SubmissionProof } from "./submission";
 import { JSONstringify } from "./utils";
 import { DUMMY_SUBMISSION_ID } from "./application";
 import { strict as assert } from "assert";
@@ -14,6 +14,44 @@ export type SubmissionInterval<T = undefined> = {
   numProofs: number;
   data: T;
 };
+
+export function siFromSubmission<T>(
+  submission: Submission,
+  data: T
+): SubmissionInterval<T> {
+  return {
+    submission,
+    startIdx: 0,
+    numProofs: submission.proofIds.length,
+    data: data,
+  };
+}
+
+/// Initialize SubmissionIntervals by skipping `offset` proofs in the first
+/// submission, and only including only `finalCount` in the last interval.
+export function sisFromSubmissions(
+  submissions: Submission[],
+  offset?: number,
+  finalCount?: number
+): SubmissionInterval<undefined>[] {
+  const numEntries = submissions.length;
+  const sis = submissions.map((s) => siFromSubmission<undefined>(s, undefined));
+  if (numEntries > 0) {
+    offset = offset ?? 0;
+    sis[0].startIdx = offset;
+    if (finalCount === undefined) {
+      finalCount = sis[numEntries - 1].numProofs;
+      // If there is only one entry, first == last and therefore we must also
+      // subtract the offset.
+      if (numEntries === 1) {
+        finalCount = finalCount - offset;
+      }
+    }
+    assert(finalCount !== undefined);
+    sis[numEntries - 1].numProofs = finalCount;
+  }
+  return sis;
+}
 
 /// Gives a short string representation of a submission interval
 export function siBrief<T>(si: SubmissionInterval<T>): string {
@@ -28,6 +66,17 @@ export function siBrief<T>(si: SubmissionInterval<T>): string {
 /// Returns all proofIds contained in this interval
 export function siProofIds<T>(si: SubmissionInterval<T>): string[] {
   return si.submission.proofIds.slice(si.startIdx, si.startIdx + si.numProofs);
+}
+
+/// Count the total number of proofs
+export function siNumProofs<T>(si: SubmissionInterval<T>[]): number {
+  return si.reduce((a, b) => a + b.numProofs, 0);
+}
+
+export function siComputeSubmissionProof<T>(
+  si: SubmissionInterval<T>
+): SubmissionProof | undefined {
+  return si.submission.computeSubmissionProof(si.startIdx, si.numProofs);
 }
 
 /// Given an array of entries, each holding a list of submission intervals.
