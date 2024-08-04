@@ -13,22 +13,13 @@ import * as log from "./log";
 import { readFileSync, writeFileSync } from "fs";
 import { dummyProofData } from "../sdk/upa";
 import { utils } from "../sdk";
-import {
-  computeUnpackedOffChainSubmissionmarkers,
-  packOffChainSubmissionMarkers,
-  Submission,
-  SubmissionProof,
-} from "../sdk/submission";
+import { packOffChainSubmissionMarkers, Submission } from "../sdk/submission";
 import { config, options } from ".";
 import { PayableOverrides } from "../../typechain-types/common";
 import assert from "assert";
-import {
-  siComputeSubmissionProof,
-  siNumProofs,
-  siProofIds,
-  sisFromSubmissions,
-} from "../sdk/submissionIntervals";
+import { sisFromSubmissions } from "../sdk/submissionIntervals";
 import { JSONstringify } from "../sdk/utils";
+import { computeAggreagtedProofParameters } from "../sdk/aggregatedProofParams";
 
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",
@@ -289,35 +280,14 @@ const submitAggregatedProof = command({
 
     // Compute all arguments to verifyAggregatedProof
 
-    const allSubmissions = submissionIntervals.concat(
+    const apParams = computeAggreagtedProofParameters(
+      submissionIntervals,
       offChainSubmissionIntervals
     );
-    const onChainNumProofs = siNumProofs(submissionIntervals);
-    const offChainNumProofs = siNumProofs(offChainSubmissionIntervals);
-    const proofIds = allSubmissions.flatMap(siProofIds);
-    const submissionProofs = submissionIntervals
-      .map(siComputeSubmissionProof)
-      .filter((p) => !!p) as SubmissionProof[];
-    const offChainSubmissionMarkers: boolean[] =
-      computeUnpackedOffChainSubmissionmarkers(
-        offChainSubmissions,
-        offChainOffset,
-        offChainNumProofs
-      );
-    const dupSubmissionIdxs = submissions.map((s) => s.getDupSubmissionIdx());
-
-    assert(onChainNumProofs + offChainNumProofs === proofIds.length);
 
     if (dumpArguments) {
       log.info(`Writing args file to ${dumpArguments}`);
-      const args = {
-        proofIds,
-        numOnChainProofs: onChainNumProofs,
-        submissionProofs,
-        offChainSubmissionMarkers,
-        dupSubmissionIdxs,
-      };
-      writeFileSync(dumpArguments, JSONstringify(args));
+      writeFileSync(dumpArguments, JSONstringify(apParams));
     }
 
     // Connect
@@ -333,19 +303,21 @@ const submitAggregatedProof = command({
       wallet
     );
 
-    // Handle the tx
+    // Create and handle the tx
 
-    const submissionProofsSolidity = submissionProofs.map((p) => p.solidity());
+    const submissionProofsSolidity = apParams.submissionProofs.map((p) =>
+      p.solidity()
+    );
     const optionsPayable: PayableOverrides = {
       maxFeePerGas: utils.parseGweiOrUndefined(maxFeePerGasGwei),
     };
     const txReq = await verifier.verifyAggregatedProof.populateTransaction(
       calldata,
-      proofIds,
-      onChainNumProofs,
+      apParams.proofIds,
+      apParams.numOnChainProofs,
       submissionProofsSolidity,
-      packOffChainSubmissionMarkers(offChainSubmissionMarkers),
-      Array(32).fill(0),
+      packOffChainSubmissionMarkers(apParams.offChainSubmissionMarkers),
+      apParams.dupSubmissionIdxs,
       optionsPayable
     );
 
