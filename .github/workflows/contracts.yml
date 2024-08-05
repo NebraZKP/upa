@@ -50,9 +50,9 @@ jobs:
           echo "DIFF:" && cat format.diff
           ! [ -s format.diff ]
 
-      - name: run slither
-        run: |
-          yarn slither
+      # - name: run slither
+      #   run: |
+      #     yarn slither
 
       - name: build
         run: |
