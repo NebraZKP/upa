@@ -64,6 +64,21 @@ export class UpaClient {
     return { submission, txResponse };
   }
 
+  /// Wait for the submission to be successfully sent to the contract, and
+  /// extract a full Submission object from the Tx receipt.
+  public async getSubmission(
+    submissionHandle: SubmissionHandle
+  ): Promise<Submission> {
+    const txReceipt = await submissionHandle.txResponse.wait();
+    if (!txReceipt) {
+      throw `Failed to get receipt for tx ${submissionHandle.txResponse.hash}`;
+    }
+    return Submission.fromTransactionReceipt(
+      this.upaInstance.verifier,
+      txReceipt
+    );
+  }
+
   // Waits for all of the proofs corresponding to a `SubmissionHandle` to be
   // verified on-chain.
   public async waitForSubmissionVerified(submissionHandle: SubmissionHandle) {
