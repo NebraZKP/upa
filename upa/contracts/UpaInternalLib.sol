@@ -157,8 +157,8 @@ library UpaInternalLib {
         uint256 pA = compressG1Point(proof.pA);
         uint256[2] memory pB = compressG2Point(proof.pB);
         uint256 pC = compressG1Point(proof.pC);
-        uint256[] memory m;
-        uint256[] memory pok;
+        uint256[] memory m = new uint256[](proof.m.length);
+        uint256[] memory pok = new uint256[](proof.m.length);
         for (uint256 i = 0; i < proof.m.length; i++) {
             m[i] = compressG1Point(proof.m[i]);
             pok[i] = compressG1Point(proof.pok[i]);

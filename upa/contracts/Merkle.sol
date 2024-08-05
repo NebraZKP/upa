@@ -26,6 +26,7 @@ pragma solidity ^0.8.20;
 error NonPowerOfTwoLeaves();
 error IntervalProofTooShortA();
 error IntervalProofTooShortB();
+error InvalidOffset();
 
 /// Merkle tree functions for UPA.
 library Merkle {
@@ -248,9 +249,10 @@ library Merkle {
 
             while (remainingEntries > 1) {
                 newInterval[newIntervalIdx++] = hash(
-                    interval[entryIdx++],
-                    interval[entryIdx++]
+                    interval[entryIdx],
+                    interval[entryIdx + 1]
                 );
+                entryIdx += 2;
                 remainingEntries -= 2;
 
                 // console.log(
@@ -286,6 +288,9 @@ library Merkle {
             intervalLength = newIntervalLength;
             offset = offset >> 1;
         }
+
+        // All 1-bits should have been shifted out.
+        require(offset == 0, InvalidOffset());
 
         return interval[0];
     }
