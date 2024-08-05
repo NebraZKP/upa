@@ -4,9 +4,8 @@ use crate::{
     batch_verify::universal::native::compute_circuit_id,
     keccak::{
         self, inputs::KeccakCircuitInputs, AssignedKeccakInput,
-        AssignedVerifyingKeyLimbs, KeccakConfig, KeccakInputType,
-        KeccakPaddedCircuitInput, PaddedVerifyingKeyLimbs, KECCAK_LOOKUP_BITS,
-        LIMB_BITS, NUM_LIMBS,
+        AssignedVerifyingKeyLimbs, KeccakConfig, KeccakPaddedCircuitInput,
+        PaddedVerifyingKeyLimbs, KECCAK_LOOKUP_BITS, LIMB_BITS, NUM_LIMBS,
     },
     tests::utils::check_instance,
     utils::commitment_point::{
@@ -287,7 +286,12 @@ impl KeccakCircuit {
 /// # Note
 ///
 /// The test fails for KECCAK_DEGREE values below 13.
-fn test_keccak_mock(input_type: KeccakInputType) {
+///
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock
+#[test]
+fn test_keccak_mock() {
     let _ = env_logger::builder().is_test(true).try_init();
     let k: u32 = var("KECCAK_DEGREE")
         .unwrap_or_else(|_| "18".to_string())
@@ -301,8 +305,7 @@ fn test_keccak_mock(input_type: KeccakInputType) {
         lookup_bits: KECCAK_LOOKUP_BITS,
     };
     let mut rng = OsRng;
-    let inputs =
-        KeccakCircuitInputs::<Fr>::sample(&config, input_type, &mut rng);
+    let inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
     let circuit = KeccakCircuit::mock(&config, &inputs);
     let instances: Vec<Fr> = circuit.instances()[0].clone();
     circuit
@@ -319,7 +322,13 @@ fn test_keccak_mock(input_type: KeccakInputType) {
 /// # Note
 ///
 /// The test fails for KECCAK_DEGREE values below 13.
-fn test_keccak_prover(input_type: KeccakInputType) {
+///
+/// # Command line
+///
+/// KECCAK_DEGREE=15 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover
+#[ignore = "takes too long"]
+#[test]
+fn test_keccak_prover() {
     let _ = env_logger::builder().is_test(true).try_init();
     let k: u32 = var("KECCAK_DEGREE")
         .unwrap_or_else(|_| "15".to_string())
@@ -333,12 +342,12 @@ fn test_keccak_prover(input_type: KeccakInputType) {
         lookup_bits: KECCAK_LOOKUP_BITS,
     };
     let mut rng = OsRng;
-    let inputs = KeccakCircuitInputs::sample(&config, input_type, &mut rng);
+    let inputs = KeccakCircuitInputs::sample(&config, &mut rng);
     // Keygen
     let timer = start_timer!(|| "Keygen");
     let params = gen_srs(k);
     let (pk, gate_config, break_points) = {
-        let circuit = KeccakCircuit::keygen(&config, &input_type);
+        let circuit = KeccakCircuit::keygen(&config, &());
         println!("Start keygen vk");
         let vk = keygen_vk(&params, &circuit).expect("unable to gen. vk");
         println!("Start keygen pk");
@@ -393,52 +402,6 @@ fn test_keccak_prover(input_type: KeccakInputType) {
     end_timer!(timer);
 }
 
-/*
-/// Runs [`test_keccak_mock`] for fixed length keccak
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=15 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock_fixed
-#[test]
-fn test_keccak_mock_fixed() {
-    test_keccak_mock(KeccakInputType::Fixed)
-}
-*/
-
-/// Runs [`test_keccak_mock`] for variable length keccak
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock_var
-#[test]
-fn test_keccak_mock_var() {
-    test_keccak_mock(KeccakInputType::Variable)
-}
-
-/*
-/// Runs [`test_keccak_prover`] for fixed length keccak
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=15 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover_fixed
-#[ignore = "takes too long"]
-#[test]
-fn test_keccak_prover_fixed() {
-    test_keccak_prover(KeccakInputType::Fixed)
-}
-*/
-
-/// Runs [`test_keccak_prover`] for fixed length keccak
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=15 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover_var
-#[ignore = "takes too long"]
-#[test]
-fn test_keccak_prover_var() {
-    test_keccak_prover(KeccakInputType::Variable)
-}
-
 /// Unit test checking that [`KeccakPaddedCircuitInputs::to_instance_values`]
 /// works correctly in both the fixed and variable length cases.
 ///
@@ -466,29 +429,9 @@ fn test_keccak_padded_circuit_input_to_instance_values() {
         NUM_APP_PUBLIC_INPUTS as usize + 1,
     );
 
-    /*
-    // Test fixed case
-    let fixed_padded_circuit_input = KeccakPaddedCircuitInput {
-        is_fixed: true,
-        len: Fr::from(NUM_APP_PUBLIC_INPUTS as u64),
-        app_vk_hash: dummy_app_vk_hash,
-        app_public_inputs: dummy_app_public_inputs.clone(),
-    };
-
-    let mut expected_fixed_instance_values =
-        vec![fixed_padded_circuit_input.app_vk_hash];
-    expected_fixed_instance_values
-        .extend(&fixed_padded_circuit_input.app_public_inputs);
-    assert_eq!(
-        expected_fixed_instance_values,
-        fixed_padded_circuit_input.to_instance_values()
-    );
-    */
-
     // Test variable length case
     let variable_len = 4;
     let variable_padded_circuit_input = KeccakPaddedCircuitInput {
-        is_fixed: false,
         len: Fr::from(variable_len),
         app_vk: dummy_app_vk,
         has_commitment: Fr::zero(),

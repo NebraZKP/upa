@@ -1,11 +1,9 @@
 //! Some `KeccakCircuit`-related utility functions.
 
 use super::{
-    KeccakCircuitInputs, KeccakFixedInput, KeccakInputType, KeccakVarLenInput,
-    LIMB_BITS, NUM_BYTES_FQ, NUM_LIMBS,
+    KeccakCircuitInputs, KeccakVarLenInput, LIMB_BITS, NUM_BYTES_FQ, NUM_LIMBS,
 };
 use crate::{
-    batch_verify::fixed::types::BatchVerifyConfig,
     keccak::{
         KeccakCircuit, KeccakConfig, KeccakGateConfig, PaddedVerifyingKeyLimbs,
     },
@@ -134,6 +132,7 @@ where
 {
     let num_bytes = num_bytes::<F>();
     assert_eq!(num_bytes, bytes.len(), "Wrong number of bytes");
+    assert_eq!(num_bytes % NUM_PARTS, 0);
     let num_bytes_in_part = num_bytes / NUM_PARTS;
     let powers = byte_decomposition_powers()
         .into_iter()
@@ -176,6 +175,7 @@ where
     F: EccPrimeField,
 {
     let num_bytes = num_bytes::<F>();
+    assert_eq!(num_bytes % NUM_PARTS, 0);
     let num_bytes_in_part = num_bytes / NUM_PARTS;
     let num_bits_in_part = num_bytes_in_part * BYTE_SIZE_IN_BITS;
     let parts = assigned_field_element_bytes_into_parts::<F, NUM_PARTS>(
@@ -556,28 +556,6 @@ where
     result
 }
 
-/// Given slice of `BatchVerifyCircuit` instances,
-/// compute the appropriate (fixed) keccak inputs.
-pub fn keccak_inputs_from_bv_instances<'a>(
-    bv_instances: impl ExactSizeIterator<Item = &'a [Fr]>,
-    num_app_public_inputs: usize,
-    inner_batch_size: usize,
-) -> Vec<KeccakFixedInput<Fr>> {
-    let _ = (bv_instances, num_app_public_inputs, inner_batch_size);
-    todo!()
-}
-
-/// Given the instance for a BV circuit, compute the proof_id of each
-/// application proof.
-#[deprecated]
-pub fn compute_proof_ids_from_bv_instance<F: EccPrimeField>(
-    config: &BatchVerifyConfig,
-    instance: &[F],
-) -> Vec<[u8; 32]> {
-    let _ = (config, instance);
-    todo!()
-}
-
 /// The number of public inputs each application proof
 /// contributes to the keccak circuit.
 pub(crate) fn inputs_per_application_proof(num_pub_ins: usize) -> usize {
@@ -701,9 +679,7 @@ where
     >,
 {
     let now = std::time::Instant::now();
-    let input_type = inputs.input_type();
-    let (pk, break_points, gate_config) =
-        gen_keccak_pk(params, config, &input_type);
+    let (pk, break_points, gate_config) = gen_keccak_pk(params, config);
     info!("Generated Keccak PK in {:?}", now.elapsed());
     let now = std::time::Instant::now();
     let snark = gen_keccak_snark_with::<P, V>(
@@ -757,13 +733,12 @@ where
 pub fn gen_keccak_pk(
     params: &ParamsKZG<Bn256>,
     config: &KeccakConfig,
-    input_type: &KeccakInputType,
 ) -> (
     ProvingKey<G1Affine>,
     MultiPhaseThreadBreakPoints,
     KeccakGateConfig,
 ) {
-    let circuit = KeccakCircuit::<Fr, G1Affine>::keygen(config, input_type);
+    let circuit = KeccakCircuit::<Fr, G1Affine>::keygen(config, &());
     let pk = gen_pk(params, &circuit, None);
     let break_points = circuit.break_points();
     (pk, break_points, circuit.gate_config().clone())

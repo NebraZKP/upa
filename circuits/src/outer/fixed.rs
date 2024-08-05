@@ -2,9 +2,7 @@ use crate::{
     batch_verify::fixed::{
         types::BatchVerifyConfig, utils::dummy_batch_verify_snark,
     },
-    keccak::{
-        inputs::KeccakCircuitInputs, utils::keccak_inputs_from_bv_instances,
-    },
+    keccak::inputs::KeccakCircuitInputs,
     outer::{OuterCircuit, OuterGateConfig},
     utils::upa_config::UpaConfig,
 };
@@ -52,14 +50,10 @@ impl OuterCircuit for FixedOuterCircuit {
     }
 
     fn keccak_inputs_from_bv_instances<'a>(
-        bv_config: &Self::BatchVerifyConfig,
-        bv_instances: impl ExactSizeIterator<Item = &'a [Fr]>,
+        _bv_config: &Self::BatchVerifyConfig,
+        _bv_instances: impl ExactSizeIterator<Item = &'a [Fr]>,
     ) -> KeccakCircuitInputs<Fr> {
-        KeccakCircuitInputs::Fixed(keccak_inputs_from_bv_instances(
-            bv_instances,
-            bv_config.num_app_public_inputs as usize,
-            bv_config.inner_batch_size as usize,
-        ))
+        unimplemented!("TODO: remove fixed outer circuit")
     }
 
     fn inner(&self) -> &AggregationCircuit {

@@ -20,7 +20,7 @@ use std::panic;
 use upa_circuits::{
     keccak::{
         inputs::KeccakCircuitInputs, KeccakCircuit, KeccakConfig,
-        KeccakGateConfig, KeccakInputType,
+        KeccakGateConfig,
     },
     utils::{
         benchmarks::KECCAK_CONFIG_FILE, file::load_json, upa_config::UpaConfig,
@@ -32,7 +32,6 @@ use upa_circuits::{
 fn keygen(
     config: &KeccakConfig,
     params: &ParamsKZG<Bn256>,
-    input_type: &KeccakInputType,
 ) -> Result<
     (
         ProvingKey<G1Affine>,
@@ -41,7 +40,7 @@ fn keygen(
     ),
     KeccakGateConfig,
 > {
-    let circuit = KeccakCircuit::<Fr, G1Affine>::keygen(config, input_type);
+    let circuit = KeccakCircuit::<Fr, G1Affine>::keygen(config, &());
     let gate_config = circuit.gate_config().clone();
     // Keygen panics when `gate_config` is too wide. We catch it here to
     // return an error.
@@ -70,25 +69,18 @@ pub fn bench(c: &mut Criterion) {
     group.sample_size(2);
 
     let configs = black_box(load_json::<Vec<UpaConfig>>(KECCAK_CONFIG_FILE));
-    let input_type = black_box(
-        KeccakInputType::load_from_env().unwrap_or(KeccakInputType::Fixed),
-    );
-    black_box(println!("Keccak benchmark running with: {input_type:?}"));
     for config in configs {
         let keccak_config = black_box(KeccakConfig::from(&config));
         let mut rng = black_box(OsRng);
-        let inputs = black_box(KeccakCircuitInputs::sample(
-            &keccak_config,
-            input_type,
-            &mut rng,
-        ));
+        let inputs =
+            black_box(KeccakCircuitInputs::sample(&keccak_config, &mut rng));
         // Keygen
         let params = black_box(gen_srs(keccak_config.degree_bits));
         black_box(println!(
             "Proving Keccak Circuit with config: {keccak_config:#?}"
         ));
         let (pk, gate_config, break_points) = black_box(
-            match keygen(&keccak_config, &params, &input_type) {
+            match keygen(&keccak_config, &params) {
                 Ok(result) => result,
                 Err(gate_config) => {
                     println!("Proving Keccak Circuit with gate config: {gate_config:#?}");

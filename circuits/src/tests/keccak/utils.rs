@@ -12,8 +12,8 @@ use crate::{
             encode_digest_as_field_elements, field_max_element_into_parts,
             g1_point_limbs_to_bytes,
         },
-        KeccakCircuit, KeccakConfig, KeccakInputType,
-        KeccakPaddedCircuitInputs, KECCAK_LOOKUP_BITS, LIMB_BITS, NUM_LIMBS,
+        KeccakCircuit, KeccakConfig, KeccakPaddedCircuitInputs,
+        KECCAK_LOOKUP_BITS, LIMB_BITS, NUM_LIMBS,
     },
     tests::{
         commitment_point::{
@@ -247,17 +247,10 @@ fn keccak_var_len_input_serialization() {
         num_app_public_inputs,
         lookup_bits: KECCAK_LOOKUP_BITS,
     };
-    let input_type = KeccakInputType::Variable;
-    let mut inputs =
-        KeccakCircuitInputs::<Fr>::sample(&config, input_type, &mut rng);
-    match &mut inputs {
-        KeccakCircuitInputs::VarLen(inputs) => {
-            inputs[0]
-                .commitment_point_coordinates
-                .push([Fq::random(rng), Fq::random(rng)]);
-        }
-        _ => unreachable!(),
-    }
+    let mut inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
+    inputs.0[0]
+        .commitment_point_coordinates
+        .push([Fq::random(rng), Fq::random(rng)]);
 
     let inputs_serialized = serde_json::to_string_pretty(&inputs).expect("");
     let inputs_deserialized: KeccakCircuitInputs<Fr> =
@@ -268,7 +261,8 @@ fn keccak_var_len_input_serialization() {
 /// Checks the [`KeccakCircuit`] computes circuitIds and proofIds correctly by
 /// comparing them to the output of [`compute_circuit_id`] and [`compute_proof_id`],
 /// respectively.
-fn circuit_id_and_proof_id_test(input_type: KeccakInputType) {
+#[test]
+fn circuit_id_and_proof_id_test() {
     const DEFAULT_DEGREE_BITS: u32 = 20;
     let mut rng = OsRng;
     let num_app_public_inputs = rng.gen_range(1..MAX_VEC_LEN) as u32;
@@ -280,21 +274,14 @@ fn circuit_id_and_proof_id_test(input_type: KeccakInputType) {
         num_app_public_inputs,
         lookup_bits: KECCAK_LOOKUP_BITS,
     };
-    let public_inputs =
-        KeccakCircuitInputs::sample(&config, input_type, &mut rng);
-    let circuit_inputs =
-        KeccakPaddedCircuitInputs::from_fixed_or_var_len_inputs(
-            &public_inputs,
-            num_app_public_inputs as usize,
-        );
+    let public_inputs = KeccakCircuitInputs::sample(&config, &mut rng);
+    let circuit_inputs = KeccakPaddedCircuitInputs::from_keccak_circuit_inputs(
+        &public_inputs,
+        num_app_public_inputs as usize,
+    );
 
     let number_of_field_elements = circuit_inputs.0[0].num_field_elements();
-    let circuit_id = match &public_inputs {
-        KeccakCircuitInputs::VarLen(inputs) => {
-            compute_circuit_id(&inputs[0].app_vk)
-        }
-        _ => panic!("Fixed len keccak not supported"),
-    };
+    let circuit_id = compute_circuit_id(&public_inputs.0[0].app_vk);
     let proof_id = compute_proof_id(
         &circuit_id,
         &circuit_inputs.0[0].app_public_inputs[..number_of_field_elements],
@@ -320,20 +307,6 @@ fn circuit_id_and_proof_id_test(input_type: KeccakInputType) {
         .map(|assigned_value| assigned_value.value().to_bytes()[0])
         .collect::<Vec<_>>();
     assert_eq!(proof_id, circuit_output_proof_id, "Proof id mismatch");
-}
-
-/*
-/// Runs [`proof_id_test`] for fixed length keccak.
-#[test]
-fn proof_id_test_fixed() {
-    proof_id_test(KeccakInputType::Fixed)
-}
-*/
-
-/// Runs [`circuit_id_and_proof_id_test`] for variable length keccak.
-#[test]
-fn circuit_id_and_proof_id_test_var() {
-    circuit_id_and_proof_id_test(KeccakInputType::Variable)
 }
 
 /// Tests [`field_max_element_into_parts`] returns the right decomposition.
