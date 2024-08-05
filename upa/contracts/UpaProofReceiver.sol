@@ -332,7 +332,10 @@ contract UpaProofReceiver is
         onProofSubmitted(numProofs);
 
         // Save the submission data
-        Submission storage newSubmission = getSubmissionStorageFromPtr(submissions, uint8(dupSubmissionIdx));
+        Submission storage newSubmission = getSubmissionStorageFromPtr(
+            submissions,
+            uint8(dupSubmissionIdx)
+        );
         newSubmission.proofDataDigest = proofDataDigest;
         newSubmission.submissionIdx = submissionIdx;
         newSubmission.submissionBlockNumber = uint64(block.number);
@@ -406,29 +409,39 @@ contract UpaProofReceiver is
         bytes32 submissionId,
         uint8 dupSubmissionIdx
     ) internal view returns (Submission storage /* submission */) {
-        Submission[1] storage submissions = _getProofReceiverStorage()
-            ._submissions[submissionId];
+        Submission[1] storage submissions = getSubmissionListStorage(
+            submissionId
+        );
         return getSubmissionStorageFromPtr(submissions, dupSubmissionIdx);
+    }
+
+    function getSubmissionListStorage(
+        bytes32 submissionId
+    ) internal view returns (Submission[1] storage) {
+        return _getProofReceiverStorage()._submissions[submissionId];
     }
 
     function getSubmissionStorageFromPtr(
         Submission[1] storage submissions,
-        uint8 dupSubmissionIdx) internal pure returns (Submission storage submission) {
+        uint8 dupSubmissionIdx
+    ) internal pure returns (Submission storage submission) {
         assembly {
             // mstore(0, submissions.slot)
             // let offset := keccak256(0, 32)
             // submission.slot := add(offset, mul(dupSubmissionIdx, 2))
             submission.slot := add(submissions.slot, mul(dupSubmissionIdx, 2))
         }
-
     }
 
     function getSubmissionsLengthFromPtr(
         Submission[1] storage submissions
     ) internal view returns (uint16 length) {
         uint16 i = 0;
-        for ( ; i < 256 ; ++i) {
-            Submission storage submission = getSubmissionStorageFromPtr(submissions, uint8(i));
+        for (; i < 256; ++i) {
+            Submission storage submission = getSubmissionStorageFromPtr(
+                submissions,
+                uint8(i)
+            );
             if (submission.proofDataDigest == bytes32(0)) {
                 break;
             }
