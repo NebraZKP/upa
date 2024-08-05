@@ -121,8 +121,9 @@ contract UpaVerifier is
         Uint16VectorLib.Uint16Vector numVerifiedInSubmission;
         /// ProofIds for current off-chain submission
         bytes32[] currentSubmissionProofIds;
-        /// Maps a key `submissionId` to the block at which the submission
-        /// was verified. Maps unverified submissions to 0.
+        /// For off-chain submissions only. Maps a key `submissionId` to the
+        /// block at which the submission was verified. Maps unverified
+        /// submissions to 0.
         mapping(bytes32 => uint256) verifiedAtBlock;
         /// Contract version
         uint32 version;
@@ -130,11 +131,6 @@ contract UpaVerifier is
 
     /// Gas per transaction.
     uint256 private constant GAS_PER_TRANSACTION = 21000;
-
-    /// Dummy proof id. This is the proof id of a valid proof used
-    /// to fill batches.
-    bytes32 public constant DUMMY_PROOF_ID =
-        0x84636c7b9793a9833ef7ca3e1c118d7d21dadb97ef7bf1fbfd549c10bca3553f;
 
     event UpgradeOuterVerifier(address);
 
@@ -825,6 +821,8 @@ contract UpaVerifier is
         uint256 gasSpent = startGas - gasleft() + GAS_PER_TRANSACTION;
 
         if (isLastProof) {
+            uint256 openChallengeRefundAmount = verifierStorage
+                .openChallengeRefundAmounts[submissionId];
             delete verifierStorage.openChallengeRefundAmounts[submissionId];
             // If it's the last proof in the submission, the challenge is
             // successful and the aggregator gives the claimant the full amount.
@@ -832,7 +830,7 @@ contract UpaVerifier is
                 gasSpent *
                     tx.gasprice +
                     verifierStorage.fixedReimbursement +
-                    verifierStorage.openChallengeRefundAmounts[submissionId],
+                    openChallengeRefundAmount,
                 msg.sender
             );
         } else {
@@ -919,7 +917,7 @@ contract UpaVerifier is
 
     /// Allocates the aggregator fee to be claimed once
     /// `lastSubmittedSubmissionIdx` in `proofReceiver` is verified.
-    function allocateAggregatorFee() external {
+    function allocateAggregatorFee() external onlyWorker {
         uint64 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
         allocateAggregatorFee(lastSubmittedSubmissionIdx);
     }
@@ -934,7 +932,7 @@ contract UpaVerifier is
 
     /// Withdraws the worker's balance in the `feeModel` contract,
     /// including the collateral.
-    function withdrawAggregatorBalance() external {
+    function withdrawAggregatorBalance() external onlyWorker {
         uint64 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
         withdraw(
             worker(),

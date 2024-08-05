@@ -326,7 +326,7 @@ The aggregator collects fees in two steps. First it calls
 function allocateAggregatorFee(uint64 lastSubmittedSubmissionIdx)
 ```
 
-which stores the current value of `lastSubmittedSubmissionIdx` and allocates all fees collected up to now to be claimable by the aggregator once it has verified the submission at `lastSubmittedSubmissionIdx` (which implies that all previous submissions have also been verified). Once the aggregator has done this, it can call
+which stores the current value of `lastSubmittedSubmissionIdx` and allocates all fees collected up to now to be claimable by the aggregator once it has verified or skipped the submission at `lastSubmittedSubmissionIdx` (which implies that all previous submissions have also been verified or skipped). Once the aggregator has done this, it can call
 
 ```solidity!
 function claimAggregatorFee(

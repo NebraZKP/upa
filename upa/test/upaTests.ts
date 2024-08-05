@@ -467,9 +467,9 @@ describe("UPA", async () => {
       // it hasn't been allocated yet
       expect(await verifier.feeAllocated()).equals(0n);
 
-      // Now the verifier allocates the aggregator fee. The fee due must
-      // now equal the balance minus the collateral.
-      await verifier.allocateAggregatorFee();
+      // Now the worker allocates the aggregator fee on the verifier contract.
+      // The fee due must now equal the balance minus the collateral.
+      await verifier.connect(worker).allocateAggregatorFee();
       const feeDue = await verifier.feeAllocated();
       expect(feeDue).equals(feeModelBalance - collateral);
 
@@ -543,7 +543,7 @@ describe("UPA", async () => {
       );
       // finally, we allocate funds for the third proof, verify it and claim the
       // remaining claimable funds
-      await verifier.allocateAggregatorFee();
+      await verifier.connect(worker).allocateAggregatorFee();
       expect(await verifier.feeAllocated()).equals(3n * value);
       await verifier
         .connect(worker)
