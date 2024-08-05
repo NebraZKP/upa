@@ -88,22 +88,22 @@ export class ProofReference {
   }
 }
 
-export class Submission {
+/**
+ * A submission which has not yet been assigned indices on-chain.
+ */
+export class OffChainSubmission {
   public circuitIds: string[];
   public proofs: application.Groth16Proof[];
   public inputs: bigint[][];
   public submissionId: ethers.BytesLike;
   public proofIds: string[];
   private paddedProofIds: ethers.BytesLike[];
-  private depth: number;
-  private dupSubmissionIdx: number | undefined;
 
-  private constructor(
+  constructor(
     proofIds: ethers.BytesLike[],
     circuitIds: string[],
     proofs: application.Groth16Proof[],
-    inputs: bigint[][],
-    dupSubmissionIdx: number | undefined
+    inputs: bigint[][]
   ) {
     assert(proofIds.length > 0);
     assert(proofIds.length <= MAX_SUBMISSION_SIZE);
@@ -126,15 +126,12 @@ export class Submission {
     this.inputs = inputs;
     this.proofIds = proofIds as string[];
     this.paddedProofIds = paddedProofIds;
-    this.depth = depth;
     this.submissionId = computeSubmissionId(this.proofIds);
-    this.dupSubmissionIdx = dupSubmissionIdx;
   }
 
   public static fromCircuitIdsProofsAndInputs(
-    cidProofsAndInputs: application.CircuitIdProofAndInputs[],
-    dupSubmissionIdx?: number
-  ): Submission {
+    cidProofsAndInputs: application.CircuitIdProofAndInputs[]
+  ): OffChainSubmission {
     const circuitIds: string[] = [];
     const proofs: application.Groth16Proof[] = [];
     const inputs: bigint[][] = [];
@@ -146,97 +143,10 @@ export class Submission {
       inputs.push(pubInputs);
       proofIds.push(computeProofId(cpi.circuitId, pubInputs));
     });
-    return new Submission(
-      proofIds,
-      circuitIds,
-      proofs,
-      inputs,
-      dupSubmissionIdx
-    );
+    return new OffChainSubmission(proofIds, circuitIds, proofs, inputs);
   }
 
-  public static async fromTransactionReceipt(
-    proofReceiver: UpaProofReceiver,
-    txReceipt: ethers.TransactionReceipt
-  ): Promise<Submission> {
-    const provider = proofReceiver.runner!.provider!;
-    const tx = await provider.getTransaction(txReceipt.hash);
-    return Submission.fromTransactionReceiptAndData(
-      proofReceiver,
-      txReceipt,
-      tx!
-    );
-  }
-
-  public static fromTransactionReceiptAndData(
-    proofReceiver: UpaProofReceiver,
-    txReceipt: ethers.TransactionReceipt,
-    tx: ethers.TransactionResponse
-  ): Submission {
-    const { circuitIds, proofs, publicInputs } = getCallDataForSubmitTx(
-      proofReceiver,
-      tx
-    );
-    const groth16Proofs: application.Groth16Proof[] = proofs.map((pf) => {
-      return CompressedGroth16Proof.from_solidity(pf).decompress();
-    });
-
-    assert(circuitIds.length == txReceipt.logs.length);
-
-    // Extract the proof ids from the events.  As a sanity check, also locally
-    // compute each proofId using the circuitId and public inputs from the tx
-    // data.
-
-    let dupSubmissionIdx: number | undefined;
-    const proofIds: ethers.BytesLike[] = [];
-    txReceipt.logs.forEach((log, i) => {
-      const parsed = proofReceiver.interface.parseLog(log as unknown as Log);
-      if (parsed) {
-        const proofId = parsed.args.proofId;
-        assert(proofId === computeProofId(circuitIds[i], [...publicInputs[i]]));
-        if (dupSubmissionIdx) {
-          assert(dupSubmissionIdx == parsed.args.dupSubmissionIdx);
-        } else {
-          dupSubmissionIdx = Number(parsed.args.dupSubmissionIdx);
-          assert(
-            typeof dupSubmissionIdx === "number",
-            `typeof dupSubmissionIdx: ${typeof dupSubmissionIdx}`
-          );
-        }
-        proofIds.push(proofId);
-      }
-    });
-
-    assert(typeof dupSubmissionIdx === "number");
-    return new Submission(
-      proofIds,
-      circuitIds,
-      groth16Proofs,
-      publicInputs,
-      dupSubmissionIdx
-    );
-  }
-
-  public static fromSubmittedEvents(
-    events: EventSet<ProofSubmittedEventWithProofData>
-  ) {
-    const submission = Submission.fromCircuitIdsProofsAndInputs(
-      events.events.map((ev) => {
-        return {
-          circuitId: ev.circuitId,
-          proof: CompressedGroth16Proof.from_solidity(ev.proof).decompress(),
-          inputs: ev.publicInputs,
-        };
-      }),
-      Number(events.events[0].dupSubmissionIdx)
-    );
-
-    // TODO: check the proofIds in the events against the computed version.
-
-    return submission;
-  }
-
-  public static from_json(json: string): Submission {
+  public static from_json(json: string): OffChainSubmission {
     const object = JSON.parse(json);
     const proofs: application.Groth16Proof[] = object.proofs.map(
       application.Groth16Proof.from_json
@@ -245,13 +155,7 @@ export class Submission {
       instance.map((x: string) => BigInt(x))
     );
     const proofIds: ethers.BytesLike[] = object.proofIds;
-    return new Submission(
-      proofIds,
-      object.circuitIds,
-      proofs,
-      inputs,
-      object.dupSubmissionIdx
-    );
+    return new OffChainSubmission(proofIds, object.circuitIds, proofs, inputs);
   }
 
   public to_json(): string {
@@ -266,14 +170,6 @@ export class Submission {
       return this.proofIds.slice(startIdx, endIdx);
     }
     return this.proofIds;
-  }
-
-  /**
-   * Caller expects the dupSubmissionIdx to be present.
-   */
-  public getDupSubmissionIdx(): number {
-    assert(typeof this.dupSubmissionIdx === "number");
-    return this.dupSubmissionIdx;
   }
 
   public getSubmissionId(): ethers.BytesLike {
@@ -390,6 +286,160 @@ export class Submission {
 
   public isMultiProofSubmission(): boolean {
     return this.proofIds.length > 1;
+  }
+}
+
+/**
+ * A submission which has been made on-chain, and therefore has ordering
+ * indices assigned.
+ */
+export class Submission extends OffChainSubmission {
+  private dupSubmissionIdx: number;
+
+  private constructor(
+    proofIds: ethers.BytesLike[],
+    circuitIds: string[],
+    proofs: application.Groth16Proof[],
+    inputs: bigint[][],
+    dupSubmissionIdx: number
+  ) {
+    super(proofIds, circuitIds, proofs, inputs);
+    this.dupSubmissionIdx = dupSubmissionIdx;
+  }
+
+  public static fromCircuitIdsProofsInputsAndDupIdx(
+    cidProofsAndInputs: application.CircuitIdProofAndInputs[],
+    dupSubmissionIdx: number
+  ): Submission {
+    const circuitIds: string[] = [];
+    const proofs: application.Groth16Proof[] = [];
+    const inputs: bigint[][] = [];
+    const proofIds: ethers.BytesLike[] = [];
+    cidProofsAndInputs.forEach((cpi) => {
+      const pubInputs = cpi.inputs.map(BigInt);
+      circuitIds.push(cpi.circuitId);
+      proofs.push(cpi.proof);
+      inputs.push(pubInputs);
+      proofIds.push(computeProofId(cpi.circuitId, pubInputs));
+    });
+    return new Submission(
+      proofIds,
+      circuitIds,
+      proofs,
+      inputs,
+      dupSubmissionIdx
+    );
+  }
+
+  public static async fromTransactionReceipt(
+    proofReceiver: UpaProofReceiver,
+    txReceipt: ethers.TransactionReceipt
+  ): Promise<Submission> {
+    const provider = proofReceiver.runner!.provider!;
+    const tx = await provider.getTransaction(txReceipt.hash);
+    return Submission.fromTransactionReceiptAndData(
+      proofReceiver,
+      txReceipt,
+      tx!
+    );
+  }
+
+  public static fromTransactionReceiptAndData(
+    proofReceiver: UpaProofReceiver,
+    txReceipt: ethers.TransactionReceipt,
+    tx: ethers.TransactionResponse
+  ): Submission {
+    const { circuitIds, proofs, publicInputs } = getCallDataForSubmitTx(
+      proofReceiver,
+      tx
+    );
+    const groth16Proofs: application.Groth16Proof[] = proofs.map((pf) => {
+      return CompressedGroth16Proof.from_solidity(pf).decompress();
+    });
+
+    assert(circuitIds.length == txReceipt.logs.length);
+
+    // Extract the proof ids from the events.  As a sanity check, also locally
+    // compute each proofId using the circuitId and public inputs from the tx
+    // data.
+
+    let dupSubmissionIdx: number | undefined;
+    const proofIds: ethers.BytesLike[] = [];
+    txReceipt.logs.forEach((log, i) => {
+      const parsed = proofReceiver.interface.parseLog(log as unknown as Log);
+      if (parsed) {
+        const proofId = parsed.args.proofId;
+        assert(proofId === computeProofId(circuitIds[i], [...publicInputs[i]]));
+        if (dupSubmissionIdx) {
+          assert(dupSubmissionIdx == parsed.args.dupSubmissionIdx);
+        } else {
+          dupSubmissionIdx = Number(parsed.args.dupSubmissionIdx);
+          assert(
+            typeof dupSubmissionIdx === "number",
+            `typeof dupSubmissionIdx: ${typeof dupSubmissionIdx}`
+          );
+        }
+        proofIds.push(proofId);
+      }
+    });
+
+    assert(typeof dupSubmissionIdx === "number");
+    return new Submission(
+      proofIds,
+      circuitIds,
+      groth16Proofs,
+      publicInputs,
+      dupSubmissionIdx
+    );
+  }
+
+  public static fromSubmittedEvents(
+    events: EventSet<ProofSubmittedEventWithProofData>
+  ) {
+    const submission = Submission.fromCircuitIdsProofsInputsAndDupIdx(
+      events.events.map((ev) => {
+        return {
+          circuitId: ev.circuitId,
+          proof: CompressedGroth16Proof.from_solidity(ev.proof).decompress(),
+          inputs: ev.publicInputs,
+        };
+      }),
+      Number(events.events[0].dupSubmissionIdx)
+    );
+
+    // TODO: check the proofIds in the events against the computed version.
+
+    return submission;
+  }
+
+  public static from_json(json: string): Submission {
+    const object = JSON.parse(json);
+    const proofs: application.Groth16Proof[] = object.proofs.map(
+      application.Groth16Proof.from_json
+    );
+    const inputs: bigint[][] = object.inputs.map((instance: string[]) =>
+      instance.map((x: string) => BigInt(x))
+    );
+    const proofIds: ethers.BytesLike[] = object.proofIds;
+    return new Submission(
+      proofIds,
+      object.circuitIds,
+      proofs,
+      inputs,
+      object.dupSubmissionIdx
+    );
+  }
+
+  public to_json(): string {
+    return JSONstringify(this);
+  }
+
+  /**
+   * Caller expects the dupSubmissionIdx to be present.
+   */
+  public getDupSubmissionIdx(): number {
+    assert(typeof this.dupSubmissionIdx === "number");
+    return this.dupSubmissionIdx;
   }
 }
 

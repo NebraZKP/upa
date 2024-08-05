@@ -74,7 +74,7 @@ expect(dummyProofData.circuitId).eql(DUMMY_PROOF_CIRCUIT_ID);
 describe("SubmissionInterval", () => {
   const sub =
     // eslint-disable-next-line
-    Submission.fromCircuitIdsProofsAndInputs(cidsProofsAndInputs);
+    Submission.fromCircuitIdsProofsInputsAndDupIdx(cidsProofsAndInputs, 0);
 
   it("correctly splits full submission", () => {
     // [ a, b, c, d, e, f ]
@@ -237,7 +237,7 @@ describe("SubmissionInterval", () => {
   });
 
   describe("correctly merges", () => {
-    const sA = Submission.fromCircuitIdsProofsAndInputs(
+    const sA = Submission.fromCircuitIdsProofsInputsAndDupIdx(
       [
         {
           circuitId: bigintToHex32(123n),
@@ -259,10 +259,11 @@ describe("SubmissionInterval", () => {
           proof: pf_b,
           inputs: [4n, 0n, 0n],
         },
-      ].map(CircuitIdProofAndInputs.from_json)
+      ].map(CircuitIdProofAndInputs.from_json),
+      0
     );
 
-    const sB = Submission.fromCircuitIdsProofsAndInputs(
+    const sB = Submission.fromCircuitIdsProofsInputsAndDupIdx(
       [
         {
           circuitId: bigintToHex32(456n),
@@ -279,10 +280,11 @@ describe("SubmissionInterval", () => {
           proof: pf_b,
           inputs: [7n, 0n, 0n],
         },
-      ].map(CircuitIdProofAndInputs.from_json)
+      ].map(CircuitIdProofAndInputs.from_json),
+      0
     );
 
-    const sC = Submission.fromCircuitIdsProofsAndInputs(
+    const sC = Submission.fromCircuitIdsProofsInputsAndDupIdx(
       [
         {
           circuitId: bigintToHex32(321n),
@@ -294,7 +296,8 @@ describe("SubmissionInterval", () => {
           proof: pf_b,
           inputs: [9n, 0n, 0n],
         },
-      ].map(CircuitIdProofAndInputs.from_json)
+      ].map(CircuitIdProofAndInputs.from_json),
+      0
     );
 
     it("in trivial cases", () => {
@@ -849,9 +852,10 @@ describe("SubmissionInterval", () => {
     });
 
     it("with dummy proof", () => {
-      const dummySubmission = Submission.fromCircuitIdsProofsAndInputs([
-        dummyProofData,
-      ]);
+      const dummySubmission = Submission.fromCircuitIdsProofsInputsAndDupIdx(
+        [dummyProofData],
+        0
+      );
       // if the dummy proof appears at the end, merging should succeed.
       expect(
         mergeSubmissionIntervals([

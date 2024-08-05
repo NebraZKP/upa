@@ -5,6 +5,7 @@ import {
   Groth16Proof,
 } from "../src/sdk/application";
 import {
+  OffChainSubmission,
   Submission,
   SubmissionProof,
   packOffChainSubmissionMarkers,
@@ -91,7 +92,7 @@ function generateCidProofsAndInputs(
 // Returns true iff all proofs are individually verified and the submission
 // is also verified.
 async function checkProofsAndSubmissionVerified(
-  submission: Submission,
+  submission: OffChainSubmission,
   verifier: UpaVerifier
 ): Promise<boolean> {
   const isProofVerifiedMultiFn = verifier.getFunction(isProofVerifiedMulti);

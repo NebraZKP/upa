@@ -37,6 +37,7 @@ import {
   evmLeafHashFn,
 } from "../src/sdk/merkleUtils";
 import {
+  OffChainSubmission,
   Submission,
   ZERO_BYTES32,
   packOffChainSubmissionMarkers,
@@ -171,9 +172,9 @@ export async function deployAndUpgradeUpa() {
 }
 
 export type DeployAndSubmitResult = DeployResult & {
-  s1: Submission;
-  s2: Submission;
-  s3: Submission;
+  s1: OffChainSubmission;
+  s2: OffChainSubmission;
+  s3: OffChainSubmission;
   s1_tx: ContractTransactionResponse;
   s2_tx: ContractTransactionResponse;
   s3_tx: ContractTransactionResponse;
@@ -186,7 +187,9 @@ export type DeployAndSubmitResult = DeployResult & {
 ///   3: [ pf_e, pf_f ]        (Merkle depth 2, full)
 export async function makeSubmissions(
   upa: UpaInstance
-): Promise<[Submission, Submission, Submission, string]> {
+): Promise<
+  [OffChainSubmission, OffChainSubmission, OffChainSubmission, string]
+> {
   const { verifier } = upa;
   const vk = loadAppVK("../circuits/src/tests/data/vk.json");
   await verifier.registerVK(vk);
@@ -1512,7 +1515,7 @@ describe("UPA", async () => {
         expect(numSubmissions * submissionSize).eql(AGG_BATCH_SIZE);
 
         let proofIdx = 0;
-        const submissions: Submission[] = [];
+        const submissions: OffChainSubmission[] = [];
         for (
           let submissionIdx = 0;
           submissionIdx < numSubmissions;
@@ -1529,7 +1532,7 @@ describe("UPA", async () => {
           }
 
           const submission =
-            Submission.fromCircuitIdsProofsAndInputs(submissionParams);
+            OffChainSubmission.fromCircuitIdsProofsAndInputs(submissionParams);
           {
             const submitTx = await submitProofs(
               verifier,

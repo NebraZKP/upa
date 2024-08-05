@@ -8,16 +8,19 @@ import {
 import { Submission, UpaClient } from "../src/sdk";
 import { strict as assert } from "assert";
 import { dummyProofData, updateFeeOptions } from "../src/sdk/upa";
-import { packOffChainSubmissionMarkers } from "../src/sdk/submission";
+import {
+  OffChainSubmission,
+  packOffChainSubmissionMarkers,
+} from "../src/sdk/submission";
 
 /// Submit 3 submissions (all against cid_a):
 ///   1: [ pf_a ]
 ///   2: [ pf_b, pf_c, pf_d ]  (Merkle depth 2, not full)
 ///   3: [ pf_e, pf_f ]        (Merkle depth 2, full)
 type DeployResultAndSubs = DeployResult & {
-  s1: Submission;
-  s2: Submission;
-  s3: Submission;
+  s1: OffChainSubmission;
+  s2: OffChainSubmission;
+  s3: OffChainSubmission;
   cid_a: string;
 };
 
