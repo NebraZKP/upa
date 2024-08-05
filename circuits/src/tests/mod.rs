@@ -38,11 +38,9 @@ use std::{
     path::Path,
 };
 
-// mod batch_verifier;
 mod commitment_point;
 mod hashing;
 mod keccak;
-// mod outer;
 mod universal_batch_verifier;
 mod universal_outer;
 mod utils;

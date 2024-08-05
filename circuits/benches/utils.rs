@@ -1,7 +1,5 @@
 use itertools::Itertools;
-use std::{fs::File, io::BufWriter};
 use upa_circuits::{
-    batch_verify::fixed::types::BatchVerifyConfig,
     keccak::{KeccakConfig, KECCAK_LOOKUP_BITS},
     outer::OuterConfig,
     utils::{
@@ -297,22 +295,6 @@ fn write_universal_outer_configs_fixed_size() {
         }
     }
     save_json(UNIVERSAL_OUTER_CONFIG_FILE, &configs)
-}
-
-/// Extracts BV configs from file of outer configs
-#[test]
-fn write_bv_configs_from_outer_configs() {
-    let outer_configs: Vec<OuterConfig> = load_json(OUTER_CONFIG_FILE);
-    // Use itertools::unique to remove duplicate configs
-    let bv_configs: Vec<BatchVerifyConfig> = outer_configs
-        .iter()
-        .map(|config| config.into())
-        .unique()
-        .collect();
-
-    let file = File::create(BV_CONFIG_FILE).unwrap();
-    let writer = BufWriter::new(file);
-    serde_json::to_writer_pretty(writer, &bv_configs).expect("Write failure");
 }
 
 /// Extracts Keccak configs from file of outer configs
