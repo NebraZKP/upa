@@ -1,6 +1,5 @@
 //! External-facing keccak input types that can be converted into a
-//! `KeccakPaddedCircuitInput`. (De)Serializable and provides a type-safe way
-//! to specify fixed-len vs var-len.
+//! `KeccakPaddedCircuitInput`.
 
 use super::KeccakConfig;
 use crate::{

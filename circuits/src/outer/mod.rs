@@ -38,7 +38,6 @@ use std::env::set_var;
 pub type OuterConfig = UpaConfig;
 pub type UniversalOuterConfig = UpaConfig;
 
-pub mod fixed;
 pub mod universal;
 pub mod utils;
 

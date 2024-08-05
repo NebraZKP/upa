@@ -710,7 +710,7 @@ impl<F> AssignedKeccakInputs<F>
 where
     F: Field,
 {
-    /// Flattens `self`, disregarding the length if `self` is fixed, and keeping it otherwise.
+    /// Flattens `self`.
     pub fn to_instance_values(&self) -> Vec<AssignedValue<F>> {
         self.0
             .iter()
