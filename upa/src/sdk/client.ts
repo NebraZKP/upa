@@ -9,7 +9,7 @@ import {
 } from "./upa";
 import { Groth16VerifyingKey } from "./application";
 import { PayableOverrides } from "../../typechain-types/common";
-import { OffChainSubmission } from "./submission";
+import { Submission, OffChainSubmission } from "./submission";
 import { application } from ".";
 
 /**
