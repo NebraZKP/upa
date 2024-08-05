@@ -94,7 +94,7 @@ contract UpaProofReceiver is
         /// Data for each registered circuit, indexed by the circuitId.
         mapping(bytes32 => CircuitData) _circuitData;
         /// The full set of submissions, indexed by the submissionId.
-        mapping(bytes32 => Submission[]) _submissions;
+        mapping(bytes32 => Submission[1]) _submissions;
         /// The next submission index
         uint64 _nextSubmissionIdx;
         /// The next proof index.  (Proof index is not strictly required, but
@@ -300,11 +300,11 @@ contract UpaProofReceiver is
         // submissionId.
         submissionId = Merkle.computeMerkleRootSafe(proofIds);
 
-        Submission[] storage submissions = proofReceiverStorage._submissions[
+        Submission[1] storage submissions = proofReceiverStorage._submissions[
             submissionId
         ];
         uint64 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
-        uint64 dupSubmissionIdx = uint64(submissions.length);
+        uint16 dupSubmissionIdx = getSubmissionsLengthFromPtr(submissions);
         require(
             dupSubmissionIdx < uint64(MAX_NUM_DUPLICATE_SUBMISSIONS),
             TooManySubmissionsForId()
@@ -331,14 +331,12 @@ contract UpaProofReceiver is
         // Forward the fee to the fee model
         onProofSubmitted(numProofs);
 
-        submissions.push(
-            Submission(
-                proofDataDigest,
-                submissionIdx,
-                uint64(block.number),
-                numProofs
-            )
-        );
+        // Save the submission data
+        Submission storage newSubmission = getSubmissionStorageFromPtr(submissions, uint8(dupSubmissionIdx));
+        newSubmission.proofDataDigest = proofDataDigest;
+        newSubmission.submissionIdx = submissionIdx;
+        newSubmission.submissionBlockNumber = uint64(block.number);
+        newSubmission.numProofs = numProofs;
     }
 
     /// Return the VK for a specific circuit Id.
@@ -407,14 +405,35 @@ contract UpaProofReceiver is
     function getSubmissionStorage(
         bytes32 submissionId,
         uint8 dupSubmissionIdx
-    ) internal view returns (Submission storage submission) {
-        Submission[] storage submissions = _getProofReceiverStorage()
+    ) internal view returns (Submission storage /* submission */) {
+        Submission[1] storage submissions = _getProofReceiverStorage()
             ._submissions[submissionId];
+        return getSubmissionStorageFromPtr(submissions, dupSubmissionIdx);
+    }
+
+    function getSubmissionStorageFromPtr(
+        Submission[1] storage submissions,
+        uint8 dupSubmissionIdx) internal pure returns (Submission storage submission) {
         assembly {
-            mstore(0, submissions.slot)
-            let offset := keccak256(0, 32)
-            submission.slot := add(offset, mul(dupSubmissionIdx, 2))
+            // mstore(0, submissions.slot)
+            // let offset := keccak256(0, 32)
+            // submission.slot := add(offset, mul(dupSubmissionIdx, 2))
+            submission.slot := add(submissions.slot, mul(dupSubmissionIdx, 2))
         }
+
+    }
+
+    function getSubmissionsLengthFromPtr(
+        Submission[1] storage submissions
+    ) internal view returns (uint16 length) {
+        uint16 i = 0;
+        for ( ; i < 256 ; ++i) {
+            Submission storage submission = getSubmissionStorageFromPtr(submissions, uint8(i));
+            if (submission.proofDataDigest == bytes32(0)) {
+                break;
+            }
+        }
+        return i;
     }
 
     // Sub-section of the code in `submit`.  This function exists only to
