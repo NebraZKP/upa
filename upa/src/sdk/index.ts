@@ -18,7 +18,7 @@ export * as snarkjs from "./snarkjs";
 export * as gnark from "./gnark";
 export * as events from "./events";
 export * as submission from "./submission";
-export { Submission } from "./submission";
+export { OffChainSubmission, Submission } from "./submission";
 export * as submissionIntervals from "./submissionIntervals";
 export * as aggregatedProofParams from "./aggregatedProofParams";
 export * as typechain from "../../typechain-types";
