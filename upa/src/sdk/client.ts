@@ -9,7 +9,7 @@ import {
 } from "./upa";
 import { Groth16VerifyingKey } from "./application";
 import { PayableOverrides } from "../../typechain-types/common";
-import { Submission } from "./submission";
+import { OffChainSubmission } from "./submission";
 import { application } from ".";
 
 /**
@@ -18,7 +18,7 @@ import { application } from ".";
  * transaction that performed the submission.
  */
 export type SubmissionHandle = {
-  submission: Submission;
+  submission: OffChainSubmission;
   txResponse: ethers.ContractTransactionResponse;
 };
 
@@ -44,7 +44,7 @@ export class UpaClient {
     circuitIdProofAndInputs: application.CircuitIdProofAndInputs[],
     options?: PayableOverrides
   ): Promise<SubmissionHandle> {
-    const submission = Submission.fromCircuitIdsProofsAndInputs(
+    const submission = OffChainSubmission.fromCircuitIdsProofsAndInputs(
       circuitIdProofAndInputs
     );
 
