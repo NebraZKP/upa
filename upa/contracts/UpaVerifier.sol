@@ -398,15 +398,6 @@ contract UpaVerifier is
         if (newVerified == numProofsInSubmission) {
             newNextSubmissionIdx = submissionIdx + 1;
             emit SubmissionVerified(submissionId);
-
-            if (params.dupSubmissionIdx != 0) {
-                uint64 zerothSubmissionIdx = getSubmissionIdx(submissionId, 0);
-                Uint16VectorLib.setUint16(
-                    verifierStorage.numVerifiedInSubmission,
-                    zerothSubmissionIdx,
-                    newVerified
-                );
-            }
         } else {
             newNextSubmissionIdx = submissionIdx;
         }
@@ -526,19 +517,6 @@ contract UpaVerifier is
 
                 // Emit the event
                 emit SubmissionVerified(submissionId);
-
-                // Mark the 0-th duplicate as verified
-                if (dupSubmissionIdx != 0) {
-                    uint64 zerothSubmissionIdx = getSubmissionIdx(
-                        submissionId,
-                        0
-                    );
-                    Uint16VectorLib.setUint16(
-                        verifierStorage.numVerifiedInSubmission,
-                        zerothSubmissionIdx,
-                        1
-                    );
-                }
 
                 state.proofIdIdx++;
                 verifiedSubmissionHeight = submissionBlockNumber;
@@ -757,27 +735,46 @@ contract UpaVerifier is
     function isSubmissionVerified(
         bytes32 submissionId
     ) public view override returns (bool) {
-        (uint64 submissionIdx, uint16 numProofs) = getSubmissionIdxAndNumProofs(
-            submissionId,
-            0
-        );
         VerifierStorage storage verifierStorage = _getVerifierStorage();
+        Submission[1] storage submissions = getSubmissionListStorage(
+            submissionId
+        );
 
-        // On-chain submission found, check if it is verified.
-        if (submissionIdx > 0) {
-            uint16 verified = Uint16VectorLib.getUint16(
-                verifierStorage.numVerifiedInSubmission,
-                submissionIdx
-            );
-            if (verified == numProofs) {
-                return true;
+        // Check on-chain submissions first.  If numProofs == 0, there is no
+        // on-chain submission so nothing to do.
+
+        uint16 numProofs = submissions[0].numProofs;
+        if (numProofs > 0) {
+            for (uint16 i = 0; i < MAX_NUM_DUPLICATE_SUBMISSIONS; ++i) {
+                // Early out if there are no more submissions
+                Submission storage submission = getSubmissionStorageFromPtr(
+                    submissions,
+                    uint8(i)
+                );
+                uint64 submissionIdx = submission.submissionIdx;
+                if (0 == submissionIdx) {
+                    break;
+                }
+
+                // Assume all Submissions with the same SubmissionIdx have the
+                // same number of proofs.
+                uint16 verified = Uint16VectorLib.getUint16(
+                    verifierStorage.numVerifiedInSubmission,
+                    submissionIdx
+                );
+                if (verified == numProofs) {
+                    return true;
+                }
             }
         }
 
         // No verified on-chain submission found. Check if there is a verified
         // off-chain submission.
-        // TODO: To save on SLOADs, switch to checking off-chain submissions
-        // first when that becomes the primary mode of submissions.
+
+        // TODO: To save on SLOADs, switch to checking
+        // off-chain submissions first when that becomes the primary mode of
+        // submissions.
+
         return verifierStorage.verifiedAtBlock[submissionId] > 0;
     }
 
@@ -794,16 +791,6 @@ contract UpaVerifier is
         bytes32[] calldata proofDataMerkleProof
     ) private returns (bool isLastProof) {
         VerifierStorage storage verifierStorage = _getVerifierStorage();
-
-        // If ANY of the entries in numVerifiedInSubmission[idx] for idx with
-        // this submissionId, then the whole submission should be marked as
-        // verified.  Therefore, if it is not marked as verified, logically no
-        // such numVerifiedInSubmission[idx] (including the one for this
-        // particular Submission) should be >= numProofs.
-        require(
-            !isSubmissionVerified(params.submissionId),
-            SubmissionAlreadyVerified()
-        );
 
         // Retrieve the submission
         UpaProofReceiver.Submission storage submission = getSubmissionStorage(
