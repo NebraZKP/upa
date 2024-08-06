@@ -483,3 +483,20 @@ export function computeUnpackedOffChainSubmissionmarkers(
 
   return truncatedMarkers;
 }
+
+/// `duplicateSubmissionIndices` represents an array of uint8.
+export function packDupSubmissionIdxs(
+  duplicateSubmissionIndices: number[]
+): bigint {
+  let result: bigint = BigInt(0);
+
+  for (let i = 0; i < duplicateSubmissionIndices.length; i++) {
+    const dupSubmissionIdx = duplicateSubmissionIndices[i];
+    assert(dupSubmissionIdx < 256);
+    // Set the bits corresponding to index `i` to dupSubmissionIdx, using
+    // bitwise-OR
+    result |= BigInt(dupSubmissionIdx) << BigInt(i * 8);
+  }
+
+  return result;
+}

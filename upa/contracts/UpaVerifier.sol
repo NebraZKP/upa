@@ -424,7 +424,7 @@ contract UpaVerifier is
         uint16 numOnchainProofs,
         SubmissionProof[] calldata submissionProofs,
         uint256 offChainSubmissionMarkers,
-        uint8[] calldata duplicateSubmissionIndices
+        uint256 duplicateSubmissionIndices
     ) external onlyWorker {
         // console.log("verifyAggregatedProof");
 
@@ -497,9 +497,13 @@ contract UpaVerifier is
             //   " submissionInAggProofIdx: %s",
             //   state.submissionInAggProofIdx
             // );
-            uint8 dupSubmissionIdx = duplicateSubmissionIndices[
+
+            // Interpret `duplicateSubmissionIndices` as an array of uint8
+            // and get the `dupSubmissionIdx` for this submission.
+            uint8 dupSubmissionIdx = UpaInternalLib.getUint8At(
+                duplicateSubmissionIndices,
                 state.submissionInAggProofIdx
-            ];
+            );
 
             // console.log(" dupSubmissionIdx: %s", dupSubmissionIdx);
 

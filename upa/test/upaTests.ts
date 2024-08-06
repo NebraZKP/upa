@@ -40,6 +40,7 @@ import {
   OffChainSubmission,
   Submission,
   ZERO_BYTES32,
+  packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
 } from "../src/sdk/submission";
 import { UpaFixedGasFee__factory } from "../typechain-types";
@@ -386,7 +387,7 @@ describe("UPA", async () => {
           2,
           [],
           packOffChainSubmissionMarkers([]),
-          [0, 0]
+          packDupSubmissionIdxs([0, 0])
         );
       const vapReceipt = await vapTx.wait();
       console.log(
@@ -583,7 +584,7 @@ describe("UPA", async () => {
           1,
           [],
           packOffChainSubmissionMarkers([]),
-          [0]
+          packDupSubmissionIdxs([0])
         );
       await expect(
         verifier.connect(worker).claimAggregatorFee()
@@ -598,7 +599,7 @@ describe("UPA", async () => {
           1,
           [],
           packOffChainSubmissionMarkers([]),
-          [0]
+          packDupSubmissionIdxs([0])
         );
       // If the worker claims it, it will succeed. Let's check the worker
       // received the funds.
@@ -627,7 +628,7 @@ describe("UPA", async () => {
           1,
           [],
           packOffChainSubmissionMarkers([]),
-          [0]
+          packDupSubmissionIdxs([0])
         );
       await verifier.connect(worker).claimAggregatorFee();
       expect(await verifier.feeAllocated()).equals(0n);
@@ -834,7 +835,7 @@ describe("UPA", async () => {
             s3.computeSubmissionProof(0, 2)!.solidity(),
           ],
           packOffChainSubmissionMarkers([]),
-          [0, 0, 0]
+          packDupSubmissionIdxs([0, 0, 0])
         );
       expect(await verifier.nextSubmissionIdxToVerify()).eql(4n);
 
@@ -1026,7 +1027,7 @@ describe("UPA", async () => {
           agg1.length,
           [pf2_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0, 0]
+          packDupSubmissionIdxs([0, 0])
         );
 
       // Check the UpaVerifier state.
@@ -1053,7 +1054,7 @@ describe("UPA", async () => {
           agg2.length,
           [pf2_2.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0, 0]
+          packDupSubmissionIdxs([0, 0])
         );
 
       // Check the UpaVerifier state.
@@ -1142,7 +1143,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0, 0]
+            packDupSubmissionIdxs([0, 0])
           );
       }
 
@@ -1167,7 +1168,7 @@ describe("UPA", async () => {
             agg2.length,
             [pf2_2.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            packDupSubmissionIdxs([0])
           );
       }
 
@@ -1192,7 +1193,7 @@ describe("UPA", async () => {
             agg3.length,
             [pf2_3.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0]
+            packDupSubmissionIdxs([0])
           );
       }
 
@@ -1278,7 +1279,7 @@ describe("UPA", async () => {
           agg1.length,
           [pf2_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0, 0]
+          packDupSubmissionIdxs([0, 0])
         );
 
       const agg2 = [pid_c, pid_d, pid_e, pid_f];
@@ -1293,7 +1294,7 @@ describe("UPA", async () => {
           agg2.length,
           [pf2_2.solidity(), pf3_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0, 0]
+          packDupSubmissionIdxs([0, 0])
         );
       expect(await verifier.nextSubmissionIdxToVerify()).eql(4n);
 
@@ -1370,7 +1371,7 @@ describe("UPA", async () => {
           agg1.length,
           [pf3_1.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0, 0]
+          packDupSubmissionIdxs([0, 0])
         );
       expect(await verifier.nextSubmissionIdxToVerify()).eql(4n);
 
@@ -1577,7 +1578,7 @@ describe("UPA", async () => {
           proofIds.length,
           submitPfs.map((s) => s.solidity()),
           packOffChainSubmissionMarkers([]),
-          dupSubmissionIdxs
+          packDupSubmissionIdxs(dupSubmissionIdxs)
         );
         const verifyReceipt = await verifyTx.wait();
         console.log(
@@ -1645,7 +1646,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0, 0]
+            packDupSubmissionIdxs([0, 0])
           )
       ).to.be.rejected;
     });
@@ -1680,7 +1681,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0, 0]
+            packDupSubmissionIdxs([0, 0])
           )
       ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
     });
@@ -1714,7 +1715,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0, 0]
+            packDupSubmissionIdxs([0, 0])
           )
       ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
     });
@@ -1746,7 +1747,7 @@ describe("UPA", async () => {
             agg1.length,
             [],
             packOffChainSubmissionMarkers([]),
-            [0, 0]
+            packDupSubmissionIdxs([0, 0])
           )
       ).to.be.revertedWithCustomError(verifier, "MissingSubmissionProof");
     });
@@ -1783,7 +1784,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf3_1.solidity(), pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0, 0, 0]
+            packDupSubmissionIdxs([0, 0, 0])
           )
       ).to.be.revertedWithCustomError(verifier, "SubmissionOutOfOrder");
     });
@@ -1816,7 +1817,7 @@ describe("UPA", async () => {
             agg1.length,
             [pf2_1.solidity()],
             packOffChainSubmissionMarkers([]),
-            [0, 0]
+            packDupSubmissionIdxs([0, 0])
           )
       ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
     });
@@ -1853,7 +1854,7 @@ describe("UPA", async () => {
           agg1.length,
           [],
           packOffChainSubmissionMarkers([]),
-          [0, 0]
+          packDupSubmissionIdxs([0, 0])
         );
 
       await verifier
@@ -1864,7 +1865,7 @@ describe("UPA", async () => {
           agg3.length,
           [pf3.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0]
+          packDupSubmissionIdxs([0])
         );
     });
   });

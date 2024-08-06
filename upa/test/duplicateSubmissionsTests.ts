@@ -10,6 +10,7 @@ import { strict as assert } from "assert";
 import { dummyProofData, updateFeeOptions } from "../src/sdk/upa";
 import {
   OffChainSubmission,
+  packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
 } from "../src/sdk/submission";
 
@@ -138,7 +139,7 @@ describe("Duplicate Submissions", () => {
         subB.proofIds.length,
         [subB.computeSubmissionProof()!],
         packOffChainSubmissionMarkers([]),
-        [subB.getDupSubmissionIdx()]
+        packDupSubmissionIdxs([subB.getDupSubmissionIdx()])
       );
 
     expect(await verifier["isSubmissionVerified(bytes32)"](subB.submissionId))
@@ -183,7 +184,7 @@ describe("Duplicate Submissions", () => {
         proofIds.length,
         [subProof],
         packOffChainSubmissionMarkers([]),
-        [0]
+        packDupSubmissionIdxs([0])
       );
 
     // Verify the first 2 proofs of submission B
@@ -195,7 +196,7 @@ describe("Duplicate Submissions", () => {
         proofIds.length,
         [subProof],
         packOffChainSubmissionMarkers([]),
-        [1]
+        packDupSubmissionIdxs([1])
       );
 
     expect(await verifier["isSubmissionVerified(bytes32)"](subB.submissionId))
