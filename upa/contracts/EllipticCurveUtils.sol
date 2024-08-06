@@ -27,12 +27,17 @@ pragma solidity ^0.8.20;
 //   solhint-disable-next-line
 //   https://github.com/witnet/elliptic-curve-solidity/blob/347547890840fd501809dfe0b855206407136ec0/contracts/EllipticCurve.sol
 
+/// Represents a G1 point which is known to be on the curve, with coordinates
+/// in the field (values < field modulus).  Structs should only be created
+/// via `intoG1Point`.
 struct G1Point {
     uint256 x;
     uint256 y;
 }
 
-// Encoding of field elements is: x[0] * z + x[1]
+/// Represents a G2 point which is known to be on the curve, with coordinates
+/// in the field (values < field modulus).  Should only be constructed via
+/// `intoG2Point`. Note: Encoding of Fq2 elements is: x[0] * z + x[1].
 struct G2Point {
     uint256[2] x;
     uint256[2] y;
@@ -187,7 +192,7 @@ library EllipticCurveUtils {
         if (p.x == 0 && p.y == 0) {
             return G1Point(0, 0);
         } else {
-            return G1Point(p.x, PRIME_Q - (p.y % PRIME_Q));
+            return G1Point(p.x, PRIME_Q - p.y);
         }
     }
 
@@ -213,11 +218,6 @@ library EllipticCurveUtils {
                 r,
                 0x40 /* 0x20 * 2 */
             )
-            // Use "invalid" to make gas estimation work
-            switch success
-            case 0 {
-                invalid()
-            }
         }
 
         require(success, "pairing-add-failed");
@@ -244,11 +244,6 @@ library EllipticCurveUtils {
                 r,
                 0x40 /* 0x20 * 2 */
             )
-            // Use "invalid" to make gas estimation work
-            switch success
-            case 0 {
-                invalid()
-            }
         }
 
         require(success, "pairing-mul-failed");
@@ -307,11 +302,6 @@ library EllipticCurveUtils {
                 out,
                 0x20
             )
-            // Use "invalid" to make gas estimation work
-            switch success
-            case 0 {
-                invalid()
-            }
         }
 
         require(success, "pairing-failed");
@@ -353,11 +343,6 @@ library EllipticCurveUtils {
                 out,
                 0x20
             )
-            // Use "invalid" to make gas estimation work
-            switch success
-            case 0 {
-                invalid()
-            }
         }
 
         require(success, "pairing-failed");

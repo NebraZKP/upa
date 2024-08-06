@@ -32,7 +32,8 @@ library UpaInternalLib {
     uint256 internal constant CIRCUIT_ID_DOMAIN_TAG_WITH_COMMITMENT =
         0xbe0523909703924017e523b64b54adc1091d895bc2cea0e312c4b2e63c813202;
 
-    /// Compresses `g1Point` into a single `uint256`.
+    /// Compresses `g1Point` into a single `uint256`.  Note that this function
+    /// does not check (or care) whether `g1Point` is well-formed.
     function compressG1Point(
         uint256[2] calldata g1Point
     ) internal pure returns (uint256) {
@@ -47,10 +48,11 @@ library UpaInternalLib {
         return x | (sign << 255);
     }
 
-    /// Compresses `g2Point` into a pair of `uint256`. Note `g2Point`
-    /// must have its Fq2 elements reversed, i.e., in the EVM-compatible
-    /// order, but the output Fq2 element will come out in the natural
-    /// order.
+    /// Compresses `g2Point` into a pair of `uint256`. Note `g2Point` must
+    /// have its Fq2 elements reversed, i.e., in the EVM-compatible order, but
+    /// the output Fq2 element will come out in the natural order. Note that
+    /// this function does not check (or care) whether `g2Point` is
+    /// well-formed.
     function compressG2Point(
         uint256[2][2] calldata g2Point
     ) internal pure returns (uint256[2] memory) {
