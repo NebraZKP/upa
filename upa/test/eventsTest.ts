@@ -13,6 +13,7 @@ import {
 import { submitProofs } from "../src/sdk/upa";
 import {
   Submission,
+  packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
 } from "../src/sdk/submission";
 import { CompressedGroth16Proof } from "../src/sdk/groth16";
@@ -142,7 +143,7 @@ describe("EventGetter for events", () => {
           proofIds.length - 1,
           [sub_1.computeSubmissionProof(0, 1)!.solidity()],
           submissionMarkers,
-          [0]
+          packDupSubmissionIdxs([0])
         );
       return agg1Tx.hash;
     })();
@@ -160,7 +161,7 @@ describe("EventGetter for events", () => {
             sub_3.computeSubmissionProof(0, 1)!.solidity(),
           ],
           packOffChainSubmissionMarkers([]),
-          [0, 0, 0]
+          packDupSubmissionIdxs([0, 0, 0])
         );
       return agg2Tx.hash;
     })();
@@ -175,7 +176,7 @@ describe("EventGetter for events", () => {
           proofIds.length,
           [sub_3.computeSubmissionProof(1, 2)!.solidity()],
           packOffChainSubmissionMarkers([]),
-          [0]
+          packDupSubmissionIdxs([0])
         );
       return agg3Tx.hash;
     })();

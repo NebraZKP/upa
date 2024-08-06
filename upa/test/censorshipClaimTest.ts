@@ -15,7 +15,10 @@ import { computeProofId, computeCircuitId } from "../src/sdk/utils";
 import { expect } from "chai";
 import { Submission } from "../src/sdk";
 import { UpaVerifier } from "../typechain-types";
-import { packOffChainSubmissionMarkers } from "../src/sdk/submission";
+import {
+  packDupSubmissionIdxs,
+  packOffChainSubmissionMarkers,
+} from "../src/sdk/submission";
 
 describe("Censorship challenge tests", () => {
   type DeployAndSubmitResult = DeployAndRegisterResult & {
@@ -148,7 +151,7 @@ describe("Censorship challenge tests", () => {
         proofIds.length,
         submissionProof ? [submissionProof] : [],
         packOffChainSubmissionMarkers([]),
-        [0]
+        packDupSubmissionIdxs([0])
       );
   }
 

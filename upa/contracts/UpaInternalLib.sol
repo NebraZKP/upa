@@ -197,4 +197,17 @@ library UpaInternalLib {
             (offChainSubmissionMarkers >> (submissionMarkersIdx & 0xff)) & 1 ==
             1;
     }
+
+    /// `index` is assumed to be less than 32.
+    function getUint8At(
+        uint256 value,
+        uint16 index
+    ) internal pure returns (uint8) {
+        //require(index < 32, "Index out of bounds");
+
+        // Shift right by index * 8 bits, then mask with 0xFF
+        uint8 extractedValue = uint8((value >> (index * 8)) & 0xFF);
+
+        return extractedValue;
+    }
 }

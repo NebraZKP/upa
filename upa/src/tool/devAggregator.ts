@@ -7,7 +7,10 @@ import { dummyProofData, UpaInstance } from "../sdk/upa";
 import { strict as assert } from "assert";
 import { NonPayableOverrides } from "../../typechain-types/common";
 import * as log from "./log";
-import { packOffChainSubmissionMarkers } from "../sdk/submission";
+import {
+  packDupSubmissionIdxs,
+  packOffChainSubmissionMarkers,
+} from "../sdk/submission";
 import {
   siProofIds,
   SubmissionInterval,
@@ -188,7 +191,7 @@ async function submitBatch(
     aggProofParams.numOnChainProofs,
     aggProofParams.submissionProofs,
     packOffChainSubmissionMarkers(aggProofParams.offChainSubmissionMarkers),
-    aggProofParams.dupSubmissionIdxs,
+    packDupSubmissionIdxs(aggProofParams.dupSubmissionIdxs),
     options || {}
   );
 

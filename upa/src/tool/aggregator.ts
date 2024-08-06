@@ -13,7 +13,11 @@ import * as log from "./log";
 import { readFileSync, writeFileSync } from "fs";
 import { dummyProofData } from "../sdk/upa";
 import { utils } from "../sdk";
-import { packOffChainSubmissionMarkers, Submission } from "../sdk/submission";
+import {
+  packDupSubmissionIdxs,
+  packOffChainSubmissionMarkers,
+  Submission,
+} from "../sdk/submission";
 import { config, options } from ".";
 import { PayableOverrides } from "../../typechain-types/common";
 import assert from "assert";
@@ -317,7 +321,7 @@ const submitAggregatedProof = command({
       apParams.numOnChainProofs,
       submissionProofsSolidity,
       packOffChainSubmissionMarkers(apParams.offChainSubmissionMarkers),
-      apParams.dupSubmissionIdxs,
+      packDupSubmissionIdxs(apParams.dupSubmissionIdxs),
       optionsPayable
     );
 
