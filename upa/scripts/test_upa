@@ -160,6 +160,8 @@ pushd _test_upa
            --submission-file submit-multi-4.submission.json \
            --wait > submit-multi-4.tx.hash
 
+    multi_4_submissionid=`jq -r .submissionId submit-multi-4.submission.json`
+
     # Submission from universal_batch_verifier_8_proofs.json. We will verify
     # this as an off-chain submission- we only use `submit-proofs` to generate
     # the submission and proofId files.
@@ -212,6 +214,7 @@ pushd _test_upa
                 --proof-file submit-multi-4.proof-$i.json \
                 --proof-ref-file submit-multi-4.ref-$i.json)
     done
+    ! upa query is-submission-verified ${multi_4_submissionid}
 
     # Check stats.  Expect 2 submissions, 0 verified.
     upa query stats > stats.1
@@ -371,6 +374,9 @@ pushd _test_upa
                 --proof-file submit-multi-4.proof-$i.json \
                 --proof-ref-file submit-multi-4.ref-$i.json
     done
+
+    # Check by submission Id
+    upa query is-submission-verified ${multi_4_submissionid}
 
     # Proofs from the off-chain submission should also be verified now.
     for i in {0..7} ; do
