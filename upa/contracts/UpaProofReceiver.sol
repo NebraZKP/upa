@@ -62,7 +62,7 @@ contract UpaProofReceiver is
     IUpaProofReceiver,
     UpaFixedGasFee
 {
-    uint16 public constant MAX_NUM_DUPLICATE_SUBMISSIONS = 256;
+    uint16 public constant MAX_DUPLICATE_SUBMISSIONS = 256;
 
     uint16 public constant MAX_SUBMISSION_MERKLE_DEPTH = 5;
 
@@ -94,7 +94,7 @@ contract UpaProofReceiver is
         /// Data for each registered circuit, indexed by the circuitId.
         mapping(bytes32 => CircuitData) _circuitData;
         /// The full set of submissions, indexed by the submissionId.
-        mapping(bytes32 => Submission[1]) _submissions;
+        mapping(bytes32 => Submission[MAX_DUPLICATE_SUBMISSIONS]) _submissions;
         /// The next submission index
         uint64 _nextSubmissionIdx;
         /// The next proof index.  (Proof index is not strictly required, but
@@ -300,13 +300,14 @@ contract UpaProofReceiver is
         // submissionId.
         submissionId = Merkle.computeMerkleRootSafe(proofIds);
 
-        Submission[1] storage submissions = proofReceiverStorage._submissions[
-            submissionId
-        ];
+        Submission[MAX_DUPLICATE_SUBMISSIONS]
+            storage submissions = proofReceiverStorage._submissions[
+                submissionId
+            ];
         uint64 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
         uint16 dupSubmissionIdx = getSubmissionsLengthFromPtr(submissions);
         require(
-            dupSubmissionIdx < uint64(MAX_NUM_DUPLICATE_SUBMISSIONS),
+            dupSubmissionIdx < uint64(MAX_DUPLICATE_SUBMISSIONS),
             TooManySubmissionsForId()
         );
 
@@ -332,10 +333,7 @@ contract UpaProofReceiver is
         onProofSubmitted(numProofs);
 
         // Save the submission data
-        Submission storage newSubmission = getSubmissionStorageFromPtr(
-            submissions,
-            uint8(dupSubmissionIdx)
-        );
+        Submission storage newSubmission = submissions[dupSubmissionIdx];
         newSubmission.proofDataDigest = proofDataDigest;
         newSubmission.submissionIdx = submissionIdx;
         newSubmission.submissionBlockNumber = uint64(block.number);
@@ -409,40 +407,23 @@ contract UpaProofReceiver is
         bytes32 submissionId,
         uint8 dupSubmissionIdx
     ) internal view returns (Submission storage /* submission */) {
-        Submission[1] storage submissions = getSubmissionListStorage(
-            submissionId
-        );
-        return getSubmissionStorageFromPtr(submissions, dupSubmissionIdx);
+        Submission[MAX_DUPLICATE_SUBMISSIONS]
+            storage submissions = getSubmissionListStorage(submissionId);
+        return submissions[dupSubmissionIdx];
     }
 
     function getSubmissionListStorage(
         bytes32 submissionId
-    ) internal view returns (Submission[1] storage) {
+    ) internal view returns (Submission[MAX_DUPLICATE_SUBMISSIONS] storage) {
         return _getProofReceiverStorage()._submissions[submissionId];
     }
 
-    function getSubmissionStorageFromPtr(
-        Submission[1] storage submissions,
-        uint8 dupSubmissionIdx
-    ) internal pure returns (Submission storage submission) {
-        assembly {
-            // mstore(0, submissions.slot)
-            // let offset := keccak256(0, 32)
-            // submission.slot := add(offset, mul(dupSubmissionIdx, 2))
-            submission.slot := add(submissions.slot, mul(dupSubmissionIdx, 2))
-        }
-    }
-
     function getSubmissionsLengthFromPtr(
-        Submission[1] storage submissions
+        Submission[MAX_DUPLICATE_SUBMISSIONS] storage submissions
     ) internal view returns (uint16 length) {
         uint16 i = 0;
-        for (; i < 256; ++i) {
-            Submission storage submission = getSubmissionStorageFromPtr(
-                submissions,
-                uint8(i)
-            );
-            if (submission.proofDataDigest == bytes32(0)) {
+        for (; i < MAX_DUPLICATE_SUBMISSIONS; ++i) {
+            if (submissions[i].proofDataDigest == bytes32(0)) {
                 break;
             }
         }

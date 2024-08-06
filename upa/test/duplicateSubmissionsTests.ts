@@ -84,7 +84,7 @@ describe("Duplicate Submissions", () => {
 
     const cidProofsAndInputs = s2.getCircuitIdsProofsAndInputs();
     const maxDupSubmissions = Number(
-      await verifier.MAX_NUM_DUPLICATE_SUBMISSIONS()
+      await verifier.MAX_DUPLICATE_SUBMISSIONS()
     );
     const submitPromises = new Array(maxDupSubmissions)
       .fill(0)

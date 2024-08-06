@@ -715,22 +715,17 @@ contract UpaVerifier is
         bytes32 submissionId
     ) public view override returns (bool) {
         VerifierStorage storage verifierStorage = _getVerifierStorage();
-        Submission[1] storage submissions = getSubmissionListStorage(
-            submissionId
-        );
+        Submission[MAX_DUPLICATE_SUBMISSIONS]
+            storage submissions = getSubmissionListStorage(submissionId);
 
         // Check on-chain submissions first.  If numProofs == 0, there is no
         // on-chain submission so nothing to do.
 
         uint16 numProofs = submissions[0].numProofs;
         if (numProofs > 0) {
-            for (uint16 i = 0; i < MAX_NUM_DUPLICATE_SUBMISSIONS; ++i) {
+            for (uint16 i = 0; i < MAX_DUPLICATE_SUBMISSIONS; ++i) {
                 // Early out if there are no more submissions
-                Submission storage submission = getSubmissionStorageFromPtr(
-                    submissions,
-                    uint8(i)
-                );
-                uint64 submissionIdx = submission.submissionIdx;
+                uint64 submissionIdx = submissions[i].submissionIdx;
                 if (0 == submissionIdx) {
                     break;
                 }
