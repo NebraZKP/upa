@@ -10,6 +10,7 @@ header-includes: |
   \newcommand{\pid}{\mathsf{proofId}}
   \newcommand{\sid}{\mathsf{submissionId}}
   \newcommand{\sidx}{\mathsf{submissionIndex}}
+  \newcommand{\dsidx}{\mathsf{dupSubmissionIndex}}
   \newcommand{\pdigest}{\mathsf{proofDigest}}
   \newcommand{\keccak}{\mathsf{keccak}}
   \newcommand{\PI}{\mathsf{PI}}
@@ -45,6 +46,7 @@ The submission is assigned:
 
 - a *Submission Id* $\sid$, computed as the Merkle root of the list of $\pid_i$s, padded to the nearest power of 2 with `bytes32(0)`. Note that we hash the entries of this Merkle tree, so the leaves actually hold $\keccak(\pid_i)$. In particular, the padding leaves hold $\keccak(\texttt{bytes32(0)})$.
 - a *submission index* $\sidx$ (only for on-chain submissions), an incrementing counter of on-chain submissions, used later for censorship resistance.
+- a *duplicate submission index* $\dsidx$ (only for on-chain submissions), which is a count of previous submissions with the same *Submission Id*
 
 Note that:
 
@@ -55,7 +57,9 @@ The proof and public input data is not stored on-chain. The aggregator monitors 
 
 The aggregator puts together *batches* of proofs with *increasing* submission index values.  The proofs in a batch must be ordered exactly as they appear within submissions.  Aggregated batches do not need to align with submissions- a batch may contain multiple submissions, and a submission may span multiple batches.  Both on-chain and off-chain submissions can be aggregated in the same batch.  If a submission contains any invalid proofs, it is considered *invalid*.  The aggregator may skip *only* invalid submissions.  If the aggregator skips a valid submission, then they will be punished (see below).
 
-Once a submission is verified by the UPA contract, its submission id is marked as verified. Applications can confirm that an individual proof id is verified by providing a `ProofReference`, which is a Merkle proof that the proof id was included in a verified submission. Note that for proofs in a multi-proof submission with $\sid$, the contract does not mark the proof as verified until the entire submission has been verified.
+Once a submission is verified by the UPA contract, its submission id is marked as verified.  Applications can now query the UPA with the given submission Id and check that it has been verified.  Internally, the UPA contract only marks the submission with the given submission id and *duplicate submission index* as verified, but when applications query with a submission Id, the UPA answers in the affirmative if ANY submission with the given Submission Id is marked as verified.  In this sense, *duplicate submission index* is hidden from applications.
+
+Applications can confirm that an individual proof id is verified by providing a `ProofReference`, which is a Merkle proof that the proof id was included in a verified submission. Note that for proofs in a multi-proof submission with $\sid$, the contract does not mark the proof as verified until the entire submission has been verified.
 
 Once the UPA contract marks a proof (or the submission containing a proof) as verified, an application client can submit a transaction to the application contract (optionally with some `ProofReference` metadata), and the application contract can verify the existence of an associated ZKP as follows:
 
@@ -117,12 +121,13 @@ The `Upa.submit` method:
 - computes the `proofDataDigest` as the keccak digest of `digestRoot` and `msg.sender`
 - rejects the tx if an entry for $\sid$ already exists
 - assigns a $\sidx$ to the submission (using a single incrementing counter)
-- emits an event for each submission containing the *Submission Id* $\sid$
+- assigns a $\dsidx$ (duplicate submission index) by checking for previously submitted proofs with the same Submission Id
+- emits an event for each proof, containing the *proofId*, *submission index* and *duplicate submission index*
 - updates contract state to record the fact that a submission with id $\sid$ has been made, recording `proofDataDigest` (which is bound to `msg.sender`), $\sidx$, the number of proofs in the submission $n$, and the block number at submission time.
 
 Note: Proof data itself does not appear in the input data used to compute `proofId`.  This is because, when the proof is verified by the application, the application does not have access to (and does not require) any proof data.  Thereby, the application is in fact verifying the *existence* of some proof for the given circuit and public inputs.
 
-Note: Application authors must ensure that the public inputs to their ZKPs contain some element that is hard to compute without the corresponding private witness (and in general this will already be the case for sound protocols, in order to prevent replay attacks).  If the set of public inputs in a submission can be predicted by a malicious party, that malicious party can send an invalid submission for these public inputs, preventing on-chain submission of further (valid) proofs for that same set of public inputs.
+Note: Duplicate submissions are accepted and assigned different *Submission Index* and *Duplicate Submission Index* values.
 
 ### Submitting proofs off-chain
 
@@ -150,18 +155,19 @@ function verifyAggregatedProof(
 
 > `offChainSubmissionMarkers` represents a `bool[]` marking each off-chain member of `proofIds` with a 0 or 1. A proofId is marked with a 1 precisely when the proofId is the last one in an off-chain submission. This `bool[]` is packed into a `uint256` to compress calldata.
 
+> `dupSubmissionIdxs` represent the *Duplicate submission index* values for each submission referenced in the aggregated batch.
+
 The UPA contract:
 
 - checks that `proof` is valid for `proofIds`
 - for each on-chain $\pid$ in `proofIds`,
   - skip $\pid$ if it corresponds to a dummy proof,
   - check that $\pid$ has been submitted to the contract, and that proofs appear in the aggregated batch in the order of submission (see below)
-  - mark $\pid$ as valid (see below)
   - if $\pid$ is the last proof in a submission $\sid$, emit an event indicating that the submission $\sid$ has been verified
+  - mark the submission with the given *Submission Id and *Duplicate submission index* as verified
 - for each off-chain $\pid$ in `proofIds`,
   - adds $\pid$ to the storage array `bytes32[] currentSubmissionProofIds`.
   - if `offChainSubmissionMarkers` indicates that $\pid$ is the last proofId in a submission, then the contract calculates the submissionId $\sid$ for the proofs in `currentSubmissionProofIds`. Then the contract resets the array `currentSubmissionProofIds` and updates the map entry `numVerifiedAtBlock[` $\sid$ `]` to hold the current block number.
-
 
 ### Marking on-chain submissions as verified
 
@@ -172,11 +178,11 @@ In more detail, the algorithm for verifying on-chain submissions (in the correct
 - a dynamic array `uint16[] numVerifiedInSubmission` of counters, where the $i$-th entry corresponds to the number of proofs that have been verified (in order) of the submission with $\sidx == i$
 - the submission index `nextSubmissionIdxToVerify` of the next submission from which proofs are expected.
 
-Given a list of `proofIds` and `submissionProofs`, the contract verifies that `proofIds` appear in submissions as follows:
+Given a list of `proofIds` and `submissionProofs` and `dupSubmissionIdxs`, the contract verifies that `proofIds` appear in submissions as follows:
 
 - For each $\pid$ in `proofIds`:
   - If $\pid$ corresponds to a dummy proof, skip ahead to the proofs submitted off-chain, which start at index `numOnchainProofs`.
-  - Attempt to lookup the submission data (see "Proof Submission") for a submission with Id $\keccak(\pid)$. If such a submission exists:
+  - Attempt to lookup the submission data (see "Proof Submission") for a submission with Id $\keccak(\pid)$ and duplicate submission index `dupSubmissionIdxs[i]` (where `i` is a 0-based index of the submission within this aggregated batch, incremented once for each iteration of this loop). If such a submission exists:
     - The proof was submitted as a single-proof submission.  The contract extracts the $\sidx$ from the submission data and ensures that $\sidx$ is greater than or equal to `nextSubmissionIdxToVerify`.  If not, reject the transaction.
     - The entry `numVerifiedInSubmission[` $\sidx$ `]` should logically be 0 (this can be sanity checked by the contract).  Set this entry to 1
     - update `nextSubmissionIdxToVerify` in contract state
@@ -186,7 +192,7 @@ Given a list of `proofIds` and `submissionProofs`, the contract verifies that `p
     - Take the next entry in `submissionProofs`.  This includes the following information:
       - the $\sid$ for the submission to be verified
       - a Merkle "interval" proof for a contiguous set of entries from that submission.
- - Determine the number `m` of entries in `proofIds`, including the current $\pid$, that belong to this submission, as follows:
+    - Determine the number `m` of entries in `proofIds`, including the current $\pid$, that belong to this submission, as follows:
       - Let `numProofIdsRemaining` be the number of entries (including $\pid$) still unchecked in `proofIds`.
       - Look up the submission data for $\sid$, in particular $\sidx$ and $n$.
       - Let `numUnverifiedFromSubmission = `$n$` - numVerifiedInSubmission[` $\sidx$ `]`.
@@ -235,7 +241,7 @@ The UPA contract:
 
 - receives $\pid$ or computes $\pid$ from the public inputs
 - (using the `ProofReference` if necessary) confirms that $\pid$ belongs to a submission $\sid$.
-- Checks if there was an on-chain submission for $\sid$, and if so reads the stored submission index $\sidx$ and the total number of proofs `numProofs` contained in the submission $\sid$. If it finds that `numVerifiedInSubmission[`$\sidx$`] == numProofs` then the submission $\sid$ was verified, and therefore so was the proof $\pid$.
+- For each submission with submission Id $\sid$, the contract reads the stored submission index $\sidx$ and the total number of proofs `numProofs` contained in the submission $\sid$. If it finds that `numVerifiedInSubmission[`$\sidx$`] == numProofs` then the submission $\sid$ was verified, and therefore so was the proof $\pid$.
 - Otherwise, if there is no verified on-chain submission for $\sid$, the UPA contract checks for a verified off-chain submission for $\sid$. Such a submssion exists if and only if `verifiedAtBlock[`$\sid$`] > 0`.
 
 The application contract can also look up the verification status of entire submissions by computing the corresponding (nested) array of public inputs. The contract can then either use a submissionId computed from this array, or the array itself, to query the submission's status in the UPA contract.
@@ -261,20 +267,19 @@ function isSubmissionVerified(
 The UPA contract:
 
 - receives $\sid$ or computes $\sid$ from the public inputs
-- Looks up the number of proofs `numProofsInSubmission` in $\sid$ and then checks if `numVerifiedInSubmission[`$\sidx$`] = numProofsInSubmission`.
+- Looks up the number of proofs `numProofsInSubmission` in $\sid$ and then checks if `numVerifiedInSubmission[`$\sidx$`] = numProofsInSubmission` for each submission with the given submission Id.
 - If no verified on-chain submission is found for $\sid$, check if there is a verified off-chain submission for $\sid$. Such a submssion exists if and only if `verifiedAtBlock[`$\sidx$`] > 0`.
 
 ## Censorship resistance for on-chain submissions
 
-A censorship event is considered to have occured for a submission with Id $\sid$ (with submission index $\sidx$, consisting of $n$ entries) if all of the following are satisfied:
+A censorship event is considered to have occured for a submission with Id $\sid$ (with submission index $\sidx$ and duplicate submission index $\dsidx$, consisting of $n$ entries) if all of the following are satisfied:
 
-- a submission with Id $\sid$ has been made, and **all** proofs in the submission are valid for the corresponding public inputs and circuit Ids
-- some of the entries in $\sid$ remain unverified, namely
+- a submission with Id $\sid$ has been made with duplicate submission index $\dsidx$, and **all** proofs in the submission are valid for the corresponding public inputs and circuit Ids
+- some of the proofs in the submission remain unverified, namely
   - `numVerifiedInSubmission[`$\sidx$`] < `$n$
 - one or more proofs from submission with index greater than $\sidx$ (the submission index of the submission with id $\sid$) have been included in an aggregated batch.  Namely, there exists $j > \sidx$ s.t. `numVerifiedInSubmission[`$j$`] > 0` (or alternatively `nextSubmissionIdxToVerify` $> \sidx$)
 
 Note that, if one or more entries in a submission are invalid, the aggregator is not obliged to verify any proofs from that submission.
-
 
 Censorship by the *Aggregator* can be proven by a *claimant*, by calling the method:
 
@@ -284,6 +289,7 @@ function challenge(
     Proof calldata proof,
     uint256[] calldata publicInputs,
     bytes32 submissionId,
+    uint8 dupSubmissionIdx,
     bytes32[] proofIdMerkleProof,
     bytes32[] proofDigestMerkleProof,
 ) external;
@@ -292,7 +298,7 @@ function challenge(
 providing:
 
 - the **valid** tuple $(\cid, \pi, \PI)$, or `circuitId`, `proof` and `publicInputs`, the claimed next unverified entry in the submission
-- $\sid$ or `submissionId`
+- $\sid$ or `submissionId` and duplicate submission index $\dsidx$
 - A Merkle proof that $\pid_i$ (computed from $\cid_i$ and $\PI_i$) belongs to the submission (at the "next index" - see below)
 - A Merkle proof that $\pi_i$ belongs to the submission's `proofDigest` entry (at the "next index" - see below)
 
@@ -305,7 +311,7 @@ On receipt of a transaction calling this method, the contract:
 - looks up the verification key $\vk$ using $\cid$ and performs the full proof verification for $(\vk, \pi, \PI)$.  The transaction is rejected if the proof is not valid.
 - increments the stored count `numVerifiedInSubmission[`$\sidx$`]`
 
-The aggregator is punished only when all proofs in the submission have been shown to be valid.  As such, after the above, the contract:
+The claimant receives compensation only when all proofs in the submission have been shown to be valid.  As such, after the above, the contract:
 
 - checks the condition `numVerifiedInSubmission[`$\sidx$`] == n` (where `n` is the number of proofs in the original submission $\sid$).
 - if this final condition holds then validity of all proofs in the submission has been shown and the aggregator is punished.
@@ -313,6 +319,8 @@ The aggregator is punished only when all proofs in the submission have been show
 Note: `proofDigest` is used here to prevent malicious clients from submitting invalid proofs, forcing the aggregator to skip their proofs, and then later providing valid proofs for the same public inputs. This would otherwise be an attack vector since `proofId` is not dependent on the proof data.
 
 Note: The claimed value of `proofDigest` is computed from the Merkle proof sent by the challenger.  This is checked by computing `keccak(claimedProofDigest, msg.sender)` and checking that the resulting value matches `proofDataDigest` in the submission.
+
+Note: If multiple valid submissions with the same submission Id are made, the aggreagtor should verify both submissions and ensure they are marked as valid.  A claimant may claim for a skipped submission even if the submission Id is marked valid due to another submission being fully verified.
 
 ## Collecting Aggregation Fees
 
