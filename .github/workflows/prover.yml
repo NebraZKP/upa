@@ -38,7 +38,7 @@ jobs:
 
       - name: Cargo cache
         uses: Swatinem/rust-cache@v2
-      
+
       - name: Run rustfmt
         run: |
           cargo fmt --check
@@ -55,3 +55,7 @@ jobs:
       - name: Run test_prover
         run: |
             ./scripts/test_prover
+
+      - name: Run aggregation benchmark
+        run: |
+          DRY_RUN=1 ./scripts/aggregation_benchmark.sh

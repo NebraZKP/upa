@@ -40,7 +40,7 @@ else
     echo "Dry run mode"
 fi
 
-# Go through all config files, generate keys for each
+# Run benchmark for each config file, generating any missing keys
 for config in $CONFIG_DIR/*.json; do
     echo $config
 

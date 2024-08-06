@@ -60,7 +60,7 @@ To use this script, create one or more UPA config files in the `prover/configs` 
 ```console
 [DRY_RUN=1] ./scripts/aggregation_benchmark.sh
 ```
-(The `DRY_RUN` environment variable prevents the script from performing heavy computations like keygen or proving.) The benchmark will be run for *all* UPA config files present in the `prover/configs` directory. Results will be logged in the `prover/logs` directory.
+(The `DRY_RUN` environment variable tests the script execution without performing heavy computations like keygen or proving.) The benchmark will be run for *all* UPA config files present in the `prover/configs` directory. Results will be logged in the `prover/logs` directory.
 
 ### Note
 - All UBV and Keccak provers are run concurrently, which may result in high memory usage. We recommend running the benchmark on a machine with at least 128 GB RAM.
