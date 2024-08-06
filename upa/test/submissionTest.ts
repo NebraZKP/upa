@@ -5,8 +5,9 @@ import {
   Submission,
   SubmissionProof,
   computeUnpackedOffChainSubmissionmarkers,
-  packOffChainSubmissionMarkers,
 } from "../src/sdk/submission";
+// eslint-disable-next-line
+import { packOffChainSubmissionMarkers } from "../src/sdk/aggregatedProofParams";
 import { bigintToHex32 } from "../src/sdk/utils";
 
 // Fake proofs

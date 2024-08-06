@@ -8,16 +8,16 @@ import { strict as assert } from "assert";
 import { NonPayableOverrides } from "../../typechain-types/common";
 import * as log from "./log";
 import {
-  packDupSubmissionIdxs,
-  packOffChainSubmissionMarkers,
-} from "../sdk/submission";
-import {
   siProofIds,
   SubmissionInterval,
   splitSubmissionInterval,
   submissionIntervalsFromEvents,
 } from "../sdk/submissionIntervals";
-import { computeAggregatedProofParameters } from "../sdk/aggregatedProofParams";
+import {
+  computeAggregatedProofParameters,
+  packDupSubmissionIdxs,
+  packOffChainSubmissionMarkers,
+} from "../sdk/aggregatedProofParams";
 
 export const devAggregator = command({
   name: "aggregator",

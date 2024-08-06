@@ -40,9 +40,11 @@ import {
   OffChainSubmission,
   Submission,
   ZERO_BYTES32,
+} from "../src/sdk/submission";
+import {
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
-} from "../src/sdk/submission";
+} from "../src/sdk/aggregatedProofParams";
 import { UpaFixedGasFee__factory } from "../typechain-types";
 import { SubmissionProof } from "../src/sdk/submission";
 import * as fs from "fs";

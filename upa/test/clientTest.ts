@@ -27,7 +27,7 @@ import { PayableOverrides } from "../typechain-types/common";
 import {
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
-} from "../src/sdk/submission";
+} from "../src/sdk/aggregatedProofParams";
 import { computeCircuitId } from "../src/sdk/utils";
 type DeployAndRegisterResult = {
   worker: Signer;

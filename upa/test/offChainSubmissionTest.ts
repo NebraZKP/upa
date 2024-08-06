@@ -8,9 +8,11 @@ import {
   OffChainSubmission,
   Submission,
   SubmissionProof,
+} from "../src/sdk/submission";
+import {
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
-} from "../src/sdk/submission";
+} from "../src/sdk/aggregatedProofParams";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { deployUpaDummyVerifier, DeployResult } from "./upaTests";
 import {
@@ -164,7 +166,7 @@ describe("Submissions verified in one aggregation", async () => {
       offChainCidsProofsAndInputs
     );
     const offChainSubmissionMarkers = packOffChainSubmissionMarkers(
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers()
+      offChainSubmission.getOffChainSubmissionMarkers()
     );
 
     // Should not yet be verified.
@@ -257,7 +259,7 @@ describe("Submissions verified in one aggregation", async () => {
       offChainCidsProofsAndInputs
     );
     const offChainSubmissionMarkers = packOffChainSubmissionMarkers(
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers()
+      offChainSubmission.getOffChainSubmissionMarkers()
     );
 
     // Should not yet be verified.
@@ -342,7 +344,7 @@ describe("Submissions verified in one aggregation", async () => {
       offChainCidsProofsAndInputs
     );
     const offChainSubmissionMarkers = packOffChainSubmissionMarkers(
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers()
+      offChainSubmission.getOffChainSubmissionMarkers()
     );
 
     // Should not yet be verified.
@@ -408,7 +410,7 @@ describe("Submissions verified in one aggregation", async () => {
     );
 
     const offChainSubmissionMarkers = packOffChainSubmissionMarkers(
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers()
+      offChainSubmission.getOffChainSubmissionMarkers()
     );
 
     expect(
@@ -477,7 +479,7 @@ describe("Submissions verified over multiple aggregations", async () => {
       offChainCidsProofsAndInputs
     );
     const unpackedOffChainSubmissionMarkers =
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers();
+      offChainSubmission.getOffChainSubmissionMarkers();
 
     const offChainSubmissionMarkers_1 = packOffChainSubmissionMarkers(
       unpackedOffChainSubmissionMarkers.slice(0, 3)
@@ -627,7 +629,7 @@ describe("Submissions verified over multiple aggregations", async () => {
     // We will aggregate 9, then 11, then 0 proofs from the off-chain
     // submission.
     const unpackedOffChainSubmissionMarkers =
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers();
+      offChainSubmission.getOffChainSubmissionMarkers();
 
     const offChainSubmissionMarkers_1 = packOffChainSubmissionMarkers(
       unpackedOffChainSubmissionMarkers.slice(0, 9)
@@ -823,7 +825,7 @@ describe("Aggregations containing multiple submissions", async () => {
 
     const offChainSubmissionMarkersArray = await Promise.all(
       offChainSubmissions.map(async (item) => {
-        return item.getUnpackedOffChainSubmissionMarkers();
+        return item.getOffChainSubmissionMarkers();
       })
     );
 
@@ -990,7 +992,7 @@ describe("Offchain Benchmarks", async () => {
         offChainCidsProofsAndInputs
       );
       const packedSubmissionMarkers = packOffChainSubmissionMarkers(
-        submission.getUnpackedOffChainSubmissionMarkers()
+        submission.getOffChainSubmissionMarkers()
       );
 
       const txResponse = await verifier
@@ -1066,7 +1068,7 @@ describe("Failure cases", async () => {
       offChainCidsProofsAndInputs
     );
     const offChainSubmissionMarkers = packOffChainSubmissionMarkers(
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers()
+      offChainSubmission.getOffChainSubmissionMarkers()
     );
 
     // Should not yet be verified.
@@ -1148,7 +1150,7 @@ describe("Failure cases", async () => {
 
     // We will attempt to aggregate 9 proofs from the off-chain submission.
     const unpackedOffChainSubmissionMarkers =
-      offChainSubmission.getUnpackedOffChainSubmissionMarkers();
+      offChainSubmission.getOffChainSubmissionMarkers();
 
     const offChainSubmissionMarkers = packOffChainSubmissionMarkers(
       unpackedOffChainSubmissionMarkers.slice(0, 9)

@@ -18,7 +18,7 @@ import { UpaVerifier } from "../typechain-types";
 import {
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
-} from "../src/sdk/submission";
+} from "../src/sdk/aggregatedProofParams";
 
 describe("Censorship challenge tests", () => {
   type DeployAndSubmitResult = DeployAndRegisterResult & {

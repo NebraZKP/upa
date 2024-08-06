@@ -10,6 +10,8 @@ import {
 } from "./submission";
 import { strict as assert } from "assert";
 
+const MAX_NUMBER_OF_SUBMISSION_MARKERS = 256;
+
 /// The set of arguments that must be passed to the UPA.verifyAggregatedProof
 /// contract method.
 export type AggregatedProofParameters = {
@@ -67,4 +69,49 @@ export function computeAggregatedProofParameters<T>(
     offChainSubmissionMarkers,
     dupSubmissionIdxs,
   };
+}
+
+/// Packs a boolean[] containing off-chain submission markers from one or more
+/// submissions, into a uint256[] that is ready to be passed into
+/// `verifyAggregatedProof`.
+export function packOffChainSubmissionMarkers(
+  submissionMarkers: boolean[]
+): bigint {
+  assert(submissionMarkers.length <= MAX_NUMBER_OF_SUBMISSION_MARKERS);
+
+  let packedMarker = BigInt(0);
+
+  for (let i = 0; i < 256; i++) {
+    if (i < submissionMarkers.length && submissionMarkers[i]) {
+      // Set the bit if the boolean value is true using bitwise-OR
+      packedMarker |= BigInt(1) << BigInt(i);
+    }
+  }
+
+  return packedMarker;
+}
+
+/// `duplicateSubmissionIndices` represents an array of uint8, packed into a
+/// single uint256.
+export function packDupSubmissionIdxs(
+  duplicateSubmissionIndices: number[]
+): bigint {
+  assert(
+    duplicateSubmissionIndices.length <= 32,
+    "Cannot pack more than 32 dupSubmissionIndices into a uint256"
+  );
+  let result: bigint = BigInt(0);
+
+  for (let i = 0; i < duplicateSubmissionIndices.length; i++) {
+    const dupSubmissionIdx = duplicateSubmissionIndices[i];
+    assert(
+      dupSubmissionIdx < 256,
+      `invalid dupSubmissionIdx: ${dupSubmissionIdx}`
+    );
+    // Set the bits corresponding to index `i` to dupSubmissionIdx, using
+    // bitwise-OR
+    result |= BigInt(dupSubmissionIdx) << BigInt(i * 8);
+  }
+
+  return result;
 }

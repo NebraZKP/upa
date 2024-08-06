@@ -11,11 +11,11 @@ import {
   getCallDataForVerifyAggregatedProofTx,
 } from "../src/sdk/events";
 import { submitProofs } from "../src/sdk/upa";
+import { Submission } from "../src/sdk/submission";
 import {
-  Submission,
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
-} from "../src/sdk/submission";
+} from "../src/sdk/aggregatedProofParams";
 import { CompressedGroth16Proof } from "../src/sdk/groth16";
 
 describe("EventGetter for events", () => {
@@ -125,7 +125,7 @@ describe("EventGetter for events", () => {
       { circuitId: cid, proof: pf_a, inputs: pi_offchain },
     ]);
     const submissionMarkers = packOffChainSubmissionMarkers(
-      sub_offchain.getUnpackedOffChainSubmissionMarkers()
+      sub_offchain.getOffChainSubmissionMarkers()
     );
 
     // Verify:

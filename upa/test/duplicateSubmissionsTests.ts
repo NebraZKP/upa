@@ -8,11 +8,11 @@ import {
 import { Submission, UpaClient } from "../src/sdk";
 import { strict as assert } from "assert";
 import { dummyProofData, updateFeeOptions } from "../src/sdk/upa";
+import { OffChainSubmission } from "../src/sdk/submission";
 import {
-  OffChainSubmission,
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
-} from "../src/sdk/submission";
+} from "../src/sdk/aggregatedProofParams";
 
 /// Submit 3 submissions (all against cid_a):
 ///   1: [ pf_a ]

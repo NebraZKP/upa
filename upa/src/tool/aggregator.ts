@@ -13,17 +13,17 @@ import * as log from "./log";
 import { readFileSync, writeFileSync } from "fs";
 import { dummyProofData } from "../sdk/upa";
 import { utils } from "../sdk";
-import {
-  packDupSubmissionIdxs,
-  packOffChainSubmissionMarkers,
-  Submission,
-} from "../sdk/submission";
+import { Submission } from "../sdk/submission";
 import { config, options } from ".";
 import { PayableOverrides } from "../../typechain-types/common";
 import assert from "assert";
 import { sisFromSubmissions } from "../sdk/submissionIntervals";
 import { JSONstringify } from "../sdk/utils";
-import { computeAggregatedProofParameters } from "../sdk/aggregatedProofParams";
+import {
+  packDupSubmissionIdxs,
+  packOffChainSubmissionMarkers,
+  computeAggregatedProofParameters,
+} from "../sdk/aggregatedProofParams";
 
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",

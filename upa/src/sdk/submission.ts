@@ -30,8 +30,6 @@ import { CompressedGroth16Proof } from "./groth16";
 /// 2^16.
 const MAX_SUBMISSION_SIZE = 1 << 16;
 
-const MAX_NUMBER_OF_SUBMISSION_MARKERS = 256;
-
 // TODO: Why do we need to define this?
 /// The type of objects passed to `parseLog`.
 type Log = { topics: Array<string>; data: string };
@@ -199,7 +197,7 @@ export class OffChainSubmission {
     return cpis;
   }
 
-  public getUnpackedOffChainSubmissionMarkers(): boolean[] {
+  public getOffChainSubmissionMarkers(): boolean[] {
     const submissionMarkers: boolean[] = Array(this.proofIds.length).fill(
       false
     );
@@ -443,26 +441,6 @@ export class Submission extends OffChainSubmission {
   }
 }
 
-/// Packs a boolean[] containing off-chain submission markers from one or more
-/// submissions, into a uint256[] that is ready to be passed into
-/// `verifyAggregatedProof`.
-export function packOffChainSubmissionMarkers(
-  submissionMarkers: boolean[]
-): bigint {
-  assert(submissionMarkers.length <= MAX_NUMBER_OF_SUBMISSION_MARKERS);
-
-  let packedMarker = BigInt(0);
-
-  for (let i = 0; i < 256; i++) {
-    if (i < submissionMarkers.length && submissionMarkers[i]) {
-      // Set the bit if the boolean value is true using bitwise-OR
-      packedMarker |= BigInt(1) << BigInt(i);
-    }
-  }
-
-  return packedMarker;
-}
-
 /// Computes an interval of unpacked submission markers for an array of
 /// submissions.
 /// `startIdx` - The index of the first proof to be marked
@@ -473,7 +451,7 @@ export function computeUnpackedOffChainSubmissionmarkers(
   numProofs: number
 ): boolean[] {
   const unpackedSubmissionMarkers = submissions.flatMap((submission) =>
-    submission.getUnpackedOffChainSubmissionMarkers()
+    submission.getOffChainSubmissionMarkers()
   );
 
   const truncatedMarkers = unpackedSubmissionMarkers.slice(
@@ -482,21 +460,4 @@ export function computeUnpackedOffChainSubmissionmarkers(
   );
 
   return truncatedMarkers;
-}
-
-/// `duplicateSubmissionIndices` represents an array of uint8.
-export function packDupSubmissionIdxs(
-  duplicateSubmissionIndices: number[]
-): bigint {
-  let result: bigint = BigInt(0);
-
-  for (let i = 0; i < duplicateSubmissionIndices.length; i++) {
-    const dupSubmissionIdx = duplicateSubmissionIndices[i];
-    assert(dupSubmissionIdx < 256);
-    // Set the bits corresponding to index `i` to dupSubmissionIdx, using
-    // bitwise-OR
-    result |= BigInt(dupSubmissionIdx) << BigInt(i * 8);
-  }
-
-  return result;
 }

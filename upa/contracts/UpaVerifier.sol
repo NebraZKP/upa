@@ -77,7 +77,7 @@ struct SubmissionProof {
 struct VerifyAggregatedProofState {
     // uint64 nextSubmissionIdx;
     // uint64 verifiedSubmissionHeight;
-    uint16 submissionInAggProofIdx; // idx into duplicateSubmissionIndices
+    // uint16 submissionInAggProofIdx; // idx into duplicateSubmissionIndices
     uint16 proofIdIdx; // idx into proofIds
     uint16 submissionProofIdx; // idx into submissionProofs
 }
@@ -461,7 +461,6 @@ contract UpaVerifier is
 
         // Keep these extra vars in memory to avoid "stack too deep" errors.
         VerifyAggregatedProofState memory state = VerifyAggregatedProofState(
-            0 /* submissionInAggProofIdx */,
             0 /* proofIdIdx */,
             0 /* submissionProofIdx */
         );
@@ -500,10 +499,7 @@ contract UpaVerifier is
 
             // Interpret `duplicateSubmissionIndices` as an array of uint8
             // and get the `dupSubmissionIdx` for this submission.
-            uint8 dupSubmissionIdx = UpaInternalLib.getUint8At(
-                duplicateSubmissionIndices,
-                state.submissionInAggProofIdx
-            );
+            uint8 dupSubmissionIdx = uint8(duplicateSubmissionIndices);
 
             // console.log(" dupSubmissionIdx: %s", dupSubmissionIdx);
 
@@ -555,7 +551,8 @@ contract UpaVerifier is
 
                 state.proofIdIdx += proofsThisSubmission;
             }
-            state.submissionInAggProofIdx++;
+
+            duplicateSubmissionIndices = duplicateSubmissionIndices >> 8;
         }
 
         // Finished processing on-chain proofIds. Now process proofIds from
