@@ -5,7 +5,7 @@ import { endpoint, instance } from "./options";
 import { ethers } from "ethers";
 import { config } from ".";
 import { upaFromInstanceFile } from "./config";
-import { isVerified } from "./isVerified";
+import { isVerified, isSubmissionVerified } from "./isVerified";
 import { getAggregatedProofVerifier } from "./aggregatedProofVerifier";
 
 const getMaxNumPublicInputs = command({
@@ -54,5 +54,6 @@ export const query = subcommands({
     "max-num-public-inputs": getMaxNumPublicInputs,
     "verifier-bytecode": getVerifierByteCode,
     "is-verified": isVerified,
+    "is-submission-verified": isSubmissionVerified,
   },
 });
