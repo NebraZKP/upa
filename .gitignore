@@ -16,6 +16,7 @@ target
 # Test directories
 _test_*
 _srs
+prover/_keys
 
 # Node packages
 node_modules
