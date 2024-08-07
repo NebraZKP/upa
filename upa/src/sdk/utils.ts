@@ -368,3 +368,10 @@ export function versionUintToString(versionUint: bigint): string {
   const major = (versionUint / 10000n) % 100n;
   return `${major}.${minor}.${patch}`;
 }
+
+// Try to get a signer from a ContractRunner.
+export function getSigner(
+  runner?: null | ethers.ContractRunner
+): Signer | undefined {
+  return runner && "getAddress" in runner ? (runner as Signer) : undefined;
+}
