@@ -4,7 +4,7 @@
   "description": "A demo app that sends proofs to be verified on-chain using either a circom-generated verifier or UPA.",
   "bin": "dist/src/index.js",
   "author": "",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "clean": "hardhat clean",
     "setup": "./scripts/setup",
