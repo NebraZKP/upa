@@ -33,59 +33,59 @@ use std::time::Instant;
 pub struct ProveParams {
     /// UPA configuration file
     #[arg(long, value_name = "config-file", default_value = UPA_CONFIG)]
-    config: String,
+    pub(crate) config: String,
 
     /// Batch Verify circuit protocol file
     #[arg(long, value_name = "bv-circuit-protocol-file", default_value = UBV_PROTOCOL)]
-    bv_protocol: String,
+    pub(crate) bv_protocol: String,
 
     /// Outer circuit SRS file
     #[arg(short = 's', long, value_name = "outer-srs-file", default_value = OUTER_SRS)]
-    srs: String,
+    pub(crate) srs: String,
 
     /// Outer circuit gate config file
     #[arg(short = 'g', long, value_name = "gate-config-file", default_value = OUTER_GATE_CONFIG)]
-    gate_config: String,
+    pub(crate) gate_config: String,
 
     /// Outer circuit proving key file
     #[arg(short = 'p', long, value_name = "proving-key-file", default_value = OUTER_PK)]
-    proving_key: String,
+    pub(crate) proving_key: String,
 
     /// Batch Verify proof files
     #[arg(long, value_name = "bv-proof-files")]
-    ubv_proofs: Vec<String>,
+    pub(crate) ubv_proofs: Vec<String>,
 
     /// Batch Verify instances files
     #[arg(long, value_name = "bv-instance-files")]
-    ubv_instances: Option<Vec<String>>,
+    pub(crate) ubv_instances: Option<Vec<String>>,
 
     /// Keccak proof file
     #[arg(long, value_name = "keccak-proof-file")]
-    keccak_proof: String,
+    pub(crate) keccak_proof: String,
 
     /// Keccak input file
     #[arg(long, value_name = "keccak-instance-file")]
-    keccak_instance: Option<String>,
+    pub(crate) keccak_instance: Option<String>,
 
     /// Keccak circuit protocol file
     #[arg(long, value_name = "keccak-protocol-file", default_value = KECCAK_PROTOCOL)]
-    keccak_protocol: String,
+    pub(crate) keccak_protocol: String,
 
     /// Output proof file
     #[arg(long, value_name = "outer-proof-file")]
-    proof: String,
+    pub(crate) proof: String,
 
     /// Output public inputs file
     #[arg(long, value_name = "outer-instance-file")]
-    instance: Option<String>,
+    pub(crate) instance: Option<String>,
 
     /// Output calldata file (proofs and public inputs as calldata)
     #[arg(long, value_name = "calldata")]
-    calldata: Option<String>,
+    pub(crate) calldata: Option<String>,
 
     /// show circuit stats and exit.  do not write files.
     #[arg(short = 'n', long)]
-    dry_run: bool,
+    pub(crate) dry_run: bool,
 }
 
 /// Compute EVM proof. Write proof, inputs, and calldata

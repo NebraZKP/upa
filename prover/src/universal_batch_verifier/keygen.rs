@@ -27,31 +27,31 @@ use std::time::Instant;
 pub struct KeygenParams {
     /// UPA configuration file
     #[arg(short = 'c', long, value_name = "config-file", default_value = UPA_CONFIG)]
-    config: String,
+    pub(crate) config: String,
 
     /// SRS file
     #[arg(short = 's', long, value_name = "srs-file", default_value = UBV_SRS)]
-    srs: String,
+    pub(crate) srs: String,
 
     /// Output proving key file
     #[arg(short = 'p', long, value_name = "proving-key-file", default_value = UBV_PK)]
-    proving_key: String,
+    pub(crate) proving_key: String,
 
     /// Output verification key file
     #[arg(short = 'v', long, value_name = "verification-key-file", default_value = UBV_VK)]
-    verification_key: String,
+    pub(crate) verification_key: String,
 
     /// Output protocol file
     #[arg(short = 'r', long, value_name = "protocol-file", default_value = UBV_PROTOCOL)]
-    protocol: String,
+    pub(crate) protocol: String,
 
     /// Output circuit specs file
     #[arg(short = 'g', long, value_name = "gate-config-file", default_value = UBV_GATE_CONFIG)]
-    gate_config: String,
+    pub(crate) gate_config: String,
 
     /// show circuit stats and exit.  do not write files.
     #[arg(short = 'n', long)]
-    dry_run: bool,
+    pub(crate) dry_run: bool,
 }
 
 /// Entry point to the `keygen` subcommand.  Runs the keygen process for the
