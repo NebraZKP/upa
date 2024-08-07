@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 /*
     UPA is Nebra's first generation proof aggregation engine
                                          _.oo.

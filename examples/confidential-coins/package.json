@@ -4,7 +4,7 @@
   "description": "An app using zk proofs to validate transactions with and without aggregation.",
   "bin": "dist/src/index.js",
   "author": "",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "clean": "hardhat clean",
     "setup": "./scripts/setup",
