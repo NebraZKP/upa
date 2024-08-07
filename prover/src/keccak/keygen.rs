@@ -26,31 +26,31 @@ use std::time::Instant;
 pub struct KeygenParams {
     #[arg(short = 'c', long, value_name = "config-file", default_value = UPA_CONFIG)]
     /// UPA configuration file
-    config: String,
+    pub(crate) config: String,
 
     #[arg(short = 's', long, value_name = "srs-file", default_value = KECCAK_SRS)]
     /// SRS file
-    srs: String,
+    pub(crate) srs: String,
 
     #[arg(short = 'p', long, value_name = "proving-key-file", default_value = KECCAK_PK)]
     /// Output proving key file
-    proving_key: String,
+    pub(crate) proving_key: String,
 
     #[arg(short = 'v', long, value_name = "verification-key-file", default_value = KECCAK_VK)]
     /// Output verification key file
-    verification_key: String,
+    pub(crate) verification_key: String,
 
     #[arg(short = 'r', long, value_name = "protocol-file", default_value = KECCAK_PROTOCOL)]
     /// Output protocol file
-    protocol: String,
+    pub(crate) protocol: String,
 
     #[arg(long, value_name = "specs-file", default_value = KECCAK_GATE_CONFIG)]
     /// Output circuit specs (KeccakGateConfig) file
-    gate_config: String,
+    pub(crate) gate_config: String,
 
     #[arg(short = 'n', long)]
     /// Compute and write the circuit configs and exit.
-    dry_run: bool,
+    pub(crate) dry_run: bool,
 }
 
 pub fn keygen(params: KeygenParams) {
