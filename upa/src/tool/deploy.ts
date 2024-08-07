@@ -21,7 +21,7 @@ import { IGroth16Verifier__factory } from "../../typechain-types";
 import * as options from "./options";
 import * as ethers from "ethers";
 import * as fs from "fs";
-import { parseNumberOrUndefined, sleep } from "../sdk/utils";
+import { parseNumberOrUndefined } from "../sdk/utils";
 import * as utils from "../sdk/utils";
 import {
   IGroth16Verifier,
@@ -237,13 +237,6 @@ const DEFAULT_AGGREGATOR_COLLATERAL = 10000000000000000n; // 0.01 eth
 /// Default fixed reimbursement for censorship claims
 const DEFAULT_FIXED_REIMBURSEMENT = 0n;
 
-/// Block time in seconds
-const BLOCK_TIME = 12;
-
-/// Default number of blocks to wait for the signer nonce
-/// to be updated
-const DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE = 6;
-
 /// Deploys the UPA contract, with all dependencies.  `verifier_bin_file`
 /// points to the hex representation of the verifier byte code (as output by
 /// solidity). The address of `signer` is used by default for `owner` and
@@ -312,18 +305,7 @@ export async function deployUpa(
     return universalGroth16Verifier.getAddress();
   })();
 
-  // Wait for the chain to catch up to the signer's nonce
-  // before attempting to deploy UPA
-  let counter = 0;
-  while ((await signer.getNonce()) !== nonce) {
-    await sleep(BLOCK_TIME * 1000);
-    counter++;
-    if (counter >= DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE) {
-      throw "Unable to update nonce";
-    }
-  }
-
-  // Deploy UPA
+  // Deploy the UPA implementation contract.
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
   const deployArgs = [
     owner,
@@ -337,49 +319,54 @@ export async function deployUpa(
     maxNumInputs,
     versionNum,
   ];
+  const deployImplNonce = nonce;
 
-  const deployFn = async () =>
-    upgrades.deployProxy(UpaVerifierFactory, deployArgs, {
+  const deployImpl = async () =>
+    upgrades.deployImplementation(UpaVerifierFactory, deployArgs, {
       kind: "uups",
       unsafeAllowLinkedLibraries: true,
+      nonce: deployImplNonce,
     });
 
-  const prepareDeployFn = async () => {
-    const implAddress: string = upgrades.deployImplementation(
-      UpaVerifierFactory,
-      deployArgs,
-      {
-        kind: "uups",
-        unsafeAllowLinkedLibraries: true,
-      }
-    );
-    return implAddress;
-  };
+  const implAddress: string = await utils.requestWithRetry(
+    deployImpl,
+    "UPA contract deployment",
+    maxRetries,
+    undefined /*timeoutMs*/,
+    UpaVerifierFactory.interface
+  );
 
+  await UpaVerifierFactory.attach(implAddress).waitForDeployment();
+
+  console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
+
+  // The nonce won't have incremented if the impl already existed. Re-query it.
+  nonce = await signer.getNonce();
+
+  const initializerData = getInitializerData(
+    UpaVerifierFactory.interface,
+    deployArgs
+  );
+
+  console.log(`initializerData`);
+  console.log(initializerData);
+
+  const ProxyFactory = new ethers.ContractFactory(
+    ERC1967Proxy.abi,
+    ERC1967Proxy.bytecode
+  );
+
+  // Only populate the transaction with the nonce if we will deploy the proxy
+  // contract in this function.
+  const deployProxyNonce = prepare ? undefined : nonce++;
+  const deployProxyTx = await ProxyFactory.getDeployTransaction(
+    implAddress,
+    initializerData,
+    { nonce: deployProxyNonce }
+  );
+
+  // Dump information needed to create the proxy contract.
   if (prepare) {
-    const implAddress = await utils.requestWithRetry(
-      prepareDeployFn,
-      "UPA contract impl deployment",
-      maxRetries,
-      undefined /*timeoutMs*/,
-      UpaVerifierFactory.interface
-    );
-
-    console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
-
-    const initializerData = getInitializerData(
-      UpaVerifierFactory.interface,
-      deployArgs
-    );
-
-    const ProxyFactory = new ethers.ContractFactory(
-      ERC1967Proxy.abi,
-      ERC1967Proxy.bytecode
-    );
-    const deployProxyTx = await ProxyFactory.getDeployTransaction(
-      implAddress,
-      initializerData
-    );
     console.log(`deployProxyTx (pass this into CreateX initcode arg):`);
     console.log(deployProxyTx.data);
 
@@ -392,40 +379,48 @@ export async function deployUpa(
       `Verifier needs to be sent ${aggregatorCollateral} Wei as` +
         ` aggregator collateral.`
     );
-  } else {
-    const upaVerifier: ethers.Contract = await utils.requestWithRetry(
-      deployFn,
-      "UPA contract deployment",
-      maxRetries,
-      undefined /*timeoutMs*/,
-      UpaVerifierFactory.interface
-    );
-    await upaVerifier.waitForDeployment();
-    const upaVerifierAddr = await upaVerifier.getAddress();
-    const deployTxResponse = upaVerifier.deploymentTransaction()!;
-    const deploymentTx = (await deployTxResponse.wait())!;
-    const deploymentBlockNumber: number = deploymentTx.blockNumber;
-    assert(
-      deploymentBlockNumber,
-      `failed getting deployBlockNumber:` +
-        ` ${deploymentTx} ${deploymentBlockNumber}`
-    );
 
-    // Top up the aggregator collateral
-    const topUpCollateralTx = await signer.sendTransaction({
-      to: upaVerifierAddr,
-      value: aggregatorCollateral,
-    });
-    await topUpCollateralTx.wait();
-
-    // Return the instance data
-    return {
-      verifier: upaVerifierAddr,
-      deploymentBlockNumber,
-      deploymentTx: deploymentTx.hash,
-      chainId: chainId.toString(),
-    };
+    return;
   }
+
+  // Deploy the proxy contract
+  const deployProxy = async () => {
+    const txResp = await signer.sendTransaction(deployProxyTx);
+    return txResp.wait();
+  };
+
+  const deploymentTx = await utils.requestWithRetry(
+    deployProxy,
+    "UPA contract deployment",
+    maxRetries,
+    undefined /*timeoutMs*/,
+    UpaVerifierFactory.interface
+  );
+
+  assert(deploymentTx);
+  const upaVerifierAddr = deploymentTx.contractAddress!;
+  const deploymentBlockNumber: number = deploymentTx.blockNumber;
+  assert(
+    deploymentBlockNumber,
+    `failed getting deployBlockNumber:` +
+      ` ${deploymentTx} ${deploymentBlockNumber}`
+  );
+
+  // Top up the aggregator collateral
+  const topUpCollateralTx = await signer.sendTransaction({
+    to: upaVerifierAddr,
+    value: aggregatorCollateral,
+    nonce: nonce++,
+  });
+  await topUpCollateralTx.wait();
+
+  // Return the instance data
+  return {
+    verifier: upaVerifierAddr,
+    deploymentBlockNumber,
+    deploymentTx: deploymentTx.hash,
+    chainId: chainId.toString(),
+  };
 }
 
 // Only used with OpenZeppelin's upgradeable contracts library.

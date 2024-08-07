@@ -43,9 +43,6 @@ pushd _test_upa
     fi
     fund ${USER_KEYFILE}
 
-    # Set interval mining mode during deployment
-    upa dev interval-mining 500
-
     # Deploy UPA using this key. We set a fixed fee per proof of 20 Wei.
     KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy \
                     --keyfile ${KEYFILE} \
@@ -59,8 +56,6 @@ pushd _test_upa
                     --verifier ${UPA_DIR}/upa/test/data/test.bin \
                     --use-test-config \
                     --prepare
-
-    upa dev interval-mining 0
 
     # Deploy a second agg proof verifier contract and use this.
     orig_agg_verifier=`upa query aggregated-proof-verifier`
@@ -334,9 +329,7 @@ pushd _test_upa
     upa owner upgrade --keyfile ${KEYFILE} --password ${DUMMY_PW} --retries 3 --prepare
 
     # Perform a verifier contract upgrade
-    upa dev interval-mining 500
     upa owner upgrade --keyfile ${KEYFILE} --password ${DUMMY_PW} --retries 3
-    upa dev interval-mining 0
 
     # Submit (fake) aggregated proof (from the deployer).  Cover
     #   submit-multi-4.pids.json[1..4]
