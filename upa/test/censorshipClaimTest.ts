@@ -10,6 +10,7 @@ import {
   UpaInstance,
   dummyProofData,
   isProofVerifiedMulti,
+  isSubmissionVerifiedById,
 } from "../src/sdk/upa";
 import { computeProofId, computeCircuitId } from "../src/sdk/utils";
 import { expect } from "chai";
@@ -19,6 +20,9 @@ import {
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
 } from "../src/sdk/aggregatedProofParams";
+// eslint-disable-next-line
+import { computeAggregatedProofParameters } from "../src/sdk/aggregatedProofParams";
+import { siFromSubmission } from "../src/sdk/submissionIntervals";
 
 describe("Censorship challenge tests", () => {
   type DeployAndSubmitResult = DeployAndRegisterResult & {
@@ -141,18 +145,20 @@ describe("Censorship challenge tests", () => {
     worker: Signer,
     s: Submission
   ) {
-    const proofIds = s.proofIds;
-    const submissionProof = s.computeSubmissionProof(0, proofIds.length);
-    await verifier
-      .connect(worker)
-      .verifyAggregatedProof(
-        dummyProofData(proofIds),
-        proofIds,
-        proofIds.length,
-        submissionProof ? [submissionProof] : [],
-        packOffChainSubmissionMarkers([]),
-        packDupSubmissionIdxs([0])
-      );
+    const submissionInterval = siFromSubmission(s, undefined);
+    const aggProofParams = computeAggregatedProofParameters(
+      [submissionInterval],
+      []
+    );
+
+    await verifier.connect(worker).verifyAggregatedProof(
+      dummyProofData(aggProofParams.proofIds),
+      aggProofParams.proofIds,
+      aggProofParams.numOnChainProofs,
+      aggProofParams.submissionProofs.map((p) => p.solidity()),
+      packOffChainSubmissionMarkers(aggProofParams.offChainSubmissionMarkers),
+      packDupSubmissionIdxs(aggProofParams.dupSubmissionIdxs)
+    );
   }
 
   it("single censorship challenge", async function () {
@@ -183,9 +189,8 @@ describe("Censorship challenge tests", () => {
   }).timeout(200000);
 
   it("multi censorship challenge", async function () {
-    const { upa, worker, user1, s1, s2, s3 } = await loadFixture(
-      deployAndSubmit
-    );
+    const { upa, worker, user1, s1, s2, s3 } =
+      await loadFixture(deployAndSubmit);
     const { verifier } = upa;
     // The aggregator will aggregate the first and third submissions,
     // skipping the second
@@ -226,6 +231,65 @@ describe("Censorship challenge tests", () => {
           s2.computeProofReference(i)!
         )
       ).to.be.true;
+    }
+  }).timeout(200000);
+
+  it("duplicate submission censorship challenge", async function () {
+    const { upa, worker, user1, s2, s3 } = await loadFixture(deployAndSubmit);
+    const { verifier } = upa;
+
+    // Re-submit s2 as user 1
+    const dupSubmissionTx = await submitProofs(
+      verifier.connect(user1),
+      s2.circuitIds,
+      s2.proofs,
+      s2.inputs
+    );
+    const dupSubmission = await Submission.fromTransactionReceipt(
+      verifier,
+      (await dupSubmissionTx.wait())!
+    );
+
+    // Verify the 3rd submission and this duplicate.
+    await verifySubmission(verifier, worker, s3);
+    await verifySubmission(verifier, worker, dupSubmission);
+
+    expect(
+      await verifier.getFunction(isSubmissionVerifiedById)(s2.submissionId)
+    ).is.true;
+
+    const numProofsInS2 = s2.circuitIds.length;
+
+    // Challenge to upd should fail
+    for (let i = 0; i < numProofsInS2; i++) {
+      await expect(
+        verifier
+          .connect(user1)
+          .challenge(
+            s2.circuitIds[i],
+            s2.proofs[i].solidity(),
+            s2.inputs[i],
+            s2.submissionId,
+            dupSubmission.getDupSubmissionIdx(),
+            s2.computeProofIdMerkleProof(i),
+            s2.computeProofDataMerkleProof(i)
+          )
+      ).to.be.revertedWithCustomError(verifier, "SubmissionAlreadyVerified");
+    }
+
+    // Challenge to the initial s2, as user1, should work.
+    for (let i = 0; i < numProofsInS2; i++) {
+      await verifier
+        .connect(user1)
+        .challenge(
+          s2.circuitIds[i],
+          s2.proofs[i].solidity(),
+          s2.inputs[i],
+          s2.submissionId,
+          s2.getDupSubmissionIdx(),
+          s2.computeProofIdMerkleProof(i),
+          s2.computeProofDataMerkleProof(i)
+        );
     }
   }).timeout(200000);
 
@@ -285,9 +349,8 @@ describe("Censorship challenge tests", () => {
   }).timeout(100000);
 
   it("not yet skipped proof should fail", async function () {
-    const { upa, worker, user2, s1, s2, s3 } = await loadFixture(
-      deployAndSubmit
-    );
+    const { upa, worker, user2, s1, s2, s3 } =
+      await loadFixture(deployAndSubmit);
     const { verifier } = upa;
     // The aggregator will aggregate both the first and second
     // submissions, but not the third
