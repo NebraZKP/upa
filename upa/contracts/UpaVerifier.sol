@@ -932,7 +932,7 @@ contract UpaVerifier is
 
     /// Withdraws the worker's balance in the `feeModel` contract,
     /// including the collateral.
-    function withdrawAggregatorBalance() external onlyWorker {
+    function withdrawAggregatorBalance() external onlyOwner {
         uint64 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
         withdraw(
             worker(),
