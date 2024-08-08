@@ -746,9 +746,12 @@ contract UpaVerifier is
         require(location < numProofs, SubmissionAlreadyVerified());
 
         // Confirm that the submission has indeed been skipped, i.e.
-        // the latest submission to be verified is greater than submissionIdx
+        // the next submission to be verified is greater than submissionIdx.
+        // `nextSubmissionIdxToVerify` points to either the current submission
+        // whose verification is in progress, or one greater than last fully
+        // verified submissionIdx.
         require(
-            verifierStorage.nextSubmissionIdxToVerify - 1 > submissionIdx,
+            verifierStorage.nextSubmissionIdxToVerify > submissionIdx,
             SubmissionWasNotSkipped()
         );
 

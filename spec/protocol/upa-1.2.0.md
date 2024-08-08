@@ -277,7 +277,7 @@ A censorship event is considered to have occured for a submission with Id $\sid$
 - a submission with Id $\sid$ has been made with duplicate submission index $\dsidx$, and **all** proofs in the submission are valid for the corresponding public inputs and circuit Ids
 - some of the proofs in the submission remain unverified, namely
   - `numVerifiedInSubmission[`$\sidx$`] < `$n$
-- A submission with index greater than $\sidx$ (the submission index of the submission with id $\sid$) has been verified. That is, `nextSubmissionIdxToVerify - 1` $> \sidx$.
+- one or more proofs from submission with index greater than $\sidx$ (the submission index of the submission with id $\sid$) have been included in an aggregated batch.  Namely, there exists $j > \sidx$ s.t. `numVerifiedInSubmission[`$j$`] > 0` (or alternatively `nextSubmissionIdxToVerify` $> \sidx$).
 
 Note that, if one or more entries in a submission are invalid, the aggregator is not obliged to verify any proofs from that submission.
 
