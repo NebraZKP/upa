@@ -42,6 +42,7 @@ error MaxNumPublicInputsTooLow();
 error TooManyCommitmentPoints();
 error InconsistentPedersenVK();
 error TooManySubmissionsForId();
+error DummyProofInSubmission();
 
 /// Only used for `NotOnCurve` errors.
 enum Groth16PointType {
@@ -69,6 +70,11 @@ contract UpaProofReceiver is
     uint16 public constant MAX_NUM_PROOFS_PER_SUBMISSION =
         uint16(1) << MAX_SUBMISSION_MERKLE_DEPTH;
 
+    /// Dummy proof id. This is the proof id of a valid proof used
+    /// to fill batches.
+    bytes32 public constant DUMMY_PROOF_ID =
+        0x84636c7b9793a9833ef7ca3e1c118d7d21dadb97ef7bf1fbfd549c10bca3553f;
+
     // Per-circuit data.  This only contains the VK, but the compiler
     // complains about mapping(uint256 => Groth16VK), as Groth16VK is
     // considered an internal or recursive type.
@@ -77,7 +83,8 @@ contract UpaProofReceiver is
     }
 
     struct Submission {
-        /// Merkle root of the proof data digests as seen by the contract
+        /// Equal to `kaccak(digestRoot || msg.sender)`, where `digestRoot` is
+        /// the Merkle root of the proof data digests as seen by the contract.
         bytes32 proofDataDigest;
         /// Index of this submission
         uint64 submissionIdx;
@@ -167,6 +174,7 @@ contract UpaProofReceiver is
         proofReceiverStorage._nextProofIdx = 1;
         proofReceiverStorage._maxNumPublicInputs = _maxNumPublicInputs;
 
+        __Pausable_init();
         __upaFixedGasFee_init(
             _owner,
             _fixedGasFeePerProof,
@@ -246,7 +254,7 @@ contract UpaProofReceiver is
         emit VKRegistered(circuitId, vk);
     }
 
-    // See IUpa.sol
+    // See IUpaProofReceiver.sol
     function submit(
         bytes32[] calldata circuitIds,
         Groth16CompressedProof[] calldata proofs,
@@ -453,6 +461,7 @@ contract UpaProofReceiver is
 
         uint256[] memory publicInput = publicInputs[i];
         bytes32 proofId = UpaLib.computeProofId(circuitId, publicInput);
+        require(proofId != DUMMY_PROOF_ID, DummyProofInSubmission());
         proofIds[i] = proofId;
 
         uint256 numPublicInputs = publicInput.length + proof.m.length;

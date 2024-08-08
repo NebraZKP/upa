@@ -159,7 +159,7 @@ library EllipticCurveUtils {
     ) internal pure returns (G1Point memory) {
         uint256 x = g1Point[0];
         uint256 y = g1Point[1];
-        require(isOnG1Curve(g1Point[0], g1Point[1]), "invalid curve point");
+        require(isOnG1Curve(x, y), "invalid curve point");
         return G1Point(x, y);
     }
 
@@ -214,7 +214,7 @@ library EllipticCurveUtils {
                 sub(gas(), 2000),
                 6,
                 input,
-                0xc0 /* 0x20 * 4 */,
+                0x80 /* 0x20 * 4 */,
                 r,
                 0x40 /* 0x20 * 2 */
             )

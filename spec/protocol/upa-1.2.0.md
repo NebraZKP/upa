@@ -277,7 +277,7 @@ A censorship event is considered to have occured for a submission with Id $\sid$
 - a submission with Id $\sid$ has been made with duplicate submission index $\dsidx$, and **all** proofs in the submission are valid for the corresponding public inputs and circuit Ids
 - some of the proofs in the submission remain unverified, namely
   - `numVerifiedInSubmission[`$\sidx$`] < `$n$
-- one or more proofs from submission with index greater than $\sidx$ (the submission index of the submission with id $\sid$) have been included in an aggregated batch.  Namely, there exists $j > \sidx$ s.t. `numVerifiedInSubmission[`$j$`] > 0` (or alternatively `nextSubmissionIdxToVerify` $> \sidx$)
+- A submission with index greater than $\sidx$ (the submission index of the submission with id $\sid$) has been verified. That is, `nextSubmissionIdxToVerify - 1` $> \sidx$.
 
 Note that, if one or more entries in a submission are invalid, the aggregator is not obliged to verify any proofs from that submission.
 
@@ -334,7 +334,7 @@ The aggregator collects fees in two steps. First it calls
 function allocateAggregatorFee(uint64 lastSubmittedSubmissionIdx)
 ```
 
-which stores the current value of `lastSubmittedSubmissionIdx` and allocates all fees collected up to now to be claimable by the aggregator once it has verified the submission at `lastSubmittedSubmissionIdx` (which implies that all previous submissions have also been verified). Once the aggregator has done this, it can call
+which stores the current value of `lastSubmittedSubmissionIdx` and allocates all fees collected up to now to be claimable by the aggregator once it has verified or skipped the submission at `lastSubmittedSubmissionIdx` (which implies that all previous submissions have also been verified or skipped). Once the aggregator has done this, it can call
 
 ```solidity!
 function claimAggregatorFee(

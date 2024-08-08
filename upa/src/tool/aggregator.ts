@@ -200,8 +200,7 @@ const submitAggregatedProof = command({
       long: "final-count",
       short: "f",
       description:
-        "include only leading proofs from final submission" +
-        " (default: all)",
+        "include only leading proofs from final submission" + " (default: all)",
     }),
     offChainSubmissionFiles: multioption({
       type: array(string),
