@@ -493,8 +493,9 @@ exports.default = config;
 
 // We set the first 20 bytes to be equal to the multi-sig address. CreateX
 // uses this for permissioned deploy protection. (See the `_guard`
-// function in CreateX.sol) The 21st byte is `00` to turn off cross-chain
-// redeploy protection. The last 11 bytes are free for us to set.
+// function in ComputeCreateXDeployAddress.sol. The 21st byte is `00` to turn
+// off cross-chain redeploy protection. The last 11 bytes are free for us to
+// set.
 export function computeCreateXDeploySalt(salt: string) {
   const multiSig = "0xb463603469Bf31f189E3F6625baf8378880Df14e";
   const saltSuffix = ethers.keccak256(ethers.toUtf8Bytes(salt)).slice(2, 24);
