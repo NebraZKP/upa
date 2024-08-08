@@ -174,9 +174,8 @@ export const multiSubmit = command({
       } else {
         const waitThenSubmitSolution = async () => {
           // Use `upaClient` to wait for this submission to be verified.
-          const waitTxReceipt = await upaClient.waitForSubmissionVerified(
-            submissionHandle
-          );
+          const waitTxReceipt =
+            await upaClient.waitForSubmissionVerified(submissionHandle);
 
           // Submit all of the solutions in the submission to demo-app
           // eslint-disable-next-line

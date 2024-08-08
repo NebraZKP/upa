@@ -9,7 +9,7 @@ import {
 } from "./upa";
 import { Groth16VerifyingKey } from "./application";
 import { PayableOverrides } from "../../typechain-types/common";
-import { Submission } from "./submission";
+import { Submission, OffChainSubmission } from "./submission";
 import { application } from ".";
 
 /**
@@ -18,7 +18,7 @@ import { application } from ".";
  * transaction that performed the submission.
  */
 export type SubmissionHandle = {
-  submission: Submission;
+  submission: OffChainSubmission;
   txResponse: ethers.ContractTransactionResponse;
 };
 
@@ -44,7 +44,7 @@ export class UpaClient {
     circuitIdProofAndInputs: application.CircuitIdProofAndInputs[],
     options?: PayableOverrides
   ): Promise<SubmissionHandle> {
-    const submission = Submission.fromCircuitIdsProofsAndInputs(
+    const submission = OffChainSubmission.fromCircuitIdsProofsAndInputs(
       circuitIdProofAndInputs
     );
 
@@ -56,11 +56,27 @@ export class UpaClient {
       options
     );
 
-    console.log(
-      `SubmissionId ${submission.getSubmissionId()} (txid: ${txResponse.hash})`
-    );
+    // console.log(
+    //   `SubmissionId ${submission.getSubmissionId()} ` +
+    //   `(txid: ${txResponse.hash})`
+    // );
 
     return { submission, txResponse };
+  }
+
+  /// Wait for the submission to be successfully sent to the contract, and
+  /// extract a full Submission object from the Tx receipt.
+  public async getSubmission(
+    submissionHandle: SubmissionHandle
+  ): Promise<Submission> {
+    const txReceipt = await submissionHandle.txResponse.wait();
+    if (!txReceipt) {
+      throw `Failed to get receipt for tx ${submissionHandle.txResponse.hash}`;
+    }
+    return Submission.fromTransactionReceipt(
+      this.upaInstance.verifier,
+      txReceipt
+    );
   }
 
   // Waits for all of the proofs corresponding to a `SubmissionHandle` to be

@@ -41,6 +41,7 @@ error TooManyPublicInputs();
 error MaxNumPublicInputsTooLow();
 error TooManyCommitmentPoints();
 error InconsistentPedersenVK();
+error TooManySubmissionsForId();
 
 /// Only used for `NotOnCurve` errors.
 enum Groth16PointType {
@@ -61,6 +62,8 @@ contract UpaProofReceiver is
     IUpaProofReceiver,
     UpaFixedGasFee
 {
+    uint16 public constant MAX_DUPLICATE_SUBMISSIONS = 256;
+
     uint16 public constant MAX_SUBMISSION_MERKLE_DEPTH = 5;
 
     uint16 public constant MAX_NUM_PROOFS_PER_SUBMISSION =
@@ -91,7 +94,7 @@ contract UpaProofReceiver is
         /// Data for each registered circuit, indexed by the circuitId.
         mapping(bytes32 => CircuitData) _circuitData;
         /// The full set of submissions, indexed by the submissionId.
-        mapping(bytes32 => Submission) _submissions;
+        mapping(bytes32 => Submission[MAX_DUPLICATE_SUBMISSIONS]) _submissions;
         /// The next submission index
         uint64 _nextSubmissionIdx;
         /// The next proof index.  (Proof index is not strictly required, but
@@ -264,21 +267,18 @@ contract UpaProofReceiver is
         uint16 fullSize = uint16(1) << depth;
 
         bytes32[] memory proofIds = new bytes32[](fullSize);
+        uint64[] memory proofIdxs = new uint64[](fullSize);
         bytes32[] memory proofDigests = new bytes32[](fullSize);
 
         ProofReceiverStorage
             storage proofReceiverStorage = _getProofReceiverStorage();
-        uint64 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
         uint64 proofIdx = proofReceiverStorage._nextProofIdx;
         uint256 _maxNumPublicInputs = proofReceiverStorage._maxNumPublicInputs;
 
-        // Iterate through all proofs.  Emit events, compute the proofIds and
-        // proofHashes.
+        // Iterate through all proofs.  Compute the proofIds and proofHashes.
         for (uint16 i = 0; i < numProofs; ++i) {
             handleSubmittedProof(
                 i,
-                proofIdx,
-                submissionIdx,
                 circuitIds,
                 proofs,
                 publicInputs,
@@ -286,33 +286,58 @@ contract UpaProofReceiver is
                 proofDigests,
                 _maxNumPublicInputs
             );
-            proofIdx++;
+
+            proofIdxs[i] = proofIdx++;
         }
 
         proofReceiverStorage._nextProofIdx = proofIdx;
 
+        // Compute the submissionIdx and submissionId, which in turn
+        // determines the duplicateSubmissionIdx (required to emit events).
+        // Note computeMerkleRoot overwrites the original buffer so we make a
+        // copy. (We need the proofIds in order to emit events, but we can't
+        // emit events until we know the dupSubmissionIdx, which requires the
+        // submissionId.
+        submissionId = Merkle.computeMerkleRootSafe(proofIds);
+
+        Submission[MAX_DUPLICATE_SUBMISSIONS]
+            storage submissions = proofReceiverStorage._submissions[
+                submissionId
+            ];
+        uint64 submissionIdx = proofReceiverStorage._nextSubmissionIdx++;
+        uint16 dupSubmissionIdx = getSubmissionsLengthFromPtr(submissions);
+        require(
+            dupSubmissionIdx < uint64(MAX_DUPLICATE_SUBMISSIONS),
+            TooManySubmissionsForId()
+        );
+
+        // Emit events
+        for (uint16 i = 0; i < numProofs; ++i) {
+            // TODO: Should we flag submissions separately in a Submission
+            // event and avoid the duplicated data?
+            emit ProofSubmitted(
+                proofIds[i],
+                submissionIdx,
+                proofIdxs[i],
+                dupSubmissionIdx
+            );
+        }
+
         // Record the final submission
-        submissionId = Merkle.computeMerkleRoot(proofIds);
         bytes32 proofDataDigest = UpaLib.proofDataDigest(
             Merkle.computeMerkleRoot(proofDigests),
             msg.sender
         );
 
-        // Ensure there is no existing submission
-        require(
-            proofReceiverStorage._submissions[submissionId].submissionIdx == 0,
-            SubmissionAlreadyExists()
-        );
-
         // Forward the fee to the fee model
         onProofSubmitted(numProofs);
 
-        proofReceiverStorage._submissions[submissionId] = Submission(
-            proofDataDigest,
-            submissionIdx,
-            uint64(block.number),
-            numProofs
-        );
+        // Save the submission data
+        Submission storage newSubmission = submissions[dupSubmissionIdx];
+        newSubmission.proofDataDigest = proofDataDigest;
+        newSubmission.submissionIdx = submissionIdx;
+        newSubmission.submissionBlockNumber = uint64(block.number);
+        newSubmission.numProofs = numProofs;
     }
 
     /// Return the VK for a specific circuit Id.
@@ -325,69 +350,97 @@ contract UpaProofReceiver is
     }
 
     function getSubmissionIdx(
-        bytes32 submissionId
+        bytes32 submissionId,
+        uint8 dupSubmissionIdx
     ) public view returns (uint64 submissionIdx) {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
     }
 
     function getSubmissionIdxAndHeight(
-        bytes32 submissionId
+        bytes32 submissionId,
+        uint8 dupSubmissionIdx
     ) public view returns (uint64 submissionIdx, uint64 submissionBlockNumber) {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
         submissionBlockNumber = submission.submissionBlockNumber;
     }
 
     function getSubmissionIdxAndNumProofs(
-        bytes32 submissionId
+        bytes32 submissionId,
+        uint8 dupSubmissionIdx
     ) public view returns (uint64 submissionIdx, uint16 numProofs) {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
         numProofs = submission.numProofs;
     }
 
     function getSubmissionIdxHeightNumProofs(
-        bytes32 submissionId
+        bytes32 submissionId,
+        uint8 dupSubmissionIdx
     )
         public
         view
         returns (uint64 submissionIdx, uint64 height, uint16 numProofs)
     {
-        Submission storage submission = _getProofReceiverStorage()._submissions[
-            submissionId
-        ];
+        Submission storage submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
+        );
         submissionIdx = submission.submissionIdx;
         height = submission.submissionBlockNumber;
         numProofs = submission.numProofs;
     }
 
-    function getSubmission(
+    // Unsafe access into the array of Submissions, as expected by the rest of
+    // the code.
+    function getSubmissionStorage(
+        bytes32 submissionId,
+        uint8 dupSubmissionIdx
+    ) internal view returns (Submission storage /* submission */) {
+        Submission[MAX_DUPLICATE_SUBMISSIONS]
+            storage submissions = getSubmissionListStorage(submissionId);
+        return submissions[dupSubmissionIdx];
+    }
+
+    function getSubmissionListStorage(
         bytes32 submissionId
-    ) public view returns (Submission memory submission) {
-        submission = _getProofReceiverStorage()._submissions[submissionId];
-        require(0 != submission.submissionIdx, SubmissionDoesNotExist());
+    ) internal view returns (Submission[MAX_DUPLICATE_SUBMISSIONS] storage) {
+        return _getProofReceiverStorage()._submissions[submissionId];
+    }
+
+    function getSubmissionsLengthFromPtr(
+        Submission[MAX_DUPLICATE_SUBMISSIONS] storage submissions
+    ) internal view returns (uint16 length) {
+        uint16 i = 0;
+        for (; i < MAX_DUPLICATE_SUBMISSIONS; ++i) {
+            if (submissions[i].proofDataDigest == bytes32(0)) {
+                break;
+            }
+        }
+        return i;
     }
 
     // Sub-section of the code in `submit`.  This function exists only to
     // avoid a "stack too deep" error in the compiler.
     function handleSubmittedProof(
         uint16 i,
-        uint64 proofIdx,
-        uint64 submissionIdx,
         bytes32[] calldata circuitIds,
         Groth16CompressedProof[] calldata proofs,
         uint256[][] calldata publicInputs,
         bytes32[] memory proofIds,
         bytes32[] memory proofDigests,
         uint256 _maxNumPublicInputs
-    ) internal {
+    ) internal view {
         bytes32 circuitId = circuitIds[i];
         CircuitData storage cData = _getProofReceiverStorage()._circuitData[
             circuitId
@@ -404,7 +457,5 @@ contract UpaProofReceiver is
 
         uint256 numPublicInputs = publicInput.length + proof.m.length;
         require(numPublicInputs <= _maxNumPublicInputs, TooManyPublicInputs());
-
-        emit ProofSubmitted(proofId, submissionIdx, proofIdx);
     }
 }

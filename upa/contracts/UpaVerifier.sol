@@ -45,7 +45,7 @@ error InvalidProofDataDigest();
 error InvalidProof();
 error SubmissionOutOfOrder();
 error ProofAlreadyVerified();
-error LocationOutOfRange();
+error SubmissionAlreadyVerified();
 error UnsuccessfulChallenge();
 error AssertNoSubmissionProofs();
 error MissingSubmissionProof();
@@ -272,7 +272,8 @@ contract UpaVerifier is
         bytes32[] calldata proofIds,
         uint64 nextSubmissionIdx,
         uint16 numOnchainProofs,
-        uint16 proofIdIdx
+        uint16 proofIdIdx,
+        uint8 dupSubmissionIdx
     )
         private
         returns (
@@ -292,7 +293,7 @@ contract UpaVerifier is
             submissionIdx,
             submissionBlockNumber,
             numProofsInSubmission
-        ) = getSubmissionIdxHeightNumProofs(submissionId);
+        ) = getSubmissionIdxHeightNumProofs(submissionId, dupSubmissionIdx);
 
         // Submissions must be verified in the order submitted.
         require(submissionIdx >= nextSubmissionIdx, SubmissionOutOfOrder());
@@ -359,6 +360,9 @@ contract UpaVerifier is
         //   " set numVerifiedInSubmission to %s",
         //   verified + proofsThisSubmission);
 
+        // If the entire submission has been verified, emit an event and
+        // ensure that we also mark the submissionIdx for the zeroth
+        // duplicated submission with this submissionId.
         if (newVerified == numProofsInSubmission) {
             newNextSubmissionIdx = submissionIdx + 1;
             emit SubmissionVerified(submissionId);
@@ -387,7 +391,8 @@ contract UpaVerifier is
         bytes32[] calldata proofIds,
         uint16 numOnchainProofs,
         SubmissionProof[] calldata submissionProofs,
-        uint256 offChainSubmissionMarkers
+        uint256 offChainSubmissionMarkers,
+        uint256 duplicateSubmissionIndices
     ) external onlyWorker {
         // console.log("verifyAggregatedProof");
 
@@ -444,10 +449,24 @@ contract UpaVerifier is
             // the proof was submitted alone, hence and we do not need a
             // SubmissionProof.
             bytes32 submissionId = UpaLib.computeSubmissionId(proofId);
+            // console.log(
+            //   " submissionInAggProofIdx: %s",
+            //   state.submissionInAggProofIdx
+            // );
+
+            // Interpret `duplicateSubmissionIndices` as packed uint8s,
+            // reading the lowest-order byte first (shifting below).
+            uint8 dupSubmissionIdx = uint8(duplicateSubmissionIndices);
+
+            // console.log(" dupSubmissionIdx: %s", dupSubmissionIdx);
+
             (
                 uint64 submissionIdx,
                 uint64 submissionBlockNumber
-            ) = getSubmissionIdxAndHeight(submissionId);
+            ) = getSubmissionIdxAndHeight(submissionId, dupSubmissionIdx);
+            // console.log(" submissionIdx: %s", submissionIdx);
+            // console.log(" submissionBlockNumber: %s", submissionBlockNumber);
+
             if (submissionIdx != 0) {
                 nextSubmissionIdx = handleSingleProofOnChainSubmission(
                     submissionIdx
@@ -459,7 +478,7 @@ contract UpaVerifier is
                 verifiedSubmissionHeight = submissionBlockNumber;
             } else {
                 // This is a multi-entry submission.  Use the next
-                // SubmissionVerification entry.
+                // SubmissionProof entry.
                 require(
                     submissionProofIdx < submissionProofs.length,
                     MissingSubmissionProof()
@@ -478,11 +497,14 @@ contract UpaVerifier is
                     proofIds,
                     nextSubmissionIdx,
                     numOnchainProofs,
-                    proofIdIdx
+                    proofIdIdx,
+                    dupSubmissionIdx
                 );
 
                 proofIdIdx += proofsThisSubmission;
             }
+
+            duplicateSubmissionIndices = duplicateSubmissionIndices >> 8;
         }
 
         // Finished processing on-chain proofIds. Now process proofIds from
@@ -552,9 +574,9 @@ contract UpaVerifier is
     ) private pure {
         // Causes "stack too deep" if this is made into an assert.
         require(proofsThisSubmission > 0, AssertNoSubmissionProofs());
+
         // Copy the proofIds into memory (we must read them from
-        // calldata anyway), and emit events.  Keep proofIdStartIdx
-        // and incrememnt proofIdx ready for the next loop.
+        // calldata anyway), and emit events.
         bytes32[] memory interval = new bytes32[](proofsThisSubmission);
         for (uint16 i = 0; i < proofsThisSubmission; ++i) {
             bytes32 proofId = proofIds[proofIdx++];
@@ -579,29 +601,8 @@ contract UpaVerifier is
     function isProofVerified(
         bytes32 proofId
     ) public view override returns (bool) {
-        VerifierStorage storage verifierStorage = _getVerifierStorage();
-
         bytes32 submissionId = UpaLib.computeSubmissionId(proofId);
-
-        uint64 submissionIdx = getSubmissionIdx(submissionId);
-        if (submissionIdx > 0) {
-            // Found an on-chain single-proof submission for this proofId.
-            uint16 verified = Uint16VectorLib.getUint16(
-                verifierStorage.numVerifiedInSubmission,
-                submissionIdx
-            );
-            if (verified == 1) {
-                return true;
-            }
-
-            // Cannot have more than one verified proof in a single-proof
-            // submission
-            require(verified < 2, InvalidNumberOfVerifiedProofs());
-        }
-
-        // No verified on-chain submission found. Check if there is a
-        // verified off-chain submission.
-        return verifierStorage.verifiedAtBlock[submissionId] > 0;
+        return isSubmissionVerified(submissionId);
     }
 
     // See IUpaVerifier.sol
@@ -666,33 +667,47 @@ contract UpaVerifier is
     function isSubmissionVerified(
         bytes32 submissionId
     ) public view override returns (bool) {
-        (uint64 submissionIdx, uint16 numProofs) = getSubmissionIdxAndNumProofs(
-            submissionId
-        );
         VerifierStorage storage verifierStorage = _getVerifierStorage();
+        Submission[MAX_DUPLICATE_SUBMISSIONS]
+            storage submissions = getSubmissionListStorage(submissionId);
 
-        // On-chain submission found, check if it is verified.
-        if (submissionIdx > 0) {
-            uint16 verified = Uint16VectorLib.getUint16(
-                verifierStorage.numVerifiedInSubmission,
-                submissionIdx
-            );
-            if (verified == numProofs) {
-                return true;
+        // Check on-chain submissions first.  If numProofs == 0, there is no
+        // on-chain submission so nothing to do.
+
+        uint16 numProofs = submissions[0].numProofs;
+        if (numProofs > 0) {
+            for (uint16 i = 0; i < MAX_DUPLICATE_SUBMISSIONS; ++i) {
+                // Early out if there are no more submissions
+                uint64 submissionIdx = submissions[i].submissionIdx;
+                if (0 == submissionIdx) {
+                    break;
+                }
+
+                // Assume all Submissions with the same SubmissionId have the
+                // same number of proofs.
+                uint16 verified = Uint16VectorLib.getUint16(
+                    verifierStorage.numVerifiedInSubmission,
+                    submissionIdx
+                );
+                if (verified == numProofs) {
+                    return true;
+                }
             }
         }
 
         // No verified on-chain submission found. Check if there is a verified
         // off-chain submission.
+
         // TODO: To save on SLOADs, switch to checking off-chain submissions
         // first when that becomes the primary mode of submissions.
+
         return verifierStorage.verifiedAtBlock[submissionId] > 0;
     }
 
-    /// Checks that `proofId` and `proofDigest` correspond to the
-    /// first unproven proof in the submission with `submissionId`.
-    /// If so, it updates the state to reflect it is valid now.
-    /// Returns `true` if the proof was the last in the submission.
+    /// Checks that `proofId` and `proofDigest` correspond to the first
+    /// unproven proof in the submission with `submissionId`.  If so, it
+    /// updates the state to reflect that it is valid now.  Returns `true` if
+    /// the proof was the last in the submission.
     ///
     /// Note this function is called as part of `challenge`, which
     /// performs the groth16 verification internally.
@@ -700,12 +715,14 @@ contract UpaVerifier is
         bytes32 proofId,
         bytes32 proofDigest,
         bytes32 submissionId,
+        uint8 dupSubmissionIdx,
         bytes32[] calldata proofIdMerkleProof,
         bytes32[] calldata proofDataMerkleProof
     ) private returns (bool isLastProof) {
-        // Retrieve the submission
-        UpaProofReceiver.Submission memory submission = getSubmission(
-            submissionId
+        // Retrieve the submission into memory
+        UpaProofReceiver.Submission memory submission = getSubmissionStorage(
+            submissionId,
+            dupSubmissionIdx
         );
 
         VerifierStorage storage verifierStorage = _getVerifierStorage();
@@ -718,9 +735,11 @@ contract UpaVerifier is
             submissionIdx
         );
 
-        // Check `location` is not out of range.
+        // Check `location` is not already beyond the number of proofs in the
+        // submission (meaning the submission is already verified).  By the
+        // above, this should never happen, but we check to be sure.
         uint16 numProofs = submission.numProofs;
-        require(location < numProofs, LocationOutOfRange());
+        require(location < numProofs, SubmissionAlreadyVerified());
 
         // Confirm that the submission has indeed been skipped, i.e.
         // the latest submission to be verified is greater than submissionIdx
@@ -775,6 +794,7 @@ contract UpaVerifier is
         Groth16Proof calldata proof,
         uint256[] calldata publicInputs,
         bytes32 submissionId,
+        uint8 dupSubmissionIdx,
         bytes32[] calldata proofIdMerkleProof,
         bytes32[] calldata proofDataMerkleProof
     ) external returns (bool challengeSuccessful) {
@@ -782,28 +802,26 @@ contract UpaVerifier is
         // challenges
         uint256 startGas = gasleft();
 
-        // Compute the `proofId` and `proofDigest`
-        bytes32 proofId = UpaLib.computeProofId(circuitId, publicInputs);
-        require(proofId != DUMMY_PROOF_ID, DummyProofIdInChallenge());
         Groth16CompressedProof memory compressedProof = UpaInternalLib
             .compressProof(proof);
-        bytes32 proofDigest = UpaInternalLib.computeProofDigest(
-            compressedProof
-        );
 
-        // Check the submission
+        // Compute the `proofId` and `proofDigest`, and check the submission
+
+        bytes32 proofId = UpaLib.computeProofId(circuitId, publicInputs);
+        require(proofId != DUMMY_PROOF_ID, DummyProofIdInChallenge());
+
         bool isLastProof = checkSubmission(
             proofId,
-            proofDigest,
+            UpaInternalLib.computeProofDigest(compressedProof),
             submissionId,
+            dupSubmissionIdx,
             proofIdMerkleProof,
             proofDataMerkleProof
         );
 
         VerifierStorage storage verifierStorage = _getVerifierStorage();
 
-        // Check the number of public inputs doesn't exceed the max
-        // allowed
+        // Check the number of public inputs doesn't exceed the max allowed
         uint256 numPublicInputs = publicInputs.length + proof.m.length;
         require(numPublicInputs <= maxNumPublicInputs(), TooManyPublicInputs());
 

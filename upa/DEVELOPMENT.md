@@ -47,6 +47,23 @@ $ ./scripts/run_slither --triage-mode
 $ ./scripts/test_upa
 ```
 
+## Custom storage locations
+
+Use [this playground](https://ethfiddle.com/) and this contract:
+
+```solidity
+pragma solidity ^0.4.24;
+
+contract Playground {
+  function computeStorageLocation(string s1) pure returns (bytes32) {
+    return keccak256(abi.encode(uint256(keccak256(s1)) - 1)) & ~bytes32(uint256(0xff));
+  }
+}
+```
+
+to compute custom storage locations.  `UpaContractName` uses the string
+`ContractNameStorage`.
+
 ## Publishing
 
 ### Check version numbers

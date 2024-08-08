@@ -116,46 +116,6 @@ const computeProofRef = command({
   },
 });
 
-const computeSubmissionProof = command({
-  name: "submission-proof",
-  args: {
-    submissionFile: options.submissionFile(),
-    startIdx: option({
-      type: number,
-      long: "start-idx",
-      short: "s",
-      description: "Start index of proofs within the on-chain submission",
-    }),
-    numProofs: option({
-      type: number,
-      long: "num-proofs",
-      short: "n",
-      description: "Number of proofs to include in the SubmissionProof",
-    }),
-  },
-  description:
-    "Compute ProofReference for proof at given index within submission",
-  handler: async function ({
-    submissionFile,
-    startIdx,
-    numProofs,
-  }): Promise<void> {
-    const submission = Submission.from_json(
-      readFileSync(submissionFile, "ascii")
-    );
-    const submissionProof = submission.computeSubmissionProof(
-      startIdx,
-      numProofs
-    );
-    if (!submissionProof) {
-      console.log("SubmissionProof not required");
-      return;
-    }
-
-    console.log(submissionProof.to_json());
-  },
-});
-
 export const compute = subcommands({
   name: "compute",
   description: "Commands computing objects used for submitting proofs",
@@ -164,6 +124,5 @@ export const compute = subcommands({
     "proof-id": computeProofId,
     "proof-ids": computeProofIds,
     "proof-ref": computeProofRef,
-    "submission-proof": computeSubmissionProof,
   },
 });

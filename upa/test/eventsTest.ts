@@ -11,10 +11,11 @@ import {
   getCallDataForVerifyAggregatedProofTx,
 } from "../src/sdk/events";
 import { submitProofs } from "../src/sdk/upa";
+import { Submission } from "../src/sdk/submission";
 import {
-  Submission,
+  packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
-} from "../src/sdk/submission";
+} from "../src/sdk/aggregatedProofParams";
 import { CompressedGroth16Proof } from "../src/sdk/groth16";
 
 describe("EventGetter for events", () => {
@@ -124,7 +125,7 @@ describe("EventGetter for events", () => {
       { circuitId: cid, proof: pf_a, inputs: pi_offchain },
     ]);
     const submissionMarkers = packOffChainSubmissionMarkers(
-      sub_offchain.getUnpackedOffChainSubmissionMarkers()
+      sub_offchain.getOffChainSubmissionMarkers()
     );
 
     // Verify:
@@ -141,7 +142,8 @@ describe("EventGetter for events", () => {
           proofIds,
           proofIds.length - 1,
           [sub_1.computeSubmissionProof(0, 1)!.solidity()],
-          submissionMarkers
+          submissionMarkers,
+          packDupSubmissionIdxs([0])
         );
       return agg1Tx.hash;
     })();
@@ -158,7 +160,8 @@ describe("EventGetter for events", () => {
             sub_1.computeSubmissionProof(1, 1)!.solidity(),
             sub_3.computeSubmissionProof(0, 1)!.solidity(),
           ],
-          packOffChainSubmissionMarkers([])
+          packOffChainSubmissionMarkers([]),
+          packDupSubmissionIdxs([0, 0, 0])
         );
       return agg2Tx.hash;
     })();
@@ -172,7 +175,8 @@ describe("EventGetter for events", () => {
           proofIds,
           proofIds.length,
           [sub_3.computeSubmissionProof(1, 2)!.solidity()],
-          packOffChainSubmissionMarkers([])
+          packOffChainSubmissionMarkers([]),
+          packDupSubmissionIdxs([0])
         );
       return agg3Tx.hash;
     })();

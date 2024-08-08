@@ -5,8 +5,9 @@ import {
   Submission,
   SubmissionProof,
   computeUnpackedOffChainSubmissionmarkers,
-  packOffChainSubmissionMarkers,
 } from "../src/sdk/submission";
+// eslint-disable-next-line
+import { packOffChainSubmissionMarkers } from "../src/sdk/aggregatedProofParams";
 import { bigintToHex32 } from "../src/sdk/utils";
 
 // Fake proofs
@@ -56,10 +57,13 @@ const cidsProofsAndInputs: CircuitIdProofAndInputs[] = [
 ].map(CircuitIdProofAndInputs.from_json);
 
 // Fake submissions
-const submission1 =
-  Submission.fromCircuitIdsProofsAndInputs(cidsProofsAndInputs);
-const submission2 = Submission.fromCircuitIdsProofsAndInputs(
-  cidsProofsAndInputs.slice(0, 3)
+const submission1 = Submission.fromCircuitIdsProofsInputsAndDupIdx(
+  cidsProofsAndInputs,
+  0
+);
+const submission2 = Submission.fromCircuitIdsProofsInputsAndDupIdx(
+  cidsProofsAndInputs.slice(0, 3),
+  0
 );
 
 describe("Submission", () => {

@@ -8,15 +8,16 @@ import { strict as assert } from "assert";
 import { NonPayableOverrides } from "../../typechain-types/common";
 import * as log from "./log";
 import {
-  SubmissionProof,
-  packOffChainSubmissionMarkers,
-} from "../sdk/submission";
-import {
   siProofIds,
   SubmissionInterval,
   splitSubmissionInterval,
   submissionIntervalsFromEvents,
 } from "../sdk/submissionIntervals";
+import {
+  computeAggregatedProofParameters,
+  packDupSubmissionIdxs,
+  packOffChainSubmissionMarkers,
+} from "../sdk/aggregatedProofParams";
 
 export const devAggregator = command({
   name: "aggregator",
@@ -181,19 +182,16 @@ async function submitBatch(
   // Compute the finalDigest
   const proofIds = batch.flatMap((si) => siProofIds(si));
   const calldata = dummyProofData(proofIds);
-  const submissionProofs = batch
-    .map((si) =>
-      si.submission.computeSubmissionProof(si.startIdx, si.numProofs)
-    )
-    .filter((proof) => proof) as SubmissionProof[];
+  const aggProofParams = computeAggregatedProofParameters(batch, []);
 
   // Submit aggregated proof
   await upaInstance.verifier.verifyAggregatedProof(
     calldata,
-    proofIds,
-    proofIds.length,
-    submissionProofs,
-    packOffChainSubmissionMarkers([]) /* offChainSubmissionMarkers */,
+    aggProofParams.proofIds,
+    aggProofParams.numOnChainProofs,
+    aggProofParams.submissionProofs,
+    packOffChainSubmissionMarkers(aggProofParams.offChainSubmissionMarkers),
+    packDupSubmissionIdxs(aggProofParams.dupSubmissionIdxs),
     options || {}
   );
 

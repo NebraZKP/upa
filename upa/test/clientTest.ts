@@ -24,7 +24,10 @@ import { CircuitIdProofAndInputs } from "../src/sdk/application";
 import { Signer } from "ethers";
 import { expect } from "chai";
 import { PayableOverrides } from "../typechain-types/common";
-import { packOffChainSubmissionMarkers } from "../src/sdk/submission";
+import {
+  packDupSubmissionIdxs,
+  packOffChainSubmissionMarkers,
+} from "../src/sdk/aggregatedProofParams";
 import { computeCircuitId } from "../src/sdk/utils";
 type DeployAndRegisterResult = {
   worker: Signer;
@@ -147,7 +150,8 @@ describe("UPA Client", async () => {
         agg1,
         agg1.length,
         [],
-        packOffChainSubmissionMarkers([])
+        packOffChainSubmissionMarkers([]),
+        packDupSubmissionIdxs([0])
       );
 
     await verifier
@@ -157,7 +161,8 @@ describe("UPA Client", async () => {
         agg3,
         agg3.length,
         [pf3.solidity()],
-        packOffChainSubmissionMarkers([])
+        packOffChainSubmissionMarkers([]),
+        packDupSubmissionIdxs([0])
       );
 
     await upaClient.waitForSubmissionVerified(submissionHandle_1);
