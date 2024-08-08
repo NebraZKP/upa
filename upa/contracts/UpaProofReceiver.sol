@@ -41,7 +41,6 @@ error TooManyPublicInputs();
 error MaxNumPublicInputsTooLow();
 error TooManyCommitmentPoints();
 error InconsistentPedersenVK();
-error DummyProofInSubmission();
 
 /// Only used for `NotOnCurve` errors.
 enum Groth16PointType {
