@@ -210,64 +210,64 @@ describe("Censorship challenge tests", () => {
         .be.true;
     }).timeout(200000);
 
-  it("duplicate submission censorship challenge", async function () {
-    const { upa, worker, user1, s2, s3 } = await loadFixture(fixture);
-    const { verifier } = upa;
+    it("duplicate submission censorship challenge", async function () {
+      const { upa, worker, user1, s2, s3 } = await loadFixture(fixture);
+      const { verifier } = upa;
 
-    // Re-submit s2 as user 1
-    const dupSubmissionTx = await submitProofs(
-      verifier.connect(user1),
-      s2.circuitIds,
-      s2.proofs,
-      s2.inputs
-    );
-    const dupSubmission = await Submission.fromTransactionReceipt(
-      verifier,
-      (await dupSubmissionTx.wait())!
-    );
-
-    // Verify the 3rd submission and this duplicate.
-    await verifySubmission(verifier, worker, s3);
-    await verifySubmission(verifier, worker, dupSubmission);
-
-    expect(
-      await verifier.getFunction(isSubmissionVerifiedById)(s2.submissionId)
-    ).is.true;
-
-    const numProofsInS2 = s2.circuitIds.length;
-
-    // Challenge to upa should fail
-    for (let i = 0; i < numProofsInS2; i++) {
-      await expect(
-        verifier
-        .connect(user1)
-        .challenge(
-          s2.circuitIds[i],
-          s2.proofs[i].solidity(),
-          s2.inputs[i],
-          s2.submissionId,
-          dupSubmission.getDupSubmissionIdx(),
-          s2.computeProofIdMerkleProof(i),
-          s2.computeProofDataMerkleProof(i)
-        )
-    ).to.be.revertedWithCustomError(verifier, "SubmissionAlreadyVerified");
-  }
-
-  // Challenge to the initial s2, as user1, should work.
-  for (let i = 0; i < numProofsInS2; i++) {
-    await verifier
-      .connect(user1)
-      .challenge(
-        s2.circuitIds[i],
-        s2.proofs[i].solidity(),
-        s2.inputs[i],
-        s2.submissionId,
-        s2.getDupSubmissionIdx(),
-        s2.computeProofIdMerkleProof(i),
-        s2.computeProofDataMerkleProof(i)
+      // Re-submit s2 as user 1
+      const dupSubmissionTx = await submitProofs(
+        verifier.connect(user1),
+        s2.circuitIds,
+        s2.proofs,
+        s2.inputs
       );
-  }
-}).timeout(200000);
+      const dupSubmission = await Submission.fromTransactionReceipt(
+        verifier,
+        (await dupSubmissionTx.wait())!
+      );
+
+      // Verify the 3rd submission and this duplicate.
+      await verifySubmission(verifier, worker, s3);
+      await verifySubmission(verifier, worker, dupSubmission);
+
+      expect(
+        await verifier.getFunction(isSubmissionVerifiedById)(s2.submissionId)
+      ).is.true;
+
+      const numProofsInS2 = s2.circuitIds.length;
+
+      // Challenge to upa should fail
+      for (let i = 0; i < numProofsInS2; i++) {
+        await expect(
+          verifier
+            .connect(user1)
+            .challenge(
+              s2.circuitIds[i],
+              s2.proofs[i].solidity(),
+              s2.inputs[i],
+              s2.submissionId,
+              dupSubmission.getDupSubmissionIdx(),
+              s2.computeProofIdMerkleProof(i),
+              s2.computeProofDataMerkleProof(i)
+            )
+        ).to.be.revertedWithCustomError(verifier, "SubmissionAlreadyVerified");
+      }
+
+      // Challenge to the initial s2, as user1, should work.
+      for (let i = 0; i < numProofsInS2; i++) {
+        await verifier
+          .connect(user1)
+          .challenge(
+            s2.circuitIds[i],
+            s2.proofs[i].solidity(),
+            s2.inputs[i],
+            s2.submissionId,
+            s2.getDupSubmissionIdx(),
+            s2.computeProofIdMerkleProof(i),
+            s2.computeProofDataMerkleProof(i)
+          );
+      }
+    }).timeout(200000);
     it("multi censorship challenge", async function () {
       const { upa, worker, user1, s1, s2, s3 } = await loadFixture(fixture);
       const { verifier } = upa;
@@ -369,7 +369,7 @@ describe("Censorship challenge tests", () => {
             s1.computeProofIdMerkleProof(0),
             s1.computeProofDataMerkleProof(0)
           )
-      ).to.be.revertedWithCustomError(verifier, "LocationOutOfRange");
+      ).to.be.revertedWithCustomError(verifier, "SubmissionAlreadyVerified");
     }).timeout(100000);
 
     it("not yet skipped proof should fail", async function () {
