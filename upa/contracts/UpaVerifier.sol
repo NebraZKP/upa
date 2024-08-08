@@ -55,6 +55,7 @@ error DummyProofIdInChallenge();
 error FinalDigestLDoesNotMatch();
 error FinalDigestHDoesNotMatch();
 error WrongNumberOffchainSubmissionMarkers();
+error FixedReimbursementTooHigh();
 
 /// The proof that a given sequence of proofIds belong to an existing
 /// submission.  This is intended to be sent to the UpaVerifier alongside
@@ -132,6 +133,14 @@ contract UpaVerifier is
     /// Gas per transaction.
     uint256 private constant GAS_PER_TRANSACTION = 21000;
 
+    /// Max fixed reimbursement per challenge
+    uint256 private constant MAX_FIXED_REIMBURSEMENT = (1 << 64);
+
+    /// Dummy proof id. This is the proof id of a valid proof used
+    /// to fill batches.
+    bytes32 public constant DUMMY_PROOF_ID =
+        0x84636c7b9793a9833ef7ca3e1c118d7d21dadb97ef7bf1fbfd549c10bca3553f;
+
     event UpgradeOuterVerifier(address);
 
     // keccak256(abi.encode(uint256(keccak256("VerifierStorage")) - 1)) &
@@ -195,6 +204,10 @@ contract UpaVerifier is
         require(_groth16Verifier != address(0), Groth16VerifierAddressIsZero());
         require(_aggregatorCollateral > 0, NotEnoughCollateral());
         require(_maxNumPublicInputs >= 2, MaxNumPublicInputsTooLow());
+        require(
+            _fixedReimbursement < MAX_FIXED_REIMBURSEMENT,
+            FixedReimbursementTooHigh()
+        );
 
         VerifierStorage storage verifierStorage = _getVerifierStorage();
 
@@ -875,6 +888,10 @@ contract UpaVerifier is
     function setCensorshipReimbursements(
         uint256 _fixedReimbursement
     ) external onlyOwner {
+        require(
+            _fixedReimbursement < MAX_FIXED_REIMBURSEMENT,
+            FixedReimbursementTooHigh()
+        );
         VerifierStorage storage verifierStorage = _getVerifierStorage();
 
         verifierStorage.fixedReimbursement = _fixedReimbursement;
