@@ -8,6 +8,7 @@ use crate::{
     keccak, universal_batch_verifier, universal_outer,
 };
 use clap::Parser;
+use log::info;
 
 #[derive(Clone, Debug, Parser)]
 pub struct KeygenParams {
@@ -94,8 +95,8 @@ impl From<&KeygenParams> for universal_batch_verifier::KeygenParams {
         Self {
             config: value.config,
             proving_key: value.ubv_proving_key,
-            srs: value.keccak_srs,
-            verification_key: value.keccak_verification_key,
+            srs: value.ubv_srs,
+            verification_key: value.ubv_verification_key,
             protocol: value.ubv_protocol,
             gate_config: value.ubv_gate_config,
             dry_run: value.dry_run,
@@ -138,7 +139,10 @@ impl From<&KeygenParams> for universal_outer::KeygenParams {
 }
 
 pub fn keygen(params: KeygenParams) {
+    info!("Generating UBV circuit proving and verifying keys");
     universal_batch_verifier::keygen((&params).into());
+    info!("Generating Keccak circuit proving and verifying keys");
     keccak::keygen((&params).into());
+    info!("Generating Outer circuit proving and verifying keys");
     universal_outer::keygen((&params).into());
 }

@@ -3,13 +3,13 @@
   "inner_batch_size": 2,
   "outer_batch_size": 2,
   "bv_config": {
-    "degree_bits": 18,
-    "lookup_bits": 17,
+    "degree_bits": 20,
+    "lookup_bits": 19,
     "num_limbs": 3,
     "limb_bits": 88
   },
   "keccak_config": {
-    "degree_bits": 16,
+    "degree_bits": 20,
     "lookup_bits": 8
   },
   "outer_config": {

@@ -6,6 +6,7 @@ use crate::{
     universal_outer::{self, generate_evm_verifier, GenerateVerifierParams},
 };
 use clap::Parser;
+use log::info;
 
 #[derive(Clone, Debug, Parser)]
 pub struct VerifyParams {
@@ -76,7 +77,9 @@ pub fn verify(params: VerifyParams) {
     if !params.dry_run {
         // only generate the evm verifier when
         // it isn't a dry run
+        info!("Generating evm verifier");
         generate_evm_verifier((&params).into());
     }
+    info!("Verifying Outer proof");
     universal_outer::verify((&params).into());
 }

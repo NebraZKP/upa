@@ -8,6 +8,7 @@ use crate::{
 };
 use circuits::utils::upa_config::UpaConfig;
 use clap::Parser;
+use log::info;
 
 #[derive(Clone, Debug, Parser)]
 pub struct ProveParams {
@@ -155,9 +156,9 @@ impl From<&ProveParams> for keccak::ProveParams {
         let value = value.clone();
         Self {
             config: value.config,
-            srs: value.ubv_srs,
-            proving_key: value.ubv_proving_key,
-            gate_config: value.ubv_gate_config,
+            srs: value.keccak_srs,
+            proving_key: value.keccak_proving_key,
+            gate_config: value.keccak_gate_config,
             ubv_instances,
             proof: value.keccak_proof,
             instance: value.keccak_instance,
@@ -194,9 +195,12 @@ pub fn prove(params: ProveParams) {
     let upa_config = UpaConfig::from_file(&params.config);
     let outer_batch_size = upa_config.outer_batch_size;
     for i in 0..outer_batch_size {
+        info!("Generating UBV proof for batch number {i}");
         let ubv_prove_params = universal_batch_verifier::ProveParams::from_full_prove_params_and_batch_number(&params, i);
         universal_batch_verifier::prove(ubv_prove_params);
     }
+    info!("Generating keccak proof");
     keccak::prove((&params).into());
+    info!("Generating outer proof");
     universal_outer::prove((&params).into());
 }
