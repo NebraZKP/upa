@@ -26,7 +26,8 @@ describe("UPA Upgrade", async () => {
     await upgradeVerifierContract(
       upaDesc,
       testUpaVerifierFactory,
-      0 /*maxRetries*/
+      0 /*maxRetries*/,
+      false /*prepare*/
     ).catch(() => {
       threw = 1;
     });
@@ -41,7 +42,8 @@ describe("UPA Upgrade", async () => {
     await upgradeVerifierContract(
       upaDesc,
       testUpaVerifierFactory,
-      3 /*maxRetries*/
+      3 /*maxRetries*/,
+      false /*prepare*/
     );
     const { verifier } = testUpaInstanceFromDescriptor(upaDesc, owner);
 
@@ -68,7 +70,12 @@ describe("UPA Upgrade", async () => {
 
     // Upgrade version defaults to package version
     const newUpaVerifierFactory = new UpaVerifier__factory(owner);
-    await upgradeVerifierContract(upaDesc, newUpaVerifierFactory, 0);
+    await upgradeVerifierContract(
+      upaDesc,
+      newUpaVerifierFactory,
+      0,
+      false /*prepare*/
+    );
     versionString = versionUintToString(await verifier.version());
     expect(versionString).eql(pkg.version);
 
@@ -78,6 +85,7 @@ describe("UPA Upgrade", async () => {
       upaDesc,
       newUpaVerifierFactory,
       0,
+      false /*prepare*/,
       newVersionString
     );
     versionString = versionUintToString(await verifier.version());

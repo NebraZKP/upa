@@ -21,7 +21,7 @@ import { IGroth16Verifier__factory } from "../../typechain-types";
 import * as options from "./options";
 import * as ethers from "ethers";
 import * as fs from "fs";
-import { parseNumberOrUndefined, sleep } from "../sdk/utils";
+import { parseNumberOrUndefined } from "../sdk/utils";
 import * as utils from "../sdk/utils";
 import {
   IGroth16Verifier,
@@ -31,6 +31,13 @@ import {
 import { strict as assert } from "assert";
 import { UpaInstanceDescriptor } from "../sdk/upa";
 import { spawn } from "child_process";
+// eslint-disable-next-line
+import { getInitializerData } from "@openzeppelin/hardhat-upgrades/dist/utils/initializer-data";
+// eslint-disable-next-line
+import ERC1967Proxy from "@openzeppelin/upgrades-core/artifacts/@openzeppelin/contracts-v5/proxy/ERC1967/ERC1967Proxy.sol/ERC1967Proxy.json";
+
+export const UPA_DEPLOY_SALT =
+  "NEBRA UPA! Salt-n-Pepa and Heavy D up in the limousine";
 
 // Only import if the env var HARDHAT_CONFIG is set.
 // eslint-disable-next-line
@@ -55,6 +62,7 @@ type DeployArgs = {
   upaConfigFile: string;
   useTestConfig: boolean;
   maxRetries: number;
+  prepare: boolean;
   owner?: string;
   worker?: string;
   feeRecipient?: string;
@@ -94,6 +102,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     groth16VerifierAddress,
     fixedReimbursementInWei,
     maxRetries,
+    prepare,
   } = args;
 
   const provider = new ethers.JsonRpcProvider(endpoint);
@@ -126,6 +135,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     contract_hex,
     maxNumInputs,
     maxRetries,
+    prepare,
     groth16Verifier,
     owner,
     worker,
@@ -134,7 +144,9 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     collateral,
     fixedReimbursement
   );
-  fs.writeFileSync(instance, JSON.stringify(upaInstance));
+  if (!prepare) {
+    fs.writeFileSync(instance, JSON.stringify(upaInstance));
+  }
 };
 
 export const deploy = command({
@@ -203,6 +215,11 @@ export const deploy = command({
       defaultValue: () => 1,
       description: "The number of times to retry verifier deployment",
     }),
+    prepare: flag({
+      type: boolean,
+      long: "prepare",
+      description: "Only deploy the implementation contract, not the proxy",
+    }),
   },
   description: "Deploy the UPA contracts for a given configuration",
   handler: deployHandler,
@@ -220,13 +237,6 @@ const DEFAULT_AGGREGATOR_COLLATERAL = 10000000000000000n; // 0.01 eth
 /// Default fixed reimbursement for censorship claims
 const DEFAULT_FIXED_REIMBURSEMENT = 0n;
 
-/// Block time in seconds
-const BLOCK_TIME = 12;
-
-/// Default number of blocks to wait for the signer nonce
-/// to be updated
-const DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE = 6;
-
 /// Deploys the UPA contract, with all dependencies.  `verifier_bin_file`
 /// points to the hex representation of the verifier byte code (as output by
 /// solidity). The address of `signer` is used by default for `owner` and
@@ -236,6 +246,7 @@ export async function deployUpa(
   outer_verifier_hex: string,
   maxNumInputs: number,
   maxRetries: number,
+  prepare: boolean,
   groth16Verifier?: IGroth16Verifier,
   owner?: string,
   worker?: string,
@@ -244,13 +255,14 @@ export async function deployUpa(
   aggregatorCollateral?: bigint,
   fixedReimbursement?: bigint,
   versionString?: string
-): Promise<UpaInstanceDescriptor> {
+): Promise<UpaInstanceDescriptor | undefined> {
   // Decode version string
   if (!versionString) {
     versionString = pkg.version;
   }
   assert(versionString);
   const versionNum = utils.versionStringToUint(versionString);
+  console.log(`Deploying UPA Version ${versionString}`);
 
   const addrP = signer.getAddress();
   const nonceP = signer.getNonce();
@@ -293,63 +305,112 @@ export async function deployUpa(
     return universalGroth16Verifier.getAddress();
   })();
 
-  // Wait for the chain to catch up to the signer's nonce
-  // before attempting to deploy UPA
-  let counter = 0;
-  while ((await signer.getNonce()) !== nonce) {
-    await sleep(BLOCK_TIME * 1000);
-    counter++;
-    if (counter >= DEFAULT_NUMBER_OF_BLOCKS_SIGNER_NONCE) {
-      throw "Unable to update nonce";
-    }
-  }
-
-  // Deploy UPA
+  // Deploy the UPA implementation contract.
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
+  const deployArgs = [
+    owner,
+    worker,
+    feeRecipient,
+    binVerifierAddr,
+    groth16VerifierAddr,
+    fixedReimbursement,
+    feeInGas,
+    aggregatorCollateral,
+    maxNumInputs,
+    versionNum,
+  ];
+  const deployImplNonce = nonce;
 
-  const deployFn = async () =>
-    upgrades.deployProxy(
-      UpaVerifierFactory,
-      [
-        owner,
-        worker,
-        feeRecipient,
-        binVerifierAddr,
-        groth16VerifierAddr,
-        fixedReimbursement,
-        feeInGas,
-        aggregatorCollateral,
-        maxNumInputs,
-        versionNum,
-      ],
-      {
-        kind: "uups",
-        unsafeAllowLinkedLibraries: true,
-      }
-    );
+  const deployImpl = async () =>
+    upgrades.deployImplementation(UpaVerifierFactory, deployArgs, {
+      kind: "uups",
+      unsafeAllowLinkedLibraries: true,
+      nonce: deployImplNonce,
+    });
 
-  const upaVerifier: ethers.Contract = await utils.requestWithRetry(
-    deployFn,
-    "UPA contract upgrade",
+  const implAddress: string = await utils.requestWithRetry(
+    deployImpl,
+    "UPA contract deployment",
     maxRetries,
     undefined /*timeoutMs*/,
     UpaVerifierFactory.interface
   );
 
-  await upaVerifier.waitForDeployment();
-  const upaVerifierAddr = await upaVerifier.getAddress();
-  const deployTxResponse = upaVerifier.deploymentTransaction()!;
-  const deploymentTx = (await deployTxResponse.wait())!;
+  await UpaVerifierFactory.attach(implAddress).waitForDeployment();
+
+  console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
+
+  // The nonce won't have incremented if the impl already existed. Re-query it.
+  nonce = await signer.getNonce();
+
+  const initializerData = getInitializerData(
+    UpaVerifierFactory.interface,
+    deployArgs
+  );
+
+  console.log(`initializerData`);
+  console.log(initializerData);
+
+  const ProxyFactory = new ethers.ContractFactory(
+    ERC1967Proxy.abi,
+    ERC1967Proxy.bytecode
+  );
+
+  // Only populate the transaction with the nonce if we will deploy the proxy
+  // contract in this function.
+  const deployProxyNonce = prepare ? undefined : nonce++;
+  const deployProxyTx = await ProxyFactory.getDeployTransaction(
+    implAddress,
+    initializerData,
+    { nonce: deployProxyNonce }
+  );
+
+  // Dump information needed to create the proxy contract.
+  if (prepare) {
+    console.log(`deployProxyTx (pass this into CreateX initcode arg):`);
+    console.log(deployProxyTx.data);
+
+    const createXDeploySalt = computeCreateXDeploySalt(UPA_DEPLOY_SALT);
+
+    console.log("createXDeploySalt");
+    console.log(createXDeploySalt);
+
+    console.log(
+      `Verifier needs to be sent ${aggregatorCollateral} Wei as` +
+        ` aggregator collateral.`
+    );
+
+    return;
+  }
+
+  // Deploy the proxy contract
+  const deployProxy = async () => {
+    const txResp = await signer.sendTransaction(deployProxyTx);
+    return txResp.wait();
+  };
+
+  const deploymentTx = await utils.requestWithRetry(
+    deployProxy,
+    "UPA contract deployment",
+    maxRetries,
+    undefined /*timeoutMs*/,
+    UpaVerifierFactory.interface
+  );
+
+  assert(deploymentTx);
+  const upaVerifierAddr = deploymentTx.contractAddress!;
   const deploymentBlockNumber: number = deploymentTx.blockNumber;
   assert(
     deploymentBlockNumber,
-    `failed getting deployBlockNumber: ${deploymentTx} ${deploymentBlockNumber}`
+    `failed getting deployBlockNumber:` +
+      ` ${deploymentTx} ${deploymentBlockNumber}`
   );
 
   // Top up the aggregator collateral
   const topUpCollateralTx = await signer.sendTransaction({
     to: upaVerifierAddr,
     value: aggregatorCollateral,
+    nonce: nonce++,
   });
   await topUpCollateralTx.wait();
 
@@ -428,4 +489,16 @@ exports.default = config;
       reject(err);
     });
   });
+}
+
+// We set the first 20 bytes to be equal to the multi-sig address. CreateX
+// uses this for permissioned deploy protection. (See the `_guard`
+// function in ComputeCreateXDeployAddress.sol. The 21st byte is `00` to turn
+// off cross-chain redeploy protection. The last 11 bytes are free for us to
+// set.
+export function computeCreateXDeploySalt(salt: string) {
+  const multiSig = "0xb463603469Bf31f189E3F6625baf8378880Df14e";
+  const saltSuffix = ethers.keccak256(ethers.toUtf8Bytes(salt)).slice(2, 24);
+  const createXDeploySalt = multiSig + "00" + saltSuffix;
+  return createXDeploySalt;
 }

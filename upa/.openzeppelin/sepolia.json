@@ -2,105 +2,30 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0x8bdEa1842afb8Be3b46d8fE8D6d110eDE057d7c7",
-      "txHash": "0x4ac5613609cfff298809bad0fb96932efe96c395db4b8ac1a75d43e47e271a7d",
+      "address": "0x4f5DC50FfbE2C98d097040b4f4d6A007359B4841",
+      "txHash": "0x01f8fccacec0044997212a898937c0eecd10f8c51c23a74ddaf3c39ced061092",
+      "kind": "uups"
+    },
+    {
+      "address": "0xB7f216Ea73EAcDB4fEb8fba2ef772b5a8Dfb528E",
+      "txHash": "0x0a8cd1855156ee707c3a58d45320ac508a4861e305b600b1731230aca2f30b83",
       "kind": "uups"
     }
   ],
   "impls": {
-    "e98e66ddee724aedc00e0cbbae82b415bafddc5aedb43a1c12aaa57443c3332f": {
-      "address": "0xc3bEbaD8Ac7d53B7a9F507b605e96bB03eFd86a5",
-      "txHash": "0xd1a59f5e4aa048d3b7addc24081d823925bea01e2b9176b5e5b83c9631f910e9",
+    "d4c48e9b8443bb79429b1b472641f10e504f15b8a5fa46a8f80cf7de57fb736c": {
+      "address": "0x8824aCF0E30b38369b3B977FC1E2E8e94EBC6779",
+      "txHash": "0x6c2dca54a07987019b72f83a1dc74e12d6fa43297144bd6f7901922dab531dac",
       "layout": {
-        "solcVersion": "0.8.20",
+        "solcVersion": "0.8.26",
         "storage": [
           {
-            "label": "proofReceiver",
+            "label": "fixedGasFeePerProof",
             "offset": 0,
             "slot": "0",
-            "type": "t_contract(UpaProofReceiver)6475",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:63"
-          },
-          {
-            "label": "worker",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_address",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:66"
-          },
-          {
-            "label": "feeModel",
-            "offset": 0,
-            "slot": "2",
-            "type": "t_contract(IUpaFeeModel)2224",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:69"
-          },
-          {
-            "label": "outerVerifier",
-            "offset": 0,
-            "slot": "3",
-            "type": "t_address",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:72"
-          },
-          {
-            "label": "groth16Verifier",
-            "offset": 0,
-            "slot": "4",
-            "type": "t_contract(IGroth16Verifier)2145",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:75"
-          },
-          {
-            "label": "nextSubmissionIdxToVerify",
-            "offset": 20,
-            "slot": "4",
-            "type": "t_uint64",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:79"
-          },
-          {
-            "label": "lastVerifiedSubmissionHeight",
-            "offset": 0,
-            "slot": "5",
-            "type": "t_uint64",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:84"
-          },
-          {
-            "label": "openChallengeRefundAmounts",
-            "offset": 0,
-            "slot": "6",
-            "type": "t_mapping(t_bytes32,t_uint256)",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:88"
-          },
-          {
-            "label": "numVerifiedInSubmission",
-            "offset": 0,
-            "slot": "7",
-            "type": "t_struct(Uint16Vector)4463_storage",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:101"
-          },
-          {
-            "label": "fixedReimbursement",
-            "offset": 0,
-            "slot": "8",
             "type": "t_uint256",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:106"
-          },
-          {
-            "label": "fixedReimbursementPerProof",
-            "offset": 0,
-            "slot": "9",
-            "type": "t_uint256",
-            "contract": "UpaVerifier",
-            "src": "contracts/UpaVerifier.sol:111"
+            "contract": "UpaFixedGasFee",
+            "src": "contracts/UpaFixedGasFee.sol:14"
           }
         ],
         "types": {
@@ -108,9 +33,137 @@
             "label": "address",
             "numberOfBytes": "20"
           },
+          "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage": {
+            "label": "uint256[2][2][]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_array(t_uint256)2_storage)2_storage": {
+            "label": "uint256[2][2]",
+            "numberOfBytes": "128"
+          },
+          "t_array(t_array(t_uint256)2_storage)dyn_storage": {
+            "label": "uint256[2][]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint16)dyn_storage": {
+            "label": "uint16[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)2_storage": {
+            "label": "uint256[2]",
+            "numberOfBytes": "64"
+          },
           "t_bool": {
             "label": "bool",
             "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IGroth16Verifier)590": {
+            "label": "contract IGroth16Verifier",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_bytes32,t_struct(CircuitData)951_storage)": {
+            "label": "mapping(bytes32 => struct UpaProofReceiver.CircuitData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Submission)964_storage)": {
+            "label": "mapping(bytes32 => struct UpaProofReceiver.Submission)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(CircuitData)951_storage": {
+            "label": "struct UpaProofReceiver.CircuitData",
+            "members": [
+              {
+                "label": "verificationKey",
+                "type": "t_struct(Groth16VK)585_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "544"
+          },
+          "t_struct(FeeBaseStorage)733_storage": {
+            "label": "struct UpaFeeBase.FeeBaseStorage",
+            "members": [
+              {
+                "label": "totalFeeDueInWei",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "aggregatorCollateral",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "verifiedSubmissionIdxForAllocatedFee",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Groth16VK)585_storage": {
+            "label": "struct Groth16VK",
+            "members": [
+              {
+                "label": "alpha",
+                "type": "t_array(t_uint256)2_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "beta",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "gamma",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "delta",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "10"
+              },
+              {
+                "label": "s",
+                "type": "t_array(t_array(t_uint256)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "14"
+              },
+              {
+                "label": "h1",
+                "type": "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "15"
+              },
+              {
+                "label": "h2",
+                "type": "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "16"
+              }
+            ],
+            "numberOfBytes": "544"
           },
           "t_struct(InitializableStorage)65_storage": {
             "label": "struct Initializable.InitializableStorage",
@@ -142,58 +195,1567 @@
             ],
             "numberOfBytes": "32"
           },
-          "t_uint64": {
-            "label": "uint64",
-            "numberOfBytes": "8"
-          },
-          "t_array(t_uint256)dyn_storage": {
-            "label": "uint256[]",
-            "numberOfBytes": "32"
-          },
-          "t_bytes32": {
-            "label": "bytes32",
-            "numberOfBytes": "32"
-          },
-          "t_contract(IGroth16Verifier)2145": {
-            "label": "contract IGroth16Verifier",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IUpaFeeModel)2224": {
-            "label": "contract IUpaFeeModel",
-            "numberOfBytes": "20"
-          },
-          "t_contract(UpaProofReceiver)6475": {
-            "label": "contract UpaProofReceiver",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_bytes32,t_uint256)": {
-            "label": "mapping(bytes32 => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_struct(Uint16Vector)4463_storage": {
-            "label": "struct Uint16VectorLib.Uint16Vector",
+          "t_struct(PausableStorage)193_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
             "members": [
               {
-                "label": "entries",
-                "type": "t_array(t_uint256)dyn_storage",
+                "label": "_paused",
+                "type": "t_bool",
                 "offset": 0,
                 "slot": "0"
               }
             ],
             "numberOfBytes": "32"
           },
+          "t_struct(ProofReceiverStorage)991_storage": {
+            "label": "struct UpaProofReceiver.ProofReceiverStorage",
+            "members": [
+              {
+                "label": "_circuitIds",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_circuitData",
+                "type": "t_mapping(t_bytes32,t_struct(CircuitData)951_storage)",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "_submissions",
+                "type": "t_mapping(t_bytes32,t_struct(Submission)964_storage)",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "_nextSubmissionIdx",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "_nextProofIdx",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "3"
+              },
+              {
+                "label": "_maxNumPublicInputs",
+                "type": "t_uint8",
+                "offset": 16,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(Submission)964_storage": {
+            "label": "struct UpaProofReceiver.Submission",
+            "members": [
+              {
+                "label": "proofDataDigest",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "submissionIdx",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "submissionBlockNumber",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "1"
+              },
+              {
+                "label": "numProofs",
+                "type": "t_uint16",
+                "offset": 16,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Uint16Vector)691_storage": {
+            "label": "struct Uint16VectorLib.Uint16Vector",
+            "members": [
+              {
+                "label": "entries",
+                "type": "t_array(t_uint16)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(VerifierStorage)1156_storage": {
+            "label": "struct UpaVerifier.VerifierStorage",
+            "members": [
+              {
+                "label": "worker",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "feeRecipient",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "outerVerifier",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "groth16Verifier",
+                "type": "t_contract(IGroth16Verifier)590",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "nextSubmissionIdxToVerify",
+                "type": "t_uint64",
+                "offset": 20,
+                "slot": "3"
+              },
+              {
+                "label": "lastVerifiedSubmissionHeight",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "openChallengeRefundAmounts",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "fixedReimbursement",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "numVerifiedInSubmission",
+                "type": "t_struct(Uint16Vector)691_storage",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "currentSubmissionProofIds",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "verifiedAtBlock",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "9"
+              }
+            ],
+            "numberOfBytes": "320"
+          },
+          "t_uint16": {
+            "label": "uint16",
+            "numberOfBytes": "2"
+          },
           "t_uint256": {
             "label": "uint256",
             "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
           }
         },
         "namespaces": {
+          "erc7201:VerifierStorage": [
+            {
+              "contract": "UpaVerifier",
+              "label": "worker",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:89",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "feeRecipient",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:91",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "outerVerifier",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:93",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "groth16Verifier",
+              "type": "t_contract(IGroth16Verifier)590",
+              "src": "contracts/UpaVerifier.sol:95",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "nextSubmissionIdxToVerify",
+              "type": "t_uint64",
+              "src": "contracts/UpaVerifier.sol:98",
+              "offset": 20,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "lastVerifiedSubmissionHeight",
+              "type": "t_uint64",
+              "src": "contracts/UpaVerifier.sol:102",
+              "offset": 0,
+              "slot": "4"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "openChallengeRefundAmounts",
+              "type": "t_mapping(t_bytes32,t_uint256)",
+              "src": "contracts/UpaVerifier.sol:105",
+              "offset": 0,
+              "slot": "5"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "fixedReimbursement",
+              "type": "t_uint256",
+              "src": "contracts/UpaVerifier.sol:109",
+              "offset": 0,
+              "slot": "6"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "numVerifiedInSubmission",
+              "type": "t_struct(Uint16Vector)691_storage",
+              "src": "contracts/UpaVerifier.sol:121",
+              "offset": 0,
+              "slot": "7"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "currentSubmissionProofIds",
+              "type": "t_array(t_bytes32)dyn_storage",
+              "src": "contracts/UpaVerifier.sol:123",
+              "offset": 0,
+              "slot": "8"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "verifiedAtBlock",
+              "type": "t_mapping(t_bytes32,t_uint256)",
+              "src": "contracts/UpaVerifier.sol:126",
+              "offset": 0,
+              "slot": "9"
+            }
+          ],
+          "erc7201:ProofReceiverStorage": [
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_circuitIds",
+              "type": "t_array(t_bytes32)dyn_storage",
+              "src": "contracts/UpaProofReceiver.sol:90",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_circuitData",
+              "type": "t_mapping(t_bytes32,t_struct(CircuitData)951_storage)",
+              "src": "contracts/UpaProofReceiver.sol:92",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_submissions",
+              "type": "t_mapping(t_bytes32,t_struct(Submission)964_storage)",
+              "src": "contracts/UpaProofReceiver.sol:94",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_nextSubmissionIdx",
+              "type": "t_uint64",
+              "src": "contracts/UpaProofReceiver.sol:96",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_nextProofIdx",
+              "type": "t_uint64",
+              "src": "contracts/UpaProofReceiver.sol:100",
+              "offset": 8,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_maxNumPublicInputs",
+              "type": "t_uint8",
+              "src": "contracts/UpaProofReceiver.sol:102",
+              "offset": 16,
+              "slot": "3"
+            }
+          ],
+          "erc7201:FeeBaseStorage": [
+            {
+              "contract": "UpaFeeBase",
+              "label": "totalFeeDueInWei",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:45",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaFeeBase",
+              "label": "aggregatorCollateral",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:49",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaFeeBase",
+              "label": "verifiedSubmissionIdxForAllocatedFee",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:51",
+              "offset": 0,
+              "slot": "2"
+            }
+          ],
           "erc7201:openzeppelin.storage.Ownable": [
             {
               "contract": "OwnableUpgradeable",
               "label": "_owner",
               "type": "t_address",
               "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      },
+      "allAddresses": [
+        "0x8824aCF0E30b38369b3B977FC1E2E8e94EBC6779",
+        "0x77B07a9419e33004d45a5CE0B25e682240b5b3Cf",
+        "0x832Fc445591406d26B472b4550A4040a217cA1E4",
+        "0xdEd99FabD0d3e063cf42E7E870542BB27c292322",
+        "0x3144dA7B11F3896C5E16fB887d5aD47765D7fbb6"
+      ]
+    },
+    "27a7eafce97af7d327f122c242a2a9135433b3c7662c9ef19aabba61f47d38ae": {
+      "address": "0xe876Bfbf0e743b8c0b1C36cee7E03b687f1A9393",
+      "txHash": "0xd939d05745723e246ef52818aebbb9fe82cbe234a116a600170192a69d14ecff",
+      "layout": {
+        "solcVersion": "0.8.26",
+        "storage": [
+          {
+            "label": "fixedGasFeePerProof",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256",
+            "contract": "UpaFixedGasFee",
+            "src": "contracts/UpaFixedGasFee.sol:14"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage": {
+            "label": "uint256[2][2][]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_array(t_uint256)2_storage)2_storage": {
+            "label": "uint256[2][2]",
+            "numberOfBytes": "128"
+          },
+          "t_array(t_array(t_uint256)2_storage)dyn_storage": {
+            "label": "uint256[2][]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint16)dyn_storage": {
+            "label": "uint16[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)2_storage": {
+            "label": "uint256[2]",
+            "numberOfBytes": "64"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IGroth16Verifier)590": {
+            "label": "contract IGroth16Verifier",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_bytes32,t_struct(CircuitData)951_storage)": {
+            "label": "mapping(bytes32 => struct UpaProofReceiver.CircuitData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Submission)964_storage)": {
+            "label": "mapping(bytes32 => struct UpaProofReceiver.Submission)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(CircuitData)951_storage": {
+            "label": "struct UpaProofReceiver.CircuitData",
+            "members": [
+              {
+                "label": "verificationKey",
+                "type": "t_struct(Groth16VK)585_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "544"
+          },
+          "t_struct(FeeBaseStorage)733_storage": {
+            "label": "struct UpaFeeBase.FeeBaseStorage",
+            "members": [
+              {
+                "label": "totalFeeDueInWei",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "aggregatorCollateral",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "verifiedSubmissionIdxForAllocatedFee",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Groth16VK)585_storage": {
+            "label": "struct Groth16VK",
+            "members": [
+              {
+                "label": "alpha",
+                "type": "t_array(t_uint256)2_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "beta",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "gamma",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "delta",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "10"
+              },
+              {
+                "label": "s",
+                "type": "t_array(t_array(t_uint256)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "14"
+              },
+              {
+                "label": "h1",
+                "type": "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "15"
+              },
+              {
+                "label": "h2",
+                "type": "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "16"
+              }
+            ],
+            "numberOfBytes": "544"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)193_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ProofReceiverStorage)991_storage": {
+            "label": "struct UpaProofReceiver.ProofReceiverStorage",
+            "members": [
+              {
+                "label": "_circuitIds",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_circuitData",
+                "type": "t_mapping(t_bytes32,t_struct(CircuitData)951_storage)",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "_submissions",
+                "type": "t_mapping(t_bytes32,t_struct(Submission)964_storage)",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "_nextSubmissionIdx",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "_nextProofIdx",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "3"
+              },
+              {
+                "label": "_maxNumPublicInputs",
+                "type": "t_uint8",
+                "offset": 16,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(Submission)964_storage": {
+            "label": "struct UpaProofReceiver.Submission",
+            "members": [
+              {
+                "label": "proofDataDigest",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "submissionIdx",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "submissionBlockNumber",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "1"
+              },
+              {
+                "label": "numProofs",
+                "type": "t_uint16",
+                "offset": 16,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Uint16Vector)691_storage": {
+            "label": "struct Uint16VectorLib.Uint16Vector",
+            "members": [
+              {
+                "label": "entries",
+                "type": "t_array(t_uint16)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(VerifierStorage)1158_storage": {
+            "label": "struct UpaVerifier.VerifierStorage",
+            "members": [
+              {
+                "label": "worker",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "feeRecipient",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "outerVerifier",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "groth16Verifier",
+                "type": "t_contract(IGroth16Verifier)590",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "nextSubmissionIdxToVerify",
+                "type": "t_uint64",
+                "offset": 20,
+                "slot": "3"
+              },
+              {
+                "label": "lastVerifiedSubmissionHeight",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "openChallengeRefundAmounts",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "fixedReimbursement",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "numVerifiedInSubmission",
+                "type": "t_struct(Uint16Vector)691_storage",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "currentSubmissionProofIds",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "verifiedAtBlock",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "version",
+                "type": "t_uint32",
+                "offset": 0,
+                "slot": "10"
+              }
+            ],
+            "numberOfBytes": "352"
+          },
+          "t_uint16": {
+            "label": "uint16",
+            "numberOfBytes": "2"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {
+          "erc7201:VerifierStorage": [
+            {
+              "contract": "UpaVerifier",
+              "label": "worker",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:89",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "feeRecipient",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:91",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "outerVerifier",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:93",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "groth16Verifier",
+              "type": "t_contract(IGroth16Verifier)590",
+              "src": "contracts/UpaVerifier.sol:95",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "nextSubmissionIdxToVerify",
+              "type": "t_uint64",
+              "src": "contracts/UpaVerifier.sol:98",
+              "offset": 20,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "lastVerifiedSubmissionHeight",
+              "type": "t_uint64",
+              "src": "contracts/UpaVerifier.sol:102",
+              "offset": 0,
+              "slot": "4"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "openChallengeRefundAmounts",
+              "type": "t_mapping(t_bytes32,t_uint256)",
+              "src": "contracts/UpaVerifier.sol:105",
+              "offset": 0,
+              "slot": "5"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "fixedReimbursement",
+              "type": "t_uint256",
+              "src": "contracts/UpaVerifier.sol:109",
+              "offset": 0,
+              "slot": "6"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "numVerifiedInSubmission",
+              "type": "t_struct(Uint16Vector)691_storage",
+              "src": "contracts/UpaVerifier.sol:121",
+              "offset": 0,
+              "slot": "7"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "currentSubmissionProofIds",
+              "type": "t_array(t_bytes32)dyn_storage",
+              "src": "contracts/UpaVerifier.sol:123",
+              "offset": 0,
+              "slot": "8"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "verifiedAtBlock",
+              "type": "t_mapping(t_bytes32,t_uint256)",
+              "src": "contracts/UpaVerifier.sol:126",
+              "offset": 0,
+              "slot": "9"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "version",
+              "type": "t_uint32",
+              "src": "contracts/UpaVerifier.sol:127",
+              "offset": 0,
+              "slot": "10"
+            }
+          ],
+          "erc7201:ProofReceiverStorage": [
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_circuitIds",
+              "type": "t_array(t_bytes32)dyn_storage",
+              "src": "contracts/UpaProofReceiver.sol:90",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_circuitData",
+              "type": "t_mapping(t_bytes32,t_struct(CircuitData)951_storage)",
+              "src": "contracts/UpaProofReceiver.sol:92",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_submissions",
+              "type": "t_mapping(t_bytes32,t_struct(Submission)964_storage)",
+              "src": "contracts/UpaProofReceiver.sol:94",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_nextSubmissionIdx",
+              "type": "t_uint64",
+              "src": "contracts/UpaProofReceiver.sol:96",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_nextProofIdx",
+              "type": "t_uint64",
+              "src": "contracts/UpaProofReceiver.sol:100",
+              "offset": 8,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_maxNumPublicInputs",
+              "type": "t_uint8",
+              "src": "contracts/UpaProofReceiver.sol:102",
+              "offset": 16,
+              "slot": "3"
+            }
+          ],
+          "erc7201:FeeBaseStorage": [
+            {
+              "contract": "UpaFeeBase",
+              "label": "totalFeeDueInWei",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:45",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaFeeBase",
+              "label": "aggregatorCollateral",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:49",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaFeeBase",
+              "label": "verifiedSubmissionIdxForAllocatedFee",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:51",
+              "offset": 0,
+              "slot": "2"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "322194a1ce4b272bf085e286f9f33cf0014db28e0450edbc4625c042362cc0d7": {
+      "address": "0xCf5d600AD7b7D09F1dA6dC642F6115583d88028d",
+      "txHash": "0x5c2935bcf083284b96821c7760a3909b2760cd2fa13c085a05439c522f06bf00",
+      "layout": {
+        "solcVersion": "0.8.26",
+        "storage": [
+          {
+            "label": "fixedGasFeePerProof",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256",
+            "contract": "UpaFixedGasFee",
+            "src": "contracts/UpaFixedGasFee.sol:14"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage": {
+            "label": "uint256[2][2][]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_array(t_uint256)2_storage)2_storage": {
+            "label": "uint256[2][2]",
+            "numberOfBytes": "128"
+          },
+          "t_array(t_array(t_uint256)2_storage)dyn_storage": {
+            "label": "uint256[2][]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint16)dyn_storage": {
+            "label": "uint16[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)2_storage": {
+            "label": "uint256[2]",
+            "numberOfBytes": "64"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IGroth16Verifier)590": {
+            "label": "contract IGroth16Verifier",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_bytes32,t_struct(CircuitData)954_storage)": {
+            "label": "mapping(bytes32 => struct UpaProofReceiver.CircuitData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(Submission)967_storage)": {
+            "label": "mapping(bytes32 => struct UpaProofReceiver.Submission)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(CircuitData)954_storage": {
+            "label": "struct UpaProofReceiver.CircuitData",
+            "members": [
+              {
+                "label": "verificationKey",
+                "type": "t_struct(Groth16VK)585_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "544"
+          },
+          "t_struct(FeeBaseStorage)736_storage": {
+            "label": "struct UpaFeeBase.FeeBaseStorage",
+            "members": [
+              {
+                "label": "totalFeeDueInWei",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "aggregatorCollateral",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "verifiedSubmissionIdxForAllocatedFee",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(Groth16VK)585_storage": {
+            "label": "struct Groth16VK",
+            "members": [
+              {
+                "label": "alpha",
+                "type": "t_array(t_uint256)2_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "beta",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "gamma",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "delta",
+                "type": "t_array(t_array(t_uint256)2_storage)2_storage",
+                "offset": 0,
+                "slot": "10"
+              },
+              {
+                "label": "s",
+                "type": "t_array(t_array(t_uint256)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "14"
+              },
+              {
+                "label": "h1",
+                "type": "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "15"
+              },
+              {
+                "label": "h2",
+                "type": "t_array(t_array(t_array(t_uint256)2_storage)2_storage)dyn_storage",
+                "offset": 0,
+                "slot": "16"
+              }
+            ],
+            "numberOfBytes": "544"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)193_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ProofReceiverStorage)994_storage": {
+            "label": "struct UpaProofReceiver.ProofReceiverStorage",
+            "members": [
+              {
+                "label": "_circuitIds",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_circuitData",
+                "type": "t_mapping(t_bytes32,t_struct(CircuitData)954_storage)",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "_submissions",
+                "type": "t_mapping(t_bytes32,t_struct(Submission)967_storage)",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "_nextSubmissionIdx",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "_nextProofIdx",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "3"
+              },
+              {
+                "label": "_maxNumPublicInputs",
+                "type": "t_uint8",
+                "offset": 16,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(Submission)967_storage": {
+            "label": "struct UpaProofReceiver.Submission",
+            "members": [
+              {
+                "label": "proofDataDigest",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "submissionIdx",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "submissionBlockNumber",
+                "type": "t_uint64",
+                "offset": 8,
+                "slot": "1"
+              },
+              {
+                "label": "numProofs",
+                "type": "t_uint16",
+                "offset": 16,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Uint16Vector)694_storage": {
+            "label": "struct Uint16VectorLib.Uint16Vector",
+            "members": [
+              {
+                "label": "entries",
+                "type": "t_array(t_uint16)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(VerifierStorage)1162_storage": {
+            "label": "struct UpaVerifier.VerifierStorage",
+            "members": [
+              {
+                "label": "worker",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "feeRecipient",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "outerVerifier",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "groth16Verifier",
+                "type": "t_contract(IGroth16Verifier)590",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "nextSubmissionIdxToVerify",
+                "type": "t_uint64",
+                "offset": 20,
+                "slot": "3"
+              },
+              {
+                "label": "lastVerifiedSubmissionHeight",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "openChallengeRefundAmounts",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "fixedReimbursement",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "numVerifiedInSubmission",
+                "type": "t_struct(Uint16Vector)694_storage",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "currentSubmissionProofIds",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "verifiedAtBlock",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "version",
+                "type": "t_uint32",
+                "offset": 0,
+                "slot": "10"
+              }
+            ],
+            "numberOfBytes": "352"
+          },
+          "t_uint16": {
+            "label": "uint16",
+            "numberOfBytes": "2"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {
+          "erc7201:VerifierStorage": [
+            {
+              "contract": "UpaVerifier",
+              "label": "worker",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:89",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "feeRecipient",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:91",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "outerVerifier",
+              "type": "t_address",
+              "src": "contracts/UpaVerifier.sol:93",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "groth16Verifier",
+              "type": "t_contract(IGroth16Verifier)590",
+              "src": "contracts/UpaVerifier.sol:95",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "nextSubmissionIdxToVerify",
+              "type": "t_uint64",
+              "src": "contracts/UpaVerifier.sol:98",
+              "offset": 20,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "lastVerifiedSubmissionHeight",
+              "type": "t_uint64",
+              "src": "contracts/UpaVerifier.sol:102",
+              "offset": 0,
+              "slot": "4"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "openChallengeRefundAmounts",
+              "type": "t_mapping(t_bytes32,t_uint256)",
+              "src": "contracts/UpaVerifier.sol:105",
+              "offset": 0,
+              "slot": "5"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "fixedReimbursement",
+              "type": "t_uint256",
+              "src": "contracts/UpaVerifier.sol:109",
+              "offset": 0,
+              "slot": "6"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "numVerifiedInSubmission",
+              "type": "t_struct(Uint16Vector)694_storage",
+              "src": "contracts/UpaVerifier.sol:121",
+              "offset": 0,
+              "slot": "7"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "currentSubmissionProofIds",
+              "type": "t_array(t_bytes32)dyn_storage",
+              "src": "contracts/UpaVerifier.sol:123",
+              "offset": 0,
+              "slot": "8"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "verifiedAtBlock",
+              "type": "t_mapping(t_bytes32,t_uint256)",
+              "src": "contracts/UpaVerifier.sol:126",
+              "offset": 0,
+              "slot": "9"
+            },
+            {
+              "contract": "UpaVerifier",
+              "label": "version",
+              "type": "t_uint32",
+              "src": "contracts/UpaVerifier.sol:128",
+              "offset": 0,
+              "slot": "10"
+            }
+          ],
+          "erc7201:ProofReceiverStorage": [
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_circuitIds",
+              "type": "t_array(t_bytes32)dyn_storage",
+              "src": "contracts/UpaProofReceiver.sol:90",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_circuitData",
+              "type": "t_mapping(t_bytes32,t_struct(CircuitData)954_storage)",
+              "src": "contracts/UpaProofReceiver.sol:92",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_submissions",
+              "type": "t_mapping(t_bytes32,t_struct(Submission)967_storage)",
+              "src": "contracts/UpaProofReceiver.sol:94",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_nextSubmissionIdx",
+              "type": "t_uint64",
+              "src": "contracts/UpaProofReceiver.sol:96",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_nextProofIdx",
+              "type": "t_uint64",
+              "src": "contracts/UpaProofReceiver.sol:100",
+              "offset": 8,
+              "slot": "3"
+            },
+            {
+              "contract": "UpaProofReceiver",
+              "label": "_maxNumPublicInputs",
+              "type": "t_uint8",
+              "src": "contracts/UpaProofReceiver.sol:102",
+              "offset": 16,
+              "slot": "3"
+            }
+          ],
+          "erc7201:FeeBaseStorage": [
+            {
+              "contract": "UpaFeeBase",
+              "label": "totalFeeDueInWei",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:45",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "UpaFeeBase",
+              "label": "aggregatorCollateral",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:49",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "UpaFeeBase",
+              "label": "verifiedSubmissionIdxForAllocatedFee",
+              "type": "t_uint256",
+              "src": "contracts/UpaFeeBase.sol:51",
+              "offset": 0,
+              "slot": "2"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
               "offset": 0,
               "slot": "0"
             }
