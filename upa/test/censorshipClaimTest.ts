@@ -29,6 +29,7 @@ describe("Censorship challenge tests", () => {
     s1: Submission;
     s2: Submission;
     s3: Submission;
+    user1StartBalance: bigint;
   };
   type DeployAndRegisterResult = {
     upa: UpaInstance;
@@ -105,6 +106,11 @@ describe("Censorship challenge tests", () => {
     const { upa, user1, user2, circuitIds, proofs, inputs } =
       deployAndRegisterResult;
     const { verifier } = upa;
+
+    const user1StartBalance = await verifier.runner!.provider!.getBalance(
+      user1
+    );
+
     // User 1 submits a valid proof
     const firstTx = await submitProof(
       verifier.connect(user1),
@@ -145,6 +151,7 @@ describe("Censorship challenge tests", () => {
       s1: await s1P,
       s2: await s2P,
       s3: await s3P,
+      user1StartBalance,
     };
   }
 
@@ -269,7 +276,8 @@ describe("Censorship challenge tests", () => {
       }
     }).timeout(200000);
     it("multi censorship challenge", async function () {
-      const { upa, worker, user1, s1, s2, s3 } = await loadFixture(fixture);
+      const { upa, worker, user1, s1, s2, s3, user1StartBalance } =
+        await loadFixture(fixture);
       const { verifier } = upa;
       // The aggregator will aggregate the first and third submissions,
       // skipping the second
@@ -287,8 +295,18 @@ describe("Censorship challenge tests", () => {
           )
         ).to.be.false;
       }
+
+      const provider = verifier.runner!.provider!;
+      const balance0 = await provider.getBalance(user1);
+      const submitCost = user1StartBalance - balance0;
+      let balance1;
+
       // user1 submits a censorship challenge
       for (let i = 0; i < numProofsInS2; i++) {
+        if (i == numProofsInS2 - 1) {
+          balance1 = await provider.getBalance(user1);
+        }
+
         await verifier
           .connect(user1)
           .challenge(
@@ -301,6 +319,17 @@ describe("Censorship challenge tests", () => {
             s2.computeProofDataMerkleProof(i)
           );
       }
+
+      const balance2 = await provider.getBalance(user1);
+
+      // Expect balance2 > balance 1
+      expect(balance2).is.greaterThan(balance1);
+      // Expect costAfterRefund < submitCost * 2% (we tolerate some minimal
+      // loss to the caller, but it should be very small compared to the
+      // overall cost)
+      const costAfterRefund = balance2 - user1StartBalance;
+      expect(costAfterRefund*50n).is.lessThan(submitCost);
+
       // The challenge passes and the proofs are now marked as verified
       for (let i = 0; i < numProofsInS2; i++) {
         expect(
