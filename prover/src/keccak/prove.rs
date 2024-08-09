@@ -30,33 +30,33 @@ use std::time::Instant;
 pub struct ProveParams {
     #[arg(short = 'c', long, value_name = "config-file", default_value = UPA_CONFIG)]
     /// Configuration file
-    config: String,
+    pub(crate) config: String,
 
     #[arg(short = 's', long, value_name = "srs-file", default_value = KECCAK_SRS)]
-    srs: String,
+    pub(crate) srs: String,
 
     #[arg(short = 'p', long, value_name = "proving-key-file", default_value = KECCAK_PK)]
-    proving_key: String,
+    pub(crate) proving_key: String,
 
     #[arg(short = 'g', long, value_name = "gate-config-file", default_value = KECCAK_GATE_CONFIG)]
     /// Circuit specs file (KeccakGateConfig)
-    gate_config: String,
+    pub(crate) gate_config: String,
 
     #[arg(short = 'i', long, value_name = "ubv-inputs-file")]
     /// Public input files for each BV circuit
-    ubv_instances: Vec<String>,
+    pub(crate) ubv_instances: Vec<String>,
 
     #[arg(long, value_name = "proof-file")]
     /// Output proof file
-    proof: String,
+    pub(crate) proof: String,
 
     #[arg(long, value_name = "instance-file")]
     /// Output instance file (defaults to <proof-file>.instance if not given)
-    instance: Option<String>,
+    pub(crate) instance: Option<String>,
 
     #[arg(short = 'n', long)]
     /// Do nothing
-    dry_run: bool,
+    pub(crate) dry_run: bool,
 }
 
 pub fn prove(params: ProveParams) {

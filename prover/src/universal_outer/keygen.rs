@@ -37,47 +37,47 @@ use std::time::Instant;
 pub struct KeygenParams {
     /// UPA configuration file (OuterConfiig)
     #[arg(long, value_name = "config-file", default_value = UPA_CONFIG)]
-    config: String,
+    pub(crate) config: String,
 
     /// Outer circuit SRS file
     #[arg(long, value_name = "outer-srs-file", default_value = OUTER_SRS)]
-    outer_srs: String,
+    pub(crate) outer_srs: String,
 
     /// Batch Verify circuit SRS file
     #[arg(long, value_name = "bv-srs-file", default_value = BV_SRS)]
-    bv_srs: String,
+    pub(crate) bv_srs: String,
 
     /// Keccak circuit SRS file
     #[arg(long, value_name = "keccak-srs-file", default_value = KECCAK_SRS)]
-    keccak_srs: String,
+    pub(crate) keccak_srs: String,
 
     /// Output proving key file
     #[arg(short = 'p', long, value_name = "proving-key-file", default_value = OUTER_PK)]
-    proving_key: String,
+    pub(crate) proving_key: String,
 
     /// Output verification key file
     #[arg(short = 'v', long, value_name = "verification-key-file", default_value = OUTER_VK)]
-    verification_key: String,
+    pub(crate) verification_key: String,
 
     /// Output protocol file
     #[arg(short = 'r', long, value_name = "protocol-file", default_value = OUTER_PROTOCOL)]
-    protocol: String,
+    pub(crate) protocol: String,
 
     /// Output gate config file
     #[arg(short = 'g', long, value_name = "gate-config-file", default_value = OUTER_GATE_CONFIG)]
-    gate_config: String,
+    pub(crate) gate_config: String,
 
     /// Output num instance file
     #[arg(long, value_name = "num_instance", default_value = OUTER_INSTANCE_SIZE)]
-    num_instance: String,
+    pub(crate) num_instance: String,
 
     /// Compute only VK, protocol, and gate config. Skip PK generation.
     #[arg(long, value_name = "vk-only")]
-    vk_only: bool,
+    pub(crate) vk_only: bool,
 
     /// show circuit stats and exit.  do not write files.
     #[arg(short = 'n', long)]
-    dry_run: bool,
+    pub(crate) dry_run: bool,
 }
 
 /// Entry point to the `keygen` subcommand.  Runs the keygen process for the
