@@ -1,7 +1,7 @@
 use crate::{
     default_values::{
-        OUTER_GATE_CONFIG, OUTER_INSTANCE_SIZE, OUTER_SRS, OUTER_VERIFIER_YUL,
-        OUTER_VK,
+        OUTER_GATE_CONFIG, OUTER_INSTANCE_SIZE, OUTER_PROOF, OUTER_SRS,
+        OUTER_VERIFIER_YUL, OUTER_VK,
     },
     universal_outer::{self, generate_evm_verifier, GenerateVerifierParams},
 };
@@ -26,7 +26,7 @@ pub struct VerifyParams {
     num_instance: String,
 
     /// Outer circuit proof file
-    #[arg(short = 'p', long, value_name = "outer-proof-file")]
+    #[arg(short = 'p', long, value_name = "outer-proof-file", default_value = OUTER_PROOF)]
     proof: String,
 
     /// Outer circuit public inputs file
@@ -73,6 +73,10 @@ impl From<&VerifyParams> for universal_outer::VerifyParams {
 }
 
 pub fn verify(params: VerifyParams) {
-    generate_evm_verifier((&params).into());
+    if !params.dry_run {
+        // only generate the evm verifier when
+        // it isn't a dry run
+        generate_evm_verifier((&params).into());
+    }
     universal_outer::verify((&params).into());
 }

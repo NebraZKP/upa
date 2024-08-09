@@ -1,8 +1,8 @@
 use crate::{
     default_values::{
-        KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_PROTOCOL, KECCAK_SRS,
-        OUTER_GATE_CONFIG, OUTER_PK, OUTER_SRS, UBV_GATE_CONFIG, UBV_PK,
-        UBV_PROTOCOL, UBV_SRS, UPA_CONFIG,
+        KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_PROOF, KECCAK_PROTOCOL,
+        KECCAK_SRS, OUTER_GATE_CONFIG, OUTER_PK, OUTER_PROOF, OUTER_SRS,
+        UBV_GATE_CONFIG, UBV_PK, UBV_PROOF, UBV_PROTOCOL, UBV_SRS, UPA_CONFIG,
     },
     keccak, universal_batch_verifier, universal_outer,
 };
@@ -61,15 +61,15 @@ pub struct ProveParams {
 
     /// JSON files each containing a batch of app_vk, proof, public input triples
     /// to be verified by the Universal Batch Verifier circuit.
-    #[arg(long, value_name = "app-vk-proof-batch-files")]
+    #[arg(long, value_name = "app-vk-proof-batch-file")]
     app_vk_proof_batch: Vec<String>,
 
     /// Output UBV proof file
-    #[arg(long, value_name = "ubv-proof-file")]
+    #[arg(long, value_name = "ubv-proof-file", default_value = UBV_PROOF)]
     ubv_proof: String,
 
     /// Output keccak proof file
-    #[arg(long, value_name = "keccak-proof-file")]
+    #[arg(long, value_name = "keccak-proof-file", default_value = KECCAK_PROOF)]
     keccak_proof: String,
 
     /// Output UBV instance file (defaults to <ubv-proof-file>.instance if not given)
@@ -81,7 +81,7 @@ pub struct ProveParams {
     keccak_instance: Option<String>,
 
     /// Output outer proof file
-    #[arg(long, value_name = "outer-proof-file")]
+    #[arg(long, value_name = "outer-proof-file", default_value = OUTER_PROOF)]
     proof: String,
 
     /// Output instance file (defaults to <outer-proof-file>.instance if not given)

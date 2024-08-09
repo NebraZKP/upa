@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-# Basic tests of the prover commands, primarily to check consistency against
-# the SDK and contract code.
+# Tests keygen, proving and verification
+
+set -e
+set -x
 
 # Build
 pushd ../upa/
@@ -15,9 +17,12 @@ cargo build --release
 shopt -s expand_aliases
 . ./scripts/shell_setup.sh
 
-set -e
-set -x
+DRY_RUN_FLAG=""
+if [ "$DRY_RUN" -eq 1 ]; then
+  DRY_RUN_FLAG="--dry-run"
+fi
 
+rm -rf _test_prover
 mkdir -p _test_prover
 pushd _test_prover
 
@@ -31,6 +36,42 @@ pushd _test_prover
         echo "cid_native: ${cid_native}"
         exit 1
     fi
+
+    # Get a default config if one is not present.
+    [ -e upa_config.json ] || cp ../tests/upa_config_2.json upa_config.json
+    inner_batch_size=`jq -r .inner_batch_size upa_config.json`
+    max_num_inputs=`jq -r .max_num_app_public_inputs upa_config.json`
+    outer_batch_size=`jq -r .outer_batch_size upa_config.json`
+
+    # Create `inner_batch_size` (unsafe) keys.
+    for i in $(seq 0 $(($inner_batch_size - 1))); do
+      key_file="vk-${i}.unsafe.json"
+      if [ $(($i % 2)) -eq 0 ]; then
+        prover groth16 generate-fake-vk -i ${max_num_inputs} -v $key_file
+      else
+        prover groth16 generate-fake-vk -i $((${max_num_inputs} / 2)) -v $key_file -c
+      fi
+    done
+
+    # Create `outer_batch_size` inner batches
+    for j in $(seq 0 $(($outer_batch_size - 1))); do
+      prover groth16 generate-proofs \
+        -n ${inner_batch_size} \
+        $(for i in $(seq 0 $(($inner_batch_size - 1))); do echo -v vk-${i}.unsafe.json; done) \
+        -b inner-batch-${j}.json
+    done
+
+    batch_files=""
+    for j in $(seq 0 $(($outer_batch_size - 1))); do
+      batch_files+="--app-vk-proof-batch inner-batch-${j}.json "
+    done
+    echo ${batch_files}
+
+    # Run keygen
+    dummy_srs_setup
+    prover full keygen ${DRY_RUN_FLAG}
+    prover full prove ${DRY_RUN_FLAG} ${batch_files}
+    prover full verify ${DRY_RUN_FLAG}
 
 popd # _test_prover
 
