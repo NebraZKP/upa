@@ -110,9 +110,13 @@ jobs:
         run: |
           cargo clippy --no-deps
 
-      - name: Run test_prover
+      - name: Run integration_test
         run: |
-            ./scripts/test_prover
+            ./scripts/integration_test
+
+      - name: Run test_prover (dry run)
+        run: |
+            DRY_RUN=1 ./scripts/test_prover
 
       - name: Run aggregation benchmark
         run: |

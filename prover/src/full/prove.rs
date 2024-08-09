@@ -1,13 +1,14 @@
 use crate::{
     default_values::{
-        KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_PROTOCOL, KECCAK_SRS,
-        OUTER_GATE_CONFIG, OUTER_PK, OUTER_SRS, UBV_GATE_CONFIG, UBV_PK,
-        UBV_PROTOCOL, UBV_SRS, UPA_CONFIG,
+        KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_PROOF, KECCAK_PROTOCOL,
+        KECCAK_SRS, OUTER_GATE_CONFIG, OUTER_PK, OUTER_PROOF, OUTER_SRS,
+        UBV_GATE_CONFIG, UBV_PK, UBV_PROOF, UBV_PROTOCOL, UBV_SRS, UPA_CONFIG,
     },
     keccak, universal_batch_verifier, universal_outer,
 };
 use circuits::utils::upa_config::UpaConfig;
 use clap::Parser;
+use log::info;
 
 #[derive(Clone, Debug, Parser)]
 pub struct ProveParams {
@@ -61,15 +62,15 @@ pub struct ProveParams {
 
     /// JSON files each containing a batch of app_vk, proof, public input triples
     /// to be verified by the Universal Batch Verifier circuit.
-    #[arg(long, value_name = "app-vk-proof-batch-files")]
+    #[arg(long, value_name = "app-vk-proof-batch-file")]
     app_vk_proof_batch: Vec<String>,
 
     /// Output UBV proof file
-    #[arg(long, value_name = "ubv-proof-file")]
+    #[arg(long, value_name = "ubv-proof-file", default_value = UBV_PROOF)]
     ubv_proof: String,
 
     /// Output keccak proof file
-    #[arg(long, value_name = "keccak-proof-file")]
+    #[arg(long, value_name = "keccak-proof-file", default_value = KECCAK_PROOF)]
     keccak_proof: String,
 
     /// Output UBV instance file (defaults to <ubv-proof-file>.instance if not given)
@@ -81,7 +82,7 @@ pub struct ProveParams {
     keccak_instance: Option<String>,
 
     /// Output outer proof file
-    #[arg(long, value_name = "outer-proof-file")]
+    #[arg(long, value_name = "outer-proof-file", default_value = OUTER_PROOF)]
     proof: String,
 
     /// Output instance file (defaults to <outer-proof-file>.instance if not given)
@@ -155,9 +156,9 @@ impl From<&ProveParams> for keccak::ProveParams {
         let value = value.clone();
         Self {
             config: value.config,
-            srs: value.ubv_srs,
-            proving_key: value.ubv_proving_key,
-            gate_config: value.ubv_gate_config,
+            srs: value.keccak_srs,
+            proving_key: value.keccak_proving_key,
+            gate_config: value.keccak_gate_config,
             ubv_instances,
             proof: value.keccak_proof,
             instance: value.keccak_instance,
@@ -194,9 +195,12 @@ pub fn prove(params: ProveParams) {
     let upa_config = UpaConfig::from_file(&params.config);
     let outer_batch_size = upa_config.outer_batch_size;
     for i in 0..outer_batch_size {
+        info!("Generating UBV proof for batch number {i}");
         let ubv_prove_params = universal_batch_verifier::ProveParams::from_full_prove_params_and_batch_number(&params, i);
         universal_batch_verifier::prove(ubv_prove_params);
     }
+    info!("Generating keccak proof");
     keccak::prove((&params).into());
+    info!("Generating outer proof");
     universal_outer::prove((&params).into());
 }
