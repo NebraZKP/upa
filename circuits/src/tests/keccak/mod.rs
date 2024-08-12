@@ -464,8 +464,7 @@ impl<F: EccPrimeField> AssignedKeccakInput<F> {
         self.len().value().get_lower_32() as usize
     }
 
-    /// Returns 1 if the input uses the optional LegoSNARK commitment and
-    /// 0 otherwise.
+    /// Returns 1 if the input uses the optional commitment, and 0 otherwise.
     pub fn has_commitment(&self) -> bool {
         self.has_commitment.value().get_lower_32() != 0
     }
