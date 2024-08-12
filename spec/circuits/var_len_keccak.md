@@ -11,8 +11,7 @@ For each of $M$ application proofs with verifying key $`vk_i`$, the Keccak circu
 ```math
 \mathsf{C_{ID}}_i = \mathsf{keccak}(\mathsf{domain tag}, vk_i)
 ```
-See [Circuit ID Computation](#circuit-id-computation) below for the details regarding domain tags and the byte representation of $`vk_i`$.
-
+to create a 32-byte digest.  See [Circuit ID Computation](#circuit-id-computation) below for details of the domain tags.
 
 ### Proof IDs:
 For each of $M$ application proofs with public inputs $P_i$ and circuit ID $`\mathsf{C_{ID}}_i`$ computed above, the Keccak circuit:
@@ -43,7 +42,7 @@ The variable length keccak circuit is determined by the following parameters:
 ## Inputs
 
 The input consists of tuples of the form $`\{ (\ell_i, vk_i,n_i, \overline{P}_i, m_i) \}^M_{i=1}`$, where
-- $`vk_i`$ is a padded Groth16 verifying key, represented as non-native limbs (see [Circuit ID Computation](#circuit-id-computation) ).
+- $`vk_i`$ is a padded Groth16 verifying key (for a circuit that accepts $\ell_i$ public inputs), represented as non-native limbs (see [Circuit ID Computation](#circuit-id-computation) ).
 - $`n_i`$ is 1 if $`vk`$ belongs to a circuit that uses the optional extra commitment and is 0 otherwise.
 - $`0 \leq \ell_i \leq L`$. We cast $\ell_i$ as an $\mathbb{F}_r$ element.
 - $`\overline{P}_i \in \mathbb{F}_r^L`$. Only the first $\ell_i$ elements of $`\overline{P}_i`$ will be used to compute the Proof ID.
@@ -63,10 +62,7 @@ We give the high-level description of the Keccak circuit, referring to component
 The circuit ID corresponding to a given $`vk`$ is $`\mathsf{C_{ID}} = \mathsf{keccak}(\mathsf{domain tag},vk)`$.
 
 #### Domain Tag
-The domain tag is derived either from the string `UPA Groth16 circuit id` (if the circuit does not use the commitment to witness value) or else from the string `UPA Groth16 with commitment circuit id`. The domain tag is derived from this string as follows:
-1. Convert the domain tag string to bytes.
-2. Compute the keccak digest of those bytes, obtaining 32 bytes.
-3. Convert these 32 bytes to a field element, by considering them as the little-endian byte representation of a 256-bit integer and reducing modulo $`r`$.
+The domain tag is derived either from the string `UPA Groth16 circuit id` (if the circuit does not use the commitment to witness value) or else from the string `UPA Groth16 with commitment circuit id`. The string is interpreted as ASCII bytes and it's 32-byte Keccak digest is used as the corresponding domain tag.
 
 #### Byte Representation
 We encode $`vk`$ in bytes as $`\alpha || \beta || \gamma || \delta || \ell_s || s_0 || ... || s_{\ell_s-1}`$ if the circuit does not use the optional commitment to witness value. If it does use the optional commitment we append $`h_1 || h_2`$ to the above bytes.
@@ -398,6 +394,8 @@ For these values we expect $`\mathsf{preimage}_{\mathsf{var}}=[4,5,6,7,8,9,0,0,0
 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0
 \end{pmatrix}
 = \begin{pmatrix} 4 & 5 & 6 & 0 & 0 & 0 & 0 & 0 & 0 \end{pmatrix}
@@ -414,7 +412,7 @@ After this step $`\mathsf{preimage}_{\mathsf{var}}= [4, 5, 6, 0, 0, 0, 0, 0, 0]`
 \end{pmatrix}
 = \begin{pmatrix} 0 & 0 & 0 & 7 & 8 & 9 & 0 & 0 & 0 \end{pmatrix}
 ```
-After this step $`\mathsf{preimage}_{\mathsf{var}}= [4, 5, 6, 7, 8, 0, 0]`$. Its unpadded length is currently $`\ell_0 + \ell_1 = 6`$.
+After this step $`\mathsf{preimage}_{\mathsf{var}}= [4, 5, 6, 7, 8, 9, 0, 0, 0]`$. Its unpadded length is currently $`\ell_0 + \ell_1 = 6`$.
 
 #### Slice-Adder Matrix
 The slice-adder matrix $S_k$ has dimensions determined by circuit constants
