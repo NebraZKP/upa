@@ -20,8 +20,12 @@ const MAX_BIT_SIZE: usize = 32;
 pub(crate) struct KeccakMultiVarHasher<F: EccPrimeField> {
     /// Fixed length input, assumed to be bytes
     fixed_input: Vec<AssignedValue<F>>,
-    /// Padded variable length inputs, assumed to be limb decompositions
-    /// of Fq elements.
+    /// Padded variable length inputs, assumed to be limb decompositions of Fq
+    /// elements.  Note that the circuit does not constrain these to have
+    /// lengths that are a multiple of the number of limbs.  The expectation
+    /// is that the user either configures the circuit such that this
+    /// constraint is naturally satisfied, or includes an explicit constraint
+    /// on the length.
     var_inputs: Vec<Vec<AssignedValue<F>>>,
     /// The length of each variable length input, measured in F elements.
     var_input_lengths: Vec<AssignedValue<F>>,
