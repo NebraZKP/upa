@@ -66,7 +66,13 @@ impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakMultiVarHasher<F> {
         // Expect input to be a limb decomposition of Fq points
         assert_eq!(input.len() % NUM_LIMBS, 0);
         assert_eq!(len.value().get_lower_32() % NUM_LIMBS as u32, 0);
-        assert!(input.len() < 1 << MAX_BIT_SIZE, "input too long");
+
+        // `input.len` at keygen determines the maximum lengths supported by
+        // the circuit.  Since the in-circuit constraint on length is
+        // implemented as `less_than` over 32 bits, the length AND the bound
+        // must be 32 bit numbers.  Hence `BOUND = (1 << MAX_BIT_SIZE) - 1`,
+        // and `length < BOUND`.
+        assert!(input.len() < (1 << MAX_BIT_SIZE) - 1, "input too long");
 
         self.var_inputs.push(input.to_vec());
         self.var_input_lengths.push(len);
