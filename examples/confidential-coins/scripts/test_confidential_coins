@@ -72,9 +72,6 @@ pushd _test_confidential_coins
     AGGREGATOR_ADDRESS=0x`cat ${AGGREGATOR_KEYFILE} | jq -r .address`
     upa dev fund ${AGGREGATOR_ADDRESS}
 
-    # Set interval mining mode for contract deployment
-    upa dev interval-mining 500
-
     # Deploy UPA using DEPLOYER_KEYFILE and then confidential-coins using
     # APP_KEYFILE.
     upa owner deploy \
@@ -84,8 +81,6 @@ pushd _test_confidential_coins
            --worker ${AGGREGATOR_ADDRESS} \
            --use-test-config \
            --retries 3
-
-    upa dev interval-mining 0
 
     # Register a vk
     upa registervk \

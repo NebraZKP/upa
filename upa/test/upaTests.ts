@@ -49,6 +49,7 @@ import { UpaFixedGasFee__factory } from "../typechain-types";
 import { SubmissionProof } from "../src/sdk/submission";
 import * as fs from "fs";
 import { deployUpa } from "../src/tool/deploy";
+import assert from "assert";
 
 /// The type of objects passed to `parseLog`.
 type Log = { topics: Array<string>; data: string };
@@ -142,6 +143,7 @@ export async function deployUpaWithVerifier(
     contract_hex,
     maxNumPublicInputs,
     3 /*maxRetries*/,
+    false /*prepare*/,
     undefined /*groth16Verifier*/,
     owner.address,
     worker.address,
@@ -151,9 +153,10 @@ export async function deployUpaWithVerifier(
     undefined /* fixedReimbursement */,
     version
   );
+  assert(upaDesc);
   const upa = await upaInstanceFromDescriptor(upaDesc, owner);
 
-  return { upa, upaDesc, owner, worker, user1, user2 };
+  return { upa, upaDesc: upaDesc, owner, worker, user1, user2 };
 }
 
 export async function deployUpaDummyVerifier(version?: string) {
