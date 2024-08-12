@@ -1,5 +1,8 @@
 use crate::{
-    keccak::{chip::KeccakChip, utils::multi_coordinates_to_bytes, NUM_LIMBS},
+    keccak::{
+        chip::KeccakChip, utils::multi_coordinates_to_bytes, NUM_BYTES_FQ,
+        NUM_LIMBS,
+    },
     EccPrimeField,
 };
 use halo2_base::{
@@ -144,26 +147,32 @@ impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakMultiVarHasher<F> {
             offset_limbs = range.gate.add(ctx, offset_limbs, *len);
         }
 
-        // preimage_var now holds the desired non-native limbs. Form preimage
-        // as the fixed-length input followed by the bytes in the non-native limbs.
+        // `preimage_var` now holds the desired non-native limbs (where
+        // `var_preimage_len` is the number of limbs). Form `preimage` as the
+        // fixed-length input followed by the bytes in the non-native limbs.
+
         let mut preimage = Vec::with_capacity(
-            self.fixed_input.len() + var_preimage_len / 3 * 32,
+            self.fixed_input.len()
+                + var_preimage_len / NUM_LIMBS * NUM_BYTES_FQ,
         );
         preimage.extend_from_slice(&self.fixed_input);
         let var_bytes = multi_coordinates_to_bytes(ctx, range, &preimage_var);
-        assert_eq!(var_bytes.len(), var_preimage_len / 3 * 32);
+        assert_eq!(
+            var_bytes.len(),
+            var_preimage_len / NUM_LIMBS * NUM_BYTES_FQ
+        );
         preimage.extend_from_slice(&var_bytes);
 
         // Given the length in limbs, compute the length of the variable part of the preimage in bytes.
 
-        let three = ctx.load_constant(F::from(3u64));
+        let limbs_per_fq = ctx.load_constant(F::from(NUM_LIMBS as u64));
         let var_input_fq_length =
-            range.gate.div_unsafe(ctx, offset_limbs, three);
+            range.gate.div_unsafe(ctx, offset_limbs, limbs_per_fq);
         // Overly conservative constraint to ensure division didn't overflow.
         range.range_check(ctx, var_input_fq_length, MAX_BIT_SIZE);
-        let thirty_two = ctx.load_constant(F::from(32u64));
+        let bytes_per_fq = ctx.load_constant(F::from(NUM_BYTES_FQ as u64));
         let var_input_byte_length =
-            range.gate.mul(ctx, var_input_fq_length, thirty_two);
+            range.gate.mul(ctx, var_input_fq_length, bytes_per_fq);
 
         // Return the preimage and the byte length of its non-padding section
         let fixed_inputs_len =
