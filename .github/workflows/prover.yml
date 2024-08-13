@@ -50,6 +50,11 @@ jobs:
     defaults:
       run:
         working-directory: prover
+    
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version: [20]
 
     steps:
       - name: Checkout
@@ -59,10 +64,35 @@ jobs:
       - name: Set HOME env variable
         run: |
           echo "HOME=/root" >> ${GITHUB_ENV}
+
       # For EC2 runner
       - name: Add pre-installed cargo and rustc executables to github path.
         run: |
           echo "$HOME/.cargo/bin" >> ${GITHUB_PATH}
+
+      # For EC2 runner
+      - name: Add pre-installed yarn executable to github path.
+        run: |
+          echo "$HOME/.nvm/versions/node/v20.11.0/bin" >> ${GITHUB_PATH}
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Based on https://github.com/actions/cache/blob/main/examples.md#node---yarn-2
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            .yarn
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
 
       - name: Cargo cache
         uses: Swatinem/rust-cache@v2
