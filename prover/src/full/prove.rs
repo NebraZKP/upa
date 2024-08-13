@@ -2,7 +2,8 @@ use crate::{
     default_values::{
         KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_PROOF, KECCAK_PROTOCOL,
         KECCAK_SRS, OUTER_GATE_CONFIG, OUTER_PK, OUTER_PROOF, OUTER_SRS,
-        UBV_GATE_CONFIG, UBV_PK, UBV_PROOF, UBV_PROTOCOL, UBV_SRS, UPA_CONFIG,
+        UBV_GATE_CONFIG, UBV_PK, UBV_PROOF_BASE, UBV_PROTOCOL, UBV_SRS,
+        UPA_CONFIG,
     },
     keccak, universal_batch_verifier, universal_outer,
 };
@@ -65,8 +66,8 @@ pub struct ProveParams {
     #[arg(long, value_name = "app-vk-proof-batch-file")]
     app_vk_proof_batch: Vec<String>,
 
-    /// Output UBV proof file
-    #[arg(long, value_name = "ubv-proof-file", default_value = UBV_PROOF)]
+    /// Output UBV proof file base
+    #[arg(long, value_name = "ubv-proof-file-base", default_value = UBV_PROOF_BASE)]
     ubv_proof: String,
 
     /// Output keccak proof file

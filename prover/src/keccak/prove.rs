@@ -1,5 +1,7 @@
 use crate::{
-    default_values::{KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_SRS, UPA_CONFIG},
+    default_values::{
+        KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_PROOF, KECCAK_SRS, UPA_CONFIG,
+    },
     file_utils::{
         break_points_file, instance_file, load_break_points, load_gate_config,
         load_instance, load_srs, open_file_for_read, panic_if_file_exists,
@@ -46,7 +48,7 @@ pub struct ProveParams {
     /// Public input files for each BV circuit
     pub(crate) ubv_instances: Vec<String>,
 
-    #[arg(long, value_name = "proof-file")]
+    #[arg(long, value_name = "proof-file", default_value = KECCAK_PROOF)]
     /// Output proof file
     pub(crate) proof: String,
 

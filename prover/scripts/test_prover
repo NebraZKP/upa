@@ -47,11 +47,19 @@ pushd _test_prover
     done
     echo ${batch_files}
 
-    # Run keygen
+    # Run keygen, prove and verify
     dummy_srs_setup
     prover full keygen ${PROVER_FLAGS}
     prover full prove ${PROVER_FLAGS} ${batch_files}
     prover full verify ${PROVER_FLAGS}
+
+    # Verify the intermediate ubv and keccak proofs
+    for j in $(seq 0 $(($outer_batch_size - 1))); do
+      proof_file="ubv.proof${j}"
+      instance_file="ubv.proof.instance${j}$"
+      prover universal-batch-verifier verify ${PROVER_FLAGS} --proof ${proof_file} --instance ${instance_file}
+    done
+    prover keccak verify ${PROVER_FLAGS}
 
 popd # _test_prover
 

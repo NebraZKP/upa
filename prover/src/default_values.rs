@@ -18,7 +18,7 @@ pub const UBV_PK: &str = "ubv.pk";
 pub const UBV_VK: &str = "ubv.vk";
 pub const UBV_GATE_CONFIG: &str = "ubv.specs";
 pub const UBV_PROTOCOL: &str = "ubv.protocol";
-pub const UBV_PROOF: &str = "ubv.proof";
+pub const UBV_PROOF_BASE: &str = "ubv.proof";
 
 pub const KECCAK_SRS: &str = "keccak.srs";
 pub const KECCAK_PK: &str = "keccak.pk";

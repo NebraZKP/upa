@@ -1,5 +1,5 @@
 use crate::{
-    default_values::{KECCAK_GATE_CONFIG, KECCAK_SRS, KECCAK_VK},
+    default_values::{KECCAK_GATE_CONFIG, KECCAK_PROOF, KECCAK_SRS, KECCAK_VK},
     file_utils::{
         instance_file, load_gate_config, load_instance, load_proof, load_srs,
         open_file_for_read,
@@ -39,7 +39,7 @@ pub struct VerifyParams {
     /// Circuit specs file
     gate_config: String,
 
-    #[arg(long, value_name = "proof-file")]
+    #[arg(long, value_name = "proof-file", default_value = KECCAK_PROOF)]
     /// Proof file for a batch
     proof: String,
 
