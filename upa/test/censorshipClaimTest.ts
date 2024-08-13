@@ -328,7 +328,7 @@ describe("Censorship challenge tests", () => {
       // loss to the caller, but it should be very small compared to the
       // overall cost)
       const costAfterRefund = balance2 - user1StartBalance;
-      expect(costAfterRefund*50n).is.lessThan(submitCost);
+      expect(costAfterRefund * 50n).is.lessThan(submitCost);
 
       // The challenge passes and the proofs are now marked as verified
       for (let i = 0; i < numProofsInS2; i++) {
