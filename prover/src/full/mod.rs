@@ -3,12 +3,11 @@ use clap::{Parser, Subcommand};
 pub use self::{
     keygen::{keygen, KeygenParams},
     prove::{prove, ProveParams},
-    verify::{verify, VerifyParams},
 };
+pub use crate::universal_outer::{verify, VerifyParams};
 
 mod keygen;
 mod prove;
-mod verify;
 
 #[derive(Parser, Debug)]
 pub struct FullParams {

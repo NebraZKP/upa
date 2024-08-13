@@ -34,4 +34,5 @@ pub const OUTER_GATE_CONFIG: &str = "outer.specs";
 pub const OUTER_PROTOCOL: &str = "outer.protocol";
 pub const OUTER_INSTANCE_SIZE: &str = "outer.instance_size";
 pub const OUTER_VERIFIER_YUL: &str = "outer.verifier.yul";
+pub const OUTER_VERIFIER_BIN: &str = "outer.verifier.bin";
 pub const OUTER_PROOF: &str = "outer.proof";

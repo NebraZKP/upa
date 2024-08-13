@@ -2,10 +2,11 @@ use crate::{
     default_values::{
         KECCAK_GATE_CONFIG, KECCAK_PK, KECCAK_PROTOCOL, KECCAK_SRS, KECCAK_VK,
         OUTER_GATE_CONFIG, OUTER_INSTANCE_SIZE, OUTER_PK, OUTER_PROTOCOL,
-        OUTER_SRS, OUTER_VK, UBV_GATE_CONFIG, UBV_PK, UBV_PROTOCOL, UBV_SRS,
-        UBV_VK, UPA_CONFIG,
+        OUTER_SRS, OUTER_VERIFIER_BIN, OUTER_VERIFIER_YUL, OUTER_VK,
+        UBV_GATE_CONFIG, UBV_PK, UBV_PROTOCOL, UBV_SRS, UBV_VK, UPA_CONFIG,
     },
-    keccak, universal_batch_verifier, universal_outer,
+    keccak, universal_batch_verifier,
+    universal_outer::{self, generate_evm_verifier},
 };
 use clap::Parser;
 use log::info;
@@ -80,6 +81,14 @@ pub struct KeygenParams {
     #[arg(long, value_name = "num_instance", default_value = OUTER_INSTANCE_SIZE)]
     num_instance: String,
 
+    /// Output yul verifier
+    #[arg(long, value_name = "yul-file", default_value = OUTER_VERIFIER_YUL)]
+    yul: String,
+
+    /// Output binary verifier
+    #[arg(long, value_name = "bin-file", default_value = OUTER_VERIFIER_BIN)]
+    bin: String,
+
     /// Compute only VK, protocol, and gate config. Skip PK generation for outer circuit.
     #[arg(long, value_name = "vk-only")]
     vk_only: bool,
@@ -138,6 +147,19 @@ impl From<&KeygenParams> for universal_outer::KeygenParams {
     }
 }
 
+impl From<&KeygenParams> for universal_outer::GenerateVerifierParams {
+    fn from(value: &KeygenParams) -> Self {
+        let value = value.clone();
+        Self {
+            outer_srs: value.outer_srs,
+            gate_config: value.outer_gate_config,
+            verification_key: value.outer_verification_key,
+            num_instance: value.num_instance,
+            yul: value.yul,
+        }
+    }
+}
+
 pub fn keygen(params: KeygenParams) {
     info!("Generating UBV circuit proving and verifying keys");
     universal_batch_verifier::keygen((&params).into());
@@ -145,4 +167,10 @@ pub fn keygen(params: KeygenParams) {
     keccak::keygen((&params).into());
     info!("Generating Outer circuit proving and verifying keys");
     universal_outer::keygen((&params).into());
+    if !params.dry_run {
+        // only generate the evm verifier when
+        // it isn't a dry run
+        info!("Generating evm verifier");
+        generate_evm_verifier((&params).into());
+    }
 }

@@ -11,11 +11,7 @@ cargo build --release
 # Shell setup
 shopt -s expand_aliases
 . ./scripts/shell_setup.sh
-
-DRY_RUN_FLAG=""
-if [ "$DRY_RUN" -eq 1 ]; then
-  DRY_RUN_FLAG="--dry-run"
-fi
+. ./scripts/prelude.sh
 
 rm -rf _test_prover
 mkdir -p _test_prover
@@ -53,9 +49,9 @@ pushd _test_prover
 
     # Run keygen
     dummy_srs_setup
-    prover full keygen ${DRY_RUN_FLAG}
-    prover full prove ${DRY_RUN_FLAG} ${batch_files}
-    prover full verify ${DRY_RUN_FLAG}
+    prover full keygen ${PROVER_FLAGS}
+    prover full prove ${PROVER_FLAGS} ${batch_files}
+    prover full verify ${PROVER_FLAGS}
 
 popd # _test_prover
 
