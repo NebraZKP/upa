@@ -12,8 +12,35 @@ concurrency:
     group: ${{github.workflow}}-${{github.ref}}
 
 jobs:
-  sdk-tests:
+  start-runner:
+    name: Start EC2 runner
     runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: us-east-2
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+            mode: start
+            github-token: ${{ secrets.AWS_GITHUB_TOKEN }}
+            # This image is the base AL2023 AMI plus yarn and gcc, and
+            # with github.com added to `~/.ssh/known_hosts`.
+            ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
+            ec2-instance-type: c7a.xlarge
+            subnet-id: ${{ vars.SUBNET_ID }}
+            security-group-id: ${{ vars.SECURITY_GROUP_ID }}
+
+  sdk-tests:
+    needs: start-runner # required to start the main job when the runner is ready.
+    runs-on: ${{ needs.start-runner.outputs.label }}
 
     defaults:
       run:
@@ -28,16 +55,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      # For EC2 runner
+      - name: Set HOME env variable
+        run: |
+          echo "HOME=/root" >> ${GITHUB_ENV}
+      # For EC2 runner
+      - name: Add pre-installed yarn executable to github path.
+        run: |
+          echo "$HOME/.nvm/versions/node/v20.11.0/bin" >> ${GITHUB_PATH}
+
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "yarn"
-          cache-dependency-path: "**/yarn.lock"
 
-      - name: install
+      # Based on https://github.com/actions/cache/blob/main/examples.md#node---yarn-2
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            .yarn
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      
+      # If the cache is empty, fetch modules, else run immutable.
+      - if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: |
           yarn
+      - if: steps.yarn-cache.outputs.cache-hit == 'true'
+        run: |
+          yarn install --immutable --immutable-cache
 
       - name: code check
         run: |
@@ -73,3 +126,25 @@ jobs:
       - name: run package test
         run: |
           ./scripts/test_package
+
+  stop-runner:
+      name: Stop EC2 runner
+      needs:
+        - start-runner
+        - sdk-tests
+      runs-on: ubuntu-latest
+      if: ${{ always() }} # required to stop the runner even if an error happened in the previous jobs
+      steps:
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: us-east-2
+        - name: Stop EC2 runner
+          uses: machulav/ec2-github-runner@v2
+          with:
+            mode: stop
+            github-token: ${{ secrets.AWS_GITHUB_TOKEN }}
+            label: ${{ needs.start-runner.outputs.label }}
+            ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
