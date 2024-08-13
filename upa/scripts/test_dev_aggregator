@@ -78,9 +78,9 @@ pushd _test_dev_aggregator
     TEST_PROOFS=${UPA_DIR}/circuits/src/tests/data/universal_batch_verifier_8_proofs.json
 
     # Register VKs
-    KEYFILE=${KEYFILE} upa registervk --vk-file ${TEST_VK}
-    KEYFILE=${KEYFILE} upa registervk --vk-file ${VK_2}
-    KEYFILE=${KEYFILE} upa registervk --vk-file ${VK_3} --wait
+    KEYFILE=${KEYFILE} upa registervk ${TEST_VK}
+    KEYFILE=${KEYFILE} upa registervk ${VK_2}
+    KEYFILE=${KEYFILE} upa registervk ${VK_3} --wait
 
     # Check stats and record
     upa query stats > stats.0

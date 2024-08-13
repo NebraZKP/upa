@@ -3,24 +3,9 @@ import { stats } from "./stats";
 import { getConfig } from "./getConfig";
 import { endpoint, instance } from "./options";
 import { ethers } from "ethers";
-import { config } from ".";
 import { upaFromInstanceFile } from "./config";
 import { isVerified, isSubmissionVerified } from "./isVerified";
 import { getAggregatedProofVerifier } from "./aggregatedProofVerifier";
-
-const getMaxNumPublicInputs = command({
-  name: "max-num-public-inputs",
-  args: {
-    endpoint: endpoint(),
-    instance: instance(),
-  },
-  description: "Get the current maximum number of public inputs supported",
-  handler: async function ({ endpoint, instance }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
-    const { verifier } = await config.upaFromInstanceFile(instance, provider);
-    console.log(await verifier.maxNumPublicInputs());
-  },
-});
 
 const getVerifierByteCode = command({
   name: "verifier-bytecode",
@@ -51,7 +36,6 @@ export const query = subcommands({
     "aggregated-proof-verifier": getAggregatedProofVerifier,
     stats,
     config: getConfig,
-    "max-num-public-inputs": getMaxNumPublicInputs,
     "verifier-bytecode": getVerifierByteCode,
     "is-verified": isVerified,
     "is-submission-verified": isSubmissionVerified,

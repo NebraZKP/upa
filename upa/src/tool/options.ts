@@ -118,15 +118,6 @@ export function vkProofInputsFile(): Option {
   });
 }
 
-export function vkFile(): Option {
-  return option({
-    type: string,
-    long: "vk-file",
-    short: "v",
-    description: "Verifying key file",
-  });
-}
-
 /// A JSON file in one of the formats:
 /// - An array of { vk, proof, inputs }
 /// - An array of { circuitId, proof, inputs }
