@@ -23,6 +23,7 @@ import {
 // eslint-disable-next-line
 import { computeAggregatedProofParameters } from "../src/sdk/aggregatedProofParams";
 import { siFromSubmission } from "../src/sdk/submissionIntervals";
+import { decompressG1Point } from "../src/sdk/pointCompression";
 
 describe("Censorship challenge tests", () => {
   type DeployAndSubmitResult = DeployAndRegisterResult & {
@@ -441,20 +442,28 @@ describe("Censorship challenge tests", () => {
     }).timeout(100000);
 
     it("false proof should fail", async function () {
-      // TODO: With a commitment, the false proof generated below fails to
-      // decompress. It hits "sqrt failed" when trying to produce a submission
-      // from the transaction receipt.
-      if (fixture === deployAndSubmitWithCommitment) {
-        return;
-      }
-
       const { upa, worker, user1, s1, s2, s3, circuitIds, proofs, inputs } =
         await loadFixture(fixture);
       const { verifier } = upa;
 
-      // user1 submits a false proof
+      // user1 submits a false proof. We fuzz the first coordinate of
+      // proofs[5].pi_a in such a way that `x^3 + b` is still a square
+      // in Fr.
       const wrongProof = proofs[5];
-      wrongProof.pi_a[0] = String(BigInt(proofs[5].pi_a[0]) + 3n);
+      let itDecompresses = false;
+      let xCoordinateWrongProof = BigInt(proofs[5].pi_a[0]) + 1n;
+      // This loop will end very early because half the elements
+      // in the field Fr are squares (which is what may cause
+      // `decompressG1Point` to fail).
+      while (!itDecompresses) {
+        try {
+          decompressG1Point(String(xCoordinateWrongProof));
+          itDecompresses = true;
+        } catch {
+          xCoordinateWrongProof += 1n;
+        }
+      }
+      wrongProof.pi_a[0] = String(xCoordinateWrongProof);
       const invalidTx = await submitProof(
         verifier.connect(user1),
         circuitIds[5],
