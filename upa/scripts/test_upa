@@ -59,7 +59,7 @@ pushd _test_upa
 
     # Deploy a second agg proof verifier contract and use this.
     orig_agg_verifier=`upa query aggregated-proof-verifier`
-    orig_max_num_inputs=`upa query max-num-public-inputs`
+    orig_max_num_inputs=`upa query config | jq -r ".maxNumPublicInputs"`
     KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy-binary \
                     --keyfile ${KEYFILE} \
                     --dump-tx \
@@ -103,9 +103,8 @@ pushd _test_upa
 
     # Check that pausing works as expected
     KEYFILE_PASSWORD=${DUMMY_PW} upa owner pause --keyfile ${KEYFILE}
-    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk \
+    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk ${TEST_VK} \
               --password ${DUMMY_PW} \
-              --vk-file ${TEST_VK} \
               --wait > /dev/null 2>&1 || true
     ## Check that no vk was registered via stats
     upa query stats > stats.0
@@ -116,17 +115,14 @@ pushd _test_upa
     KEYFILE_PASSWORD=${DUMMY_PW} upa owner unpause --keyfile ${KEYFILE}
 
     # Register all VKs
-    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk \
+    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk ${TEST_VK} \
               --password ${DUMMY_PW} \
-              --vk-file ${TEST_VK}
 
-    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk \
+    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk submit-multi-4.vk-0.json \
               --password ${DUMMY_PW} \
-              --vk-file submit-multi-4.vk-0.json
 
-    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk \
+    KEYFILE=${KEYFILE} KEYFILE_PASSWORD=${DUMMY_PW} upa registervk submit-multi-4.vk-1.json \
               --password ${DUMMY_PW} \
-              --vk-file submit-multi-4.vk-1.json \
               --wait
 
     # Check stats and record

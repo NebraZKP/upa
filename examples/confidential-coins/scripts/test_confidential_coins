@@ -83,9 +83,8 @@ pushd _test_confidential_coins
            --retries 3
 
     # Register a vk
-    upa registervk \
+    upa registervk ${APP_VKFILE} \
            --keyfile ${APP_KEYFILE} \
-           --vk-file ${APP_VKFILE} \
            --wait
 
     confidential-coins deploy \

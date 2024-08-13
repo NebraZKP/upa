@@ -1,4 +1,4 @@
-import { command } from "cmd-ts";
+import { command, positional, string } from "cmd-ts";
 import {
   instance,
   keyfile,
@@ -6,7 +6,6 @@ import {
   wait,
   password,
   getPassword,
-  vkFile,
   estimateGas,
   dumpTx,
 } from "./options";
@@ -29,7 +28,11 @@ export const registervk = command({
     estimateGas: estimateGas(),
     dumpTx: dumpTx(),
     wait: wait(),
-    vkFile: vkFile(),
+    vkFile: positional({
+      type: string,
+      displayName: "vk-file",
+      description: "JSON VK file for the circuit",
+    }),
   },
   handler: async function ({
     endpoint,

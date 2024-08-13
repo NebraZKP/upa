@@ -86,9 +86,8 @@ pushd _test_demo_app
            --retries 3
 
     # Register a vk
-    upa registervk \
+    upa registervk ${APP_VKFILE} \
            --keyfile ${APP_KEYFILE} \
-           --vk-file ${APP_VKFILE} \
            --wait
 
     demo-app deploy \
