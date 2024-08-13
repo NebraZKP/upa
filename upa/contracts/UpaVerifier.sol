@@ -38,6 +38,7 @@ error FeeRecipientAddressIsZero();
 error OuterVerifierAddressIsZero();
 error Groth16VerifierAddressIsZero();
 error UnauthorizedWorkerAccount();
+error UnauthorizedFeeRecipientAccount();
 error InvalidNumberOfVerifiedProofs();
 error InvalidMerkleProofForProofId();
 error InvalidMerkleIntervalProof();
@@ -911,6 +912,14 @@ contract UpaVerifier is
         _;
     }
 
+    modifier onlyFeeRecipient() {
+        require(
+            msg.sender == feeRecipient(),
+            UnauthorizedFeeRecipientAccount()
+        );
+        _;
+    }
+
     /// MUST NOT make any state changes!
     ///
     /// This function is public in order that it can be tested and clients
@@ -947,7 +956,7 @@ contract UpaVerifier is
 
     /// Allocates the aggregator fee to be claimed once
     /// `lastSubmittedSubmissionIdx` in `proofReceiver` is verified.
-    function allocateAggregatorFee() external onlyWorker {
+    function allocateAggregatorFee() external onlyFeeRecipient {
         uint64 lastSubmittedSubmissionIdx = getNextSubmissionIdx() - 1;
         allocateAggregatorFee(lastSubmittedSubmissionIdx);
     }
