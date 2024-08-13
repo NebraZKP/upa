@@ -263,6 +263,11 @@ where
 /// G2 point, it fails for a point not on the curve, and it fails for a point
 /// on the curve but not in the subgroup unless we skip the subgroup check.
 fn test_g2_membership_for_subgroup_check(subgroup_check: SubgroupCheck) {
+    // Cannot perform this in debug mode as internal asserts get triggered.
+    if cfg!(debug_assertions) {
+        return;
+    }
+
     let mut rng = OsRng;
     const DEGREE_BITS: usize = 15;
     let valid_point = sample_g2_affine(&mut rng);
