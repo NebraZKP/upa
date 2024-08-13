@@ -121,6 +121,7 @@ export type DeployResult = {
   upaDesc: UpaInstanceDescriptor;
   owner: Signer;
   worker: Signer;
+  feeRecipient: Signer;
   user1: Signer;
   user2: Signer;
 };
@@ -132,7 +133,8 @@ export async function deployUpaWithVerifier(
   maxNumPublicInputs?: number,
   version?: string
 ): Promise<DeployResult> {
-  const [deployer, owner, worker, user1, user2] = await ethers.getSigners();
+  const [deployer, owner, worker, feeRecipient, user1, user2] =
+    await ethers.getSigners();
 
   verifier = verifier || "test/data/outer_2_2.verifier.bin";
   maxNumPublicInputs = maxNumPublicInputs || 16;
@@ -147,7 +149,7 @@ export async function deployUpaWithVerifier(
     undefined /*groth16Verifier*/,
     owner.address,
     worker.address,
-    undefined /* feeRecipient */,
+    feeRecipient.address /* feeRecipient */,
     undefined /* feeInGas */,
     undefined /* aggregatorCollateral */,
     undefined /* fixedReimbursement */,
@@ -156,7 +158,7 @@ export async function deployUpaWithVerifier(
   assert(upaDesc);
   const upa = await upaInstanceFromDescriptor(upaDesc, owner);
 
-  return { upa, upaDesc: upaDesc, owner, worker, user1, user2 };
+  return { upa, upaDesc: upaDesc, owner, worker, feeRecipient, user1, user2 };
 }
 
 export async function deployUpaDummyVerifier(version?: string) {
@@ -470,7 +472,7 @@ describe("UPA", async () => {
     });
 
     it("testFeeModel", async () => {
-      const { upa, owner, worker, user1 } = await loadFixture(
+      const { upa, owner, worker, feeRecipient, user1 } = await loadFixture(
         deployUpaDummyVerifier
       );
       const { verifier } = upa;
@@ -545,9 +547,17 @@ describe("UPA", async () => {
       // it hasn't been allocated yet
       expect(await verifier.feeAllocated()).equals(0n);
 
-      // Now the worker allocates the aggregator fee on the verifier contract.
-      // The fee due must now equal the balance minus the collateral.
-      await verifier.connect(worker).allocateAggregatorFee();
+      // Only the fee recipient may allocate the aggregator fee.
+      await expect(
+        verifier.connect(user1).allocateAggregatorFee()
+      ).to.be.revertedWithCustomError(
+        verifier,
+        "UnauthorizedFeeRecipientAccount"
+      );
+
+      // Now the fee recipient allocates the aggregator fee on the verifier
+      // contract. The fee due must now equal the balance minus the collateral.
+      await verifier.connect(feeRecipient).allocateAggregatorFee();
       const feeDue = await verifier.feeAllocated();
       expect(feeDue).equals(feeModelBalance - collateral);
 
@@ -572,10 +582,10 @@ describe("UPA", async () => {
       expect(newFeeModelBalance).equals(feeModelBalance + 3n * value);
       expect(await verifier.feeAllocated()).equals(feeDue);
 
-      // The verifier tries to claim the fee and it fails because
+      // The fee recipient tries to claim the fee and it fails because
       // it hasn't verified the submitted proofs yet.
       await expect(
-        verifier.connect(worker).claimAggregatorFee()
+        verifier.connect(feeRecipient).claimAggregatorFee()
       ).to.be.revertedWithCustomError(verifier, "NotEnoughProofsVerified");
 
       // Now it verifies one proof, but it still shouldn't be enough
@@ -592,7 +602,7 @@ describe("UPA", async () => {
           packDupSubmissionIdxs([0])
         );
       await expect(
-        verifier.connect(worker).claimAggregatorFee()
+        verifier.connect(feeRecipient).claimAggregatorFee()
       ).to.be.revertedWithCustomError(verifier, "NotEnoughProofsVerified");
 
       // Now it verifies the second
@@ -606,14 +616,16 @@ describe("UPA", async () => {
           packOffChainSubmissionMarkers([]),
           packDupSubmissionIdxs([0])
         );
-      // If the worker claims it, it will succeed. Let's check the worker
-      // received the funds.
-      const workerBalanceBeforeClaim = await ethers.provider.getBalance(worker);
-      const claimTx = await verifier.connect(worker).claimAggregatorFee();
+      // If the fee recipient claims it, it will succeed. Let's check the
+      // fee recipient received the funds.
+      const feeRecipentBalanceBeforeClaim = await ethers.provider.getBalance(
+        feeRecipient
+      );
+      const claimTx = await verifier.connect(feeRecipient).claimAggregatorFee();
       const claimTxReceipt = await claimTx.wait();
       const claimTxCost = claimTxReceipt!.gasUsed * claimTxReceipt!.gasPrice;
-      expect(await ethers.provider.getBalance(worker)).equals(
-        workerBalanceBeforeClaim - claimTxCost + feeDue
+      expect(await ethers.provider.getBalance(feeRecipient)).equals(
+        feeRecipentBalanceBeforeClaim - claimTxCost + feeDue
       );
       // And that the due balance is reset to zero.
       expect(await verifier.feeAllocated()).equals(0n);
@@ -623,7 +635,7 @@ describe("UPA", async () => {
       );
       // finally, we allocate funds for the third proof, verify it and claim the
       // remaining claimable funds
-      await verifier.connect(worker).allocateAggregatorFee();
+      await verifier.connect(feeRecipient).allocateAggregatorFee();
       expect(await verifier.feeAllocated()).equals(3n * value);
       await verifier
         .connect(worker)
@@ -635,7 +647,7 @@ describe("UPA", async () => {
           packOffChainSubmissionMarkers([]),
           packDupSubmissionIdxs([0])
         );
-      await verifier.connect(worker).claimAggregatorFee();
+      await verifier.connect(feeRecipient).claimAggregatorFee();
       expect(await verifier.feeAllocated()).equals(0n);
       expect(await ethers.provider.getBalance(verifier)).equals(collateral);
     });
