@@ -8,15 +8,17 @@ In the following, $`vk`$ will denote a Groth16 verifying key (resulting from a c
 
 The UBV circuit verifies that a set $`\{ (vk_i, \pi_i, P_i) \}_{i = 1}^{B}`$ of tuples: Groth16 verification key, Groth16 proof and public inputs, are all valid.  That is, `Groth16.Verify` $`( $vk_i, \pi_i, P_i ) ` = 1$ for each $`i = 1, \ldots, B`$.
 
-### LegoSNARK Extension
-The UBV circuit supports [LegoSNARK](https://eprint.iacr.org/2019/142)'s "commit-and-prove" extension to the original Groth16 proof system, meaning that  $`\pi`$ may contain a Pedersen commitment to certain witness values. Specifically, UBV supports up to 1 commitment to *private* witness values. Multiple Pedersen commitments and commitments to public witness values are *not* supported.
+### Extension - Commitment to witness values
+The UBV circuit supports a "commitment to witness value" extension to the original Groth16 proof system (see the [Gnark zk-SNARK library](https://github.com/Consensys/gnark) for full details), sometimes referred to as the "commitment extension" or "Groth16 + commitment" in this document.  With this extension, $`\pi`$ may contain a Pedersen commitment to certain witness values. Specifically, UBV supports up to 1 commitment to *private* witness values. Multiple Pedersen commitments and commitments to public witness values are *not* supported.
+
+<!-- This is similar but not equal to that described in [LegoSNARK](https://eprint.iacr.org/2019/142)'s. -->
 
 In this case $`\pi`$ includes points $`(m, pok) \in \mathbb{G}_1 \times \mathbb{G}_1`$ and $`vk`$ includes points $`(h_1, h_2) \in \mathbb{G}_2 \times \mathbb{G}_2`$. Here $`m`$ is a Pedersen commitment to private witness values and $`pok`$ is an accompanying proof of knowledge. The proof of knowledge is valid iff
 ```math
 e(m, h_1) e(pok, h_2) = 1
 ```
 
-The LegoSNARK extension modifies the original Groth16 proving system as follows:
+The extension modifies the original Groth16 proving system as follows:
 - The verifier checks that $`e(m, h_1) e(pok, h_2) = 1`$
 - The verifier derives an additional public input point $`p`$ from $`m`$ using a curve-to-field hash function (specified below)
 - The verifier adds $`m`$ to the usual Groth16 public input term (see Step 4 below)
@@ -52,7 +54,7 @@ Let $`\{ (vk_i, \pi_i, P_i) \}_{i = 1}^{B}`$ be a batch of Groth16 proofs that t
 - $`\pi_i = (A_i, B_i, C_i) \in \mathbb{G}_1 \times \mathbb{G}_2 \times \mathbb{G}_1`$ denotes the proof
 - $`P_i \in \mathbb{F}_r^{\ell_i}`$ denotes the instance to the $i$-th Groth16 circuit, where $`\ell_i \leq L`$.
 
-In the LegoSNARK extension (with 1 Pedersen commitment to private witness values), we have the following additional inputs:
+In the "Commitment to witness value" extension (with 1 Pedersen commitment to private witness values), we have the following additional inputs:
 - $`vk_i`$ contains
     - An additional term $`s_{\ell_i + 1} \in \mathbb{G}_1`$
     - A Pedersen verifying key $`(h_1, h_2) \in \mathbb{G}_2 \times \mathbb{G}_2`$
@@ -60,13 +62,13 @@ In the LegoSNARK extension (with 1 Pedersen commitment to private witness values
     - A Pedersen commitment $`m \in \mathbb{G}_1`$
     - A Pedersen proof of knowledge $`pok \in \mathbb{G}_1`$
 
-Note that because the LegoSNARK extension introduces a new public input value derived from $`m`$, circuits using this extension must have $`\ell_i + 1 \leq L`$.
+Note that because the extension introduces a new public input value derived from $`m`$, circuits using this extension must have $`\ell_i + 1 \leq L`$.
 
-We emphasize that the LegoSNARK extension is optional. Therefore these additional input data may not be present, in which case the preprocessing step below will insert "padding" data that trivially satisfy the pairing check $`e(m,h_1)e(pok,h_2)=1`$. The UBV circuit ensures that these padding data do not affect the result of ordinary Groth16 verification.
+We emphasize that the "Commitment to witness value" extension is optional. Therefore these additional input data may not be present, in which case the preprocessing step below will insert "padding" data that trivially satisfy the pairing check $`e(m,h_1)e(pok,h_2)=1`$. The UBV circuit ensures that these padding data do not affect the result of ordinary Groth16 verification.
 
 ### Preprocessing
 Before feeding the inputs to the circuit, they undergo some preprocessing. The circuit doesn't do this preprocessing but it checks it has been done correctly. For each input $`(vk_i, \pi_i, P_i)`$, we construct a batch entry as follows:
-- Detect whether the optional LegoSNARK extension is being used: Let $`n_i = 1`$ if $`vk_i`$ contains a Pedersen verifying key and let $`n_i = 0`$ otherwise. Check also that $`\pi_i`$ contains a Pedersen commitment iff $n_i=1$.
+- Detect whether the optional commitment extension is being used: Let $`n_i = 1`$ if $`vk_i`$ contains a Pedersen verifying key and let $`n_i = 0`$ otherwise. Check also that $`\pi_i`$ contains a Pedersen commitment iff $n_i=1$.
 
 #### VK Padding:
 - Pad the verification key's public input terms with the generator:
@@ -80,7 +82,7 @@ The preprocessed verifying key $`\overline{vk}_i`$ is then
 ```math
 vk_i \longrightarrow \overline{vk}_i = (\alpha_i, \beta_i, \gamma_i, \delta_i, \overline{s}_i, g_2, g_2)
 ```
-- If $n_i = 1$ (LegoSNARK extension):
+- If $n_i = 1$ ("Commitment to witness value" extension):
 ```math
 vk_i \longrightarrow \overline{vk}_i = (\alpha_i, \beta_i, \gamma_i, \delta_i, \overline{s}_i, h_1, h_2)
 ```
@@ -294,7 +296,7 @@ In other words,
 ```
 where
 - `padded_vk_i_limb_decomposition` denotes the concatenation of the limb decompositions of $`vk.\alpha, vk.\beta, vk.\gamma, vk.\delta, vk.\overline{s}[0], \ldots vk.\overline{s}[L], vk.h_1, vk.h_2`$
-- `has_commitment_i` equals 1 if the $i$ th circuit uses the LegoSNARK commitment and equals 0 otherwise
+- `has_commitment_i` equals 1 if the $i$ th circuit uses the commitment extension and equals 0 otherwise
 - `num_public_inputs_i` = $`\ell_i`$ (num public inputs for i-th circuit)
 - `commitment_hash_i` = the result of hashing commitment point $`m_i`$ to $`\mathbb{F}_r`$
 - `commitment_i_limb_decomposition` denotes the decomposition of $`m_i`$ into non-native limbs. (When $`n_i=0`$ then $`m_i`$ is the padding value $`g_1`$)
@@ -309,7 +311,7 @@ For $`i = 1, \dots, B`$, there exists a verification key $`vk_i`$, public inputs
     - $`vk_i`$ has $`s_i`$ of length $`\ell_i+1`$
     - $`\mathsf{Groth16}.\mathsf{verify}(vk_i, \pi_i, P_i) = \mathsf{true}`$, where $`P_i \in \mathbb{F}_r^{\ell_i}`$ denotes the first $`\ell_i`$ elements of $`\overline{P}_i \in \mathbb{F}_r^{L}`$
     - $`\overline{P}_{ji} = 0`$ for $`j > \ell_i`$
-- LegoSNARK extension case $`\mathsf{Groth16LSE}`$ ($`n_i=1`$):
+- Groth16 with commitment extension case $`\mathsf{Groth16LSE}`$ ($`n_i=1`$):
     - $`vk_i`$ has $`s_i`$ of length $`\ell_i+2`$
     - $`\overline{P_i}[\ell_i] =`$ `commitment_hash_i` (using 0-indexing)
     - $`\mathsf{Groth16LSE}.\mathsf{verify}(vk_i, \pi_i, P_i) = \mathsf{true}`$, where $`P_i \in \mathbb{F}_r^{\ell_i}`$ denotes the first $`\ell_i+1`$ elements of $`\overline{P}_i \in \mathbb{F}_r^{L}`$
