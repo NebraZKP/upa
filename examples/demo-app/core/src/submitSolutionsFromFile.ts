@@ -99,7 +99,7 @@ export const submitSolutionsFromFile = command({
  * @returns A promise that resolves to the transaction response.
  */
 export async function submitSolution(
-  wallet: ethers.ethers.BaseWallet,
+  _wallet: ethers.AbstractSigner,
   demoApp: DemoApp,
   nonce: number,
   submission: OffChainSubmission,

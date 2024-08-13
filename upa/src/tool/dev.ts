@@ -78,7 +78,7 @@ export const send = command({
     const value = ethers.parseUnits(amount);
     const tx = await wallet.sendTransaction({
       to: destination,
-      from: wallet.address,
+      from: await wallet.getAddress(),
       value,
     });
     console.log(tx.hash);
@@ -145,7 +145,7 @@ const fund = command({
     // keyfile may be set via env variables, even though the user intention is
     // to fund a specific address, hence we don't assert that only one may be
     // set.)
-    const addr = (() => {
+    const addr = await (async () => {
       if (address) {
         return ethers.getAddress(address);
       }

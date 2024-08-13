@@ -190,7 +190,7 @@ export const submitProofsFromFile = command({
  * @returns A (promised) SubmissionHandle.
  */
 export async function submitProofs(
-  wallet: ethers.ethers.BaseWallet,
+  wallet: ethers.AbstractSigner,
   nonce: number,
   upaInstance: string,
   submission: CircuitIdProofAndInputs[],
