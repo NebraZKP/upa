@@ -317,7 +317,10 @@ describe("Censorship challenge tests", () => {
             s2.submissionId,
             0,
             s2.computeProofIdMerkleProof(i),
-            s2.computeProofDataMerkleProof(i)
+            s2.computeProofDataMerkleProof(i),
+            {
+              maxPriorityFeePerGas: 0n,
+            }
           );
       }
 
