@@ -176,7 +176,11 @@ abstract contract UpaFeeBase is
     }
 
     function claimableFees() external view returns (uint256) {
-        return address(this).balance - aggregatorCollateral();
+        if (aggregatorCollateral() > address(this).balance) {
+            return 0;
+        } else {
+            return address(this).balance - aggregatorCollateral();
+        }
     }
 
     function feeAllocated() external view returns (uint256) {

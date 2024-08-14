@@ -491,6 +491,20 @@ describe("UPA", async () => {
         collateral
       );
 
+      // Check the initial `claimableFees` is zero
+      expect(await verifier.claimableFees()).eql(0n);
+
+      // Withdraw the collateral and check that `claimableFees()` is still zero
+      await verifier.connect(owner).withdrawAggregatorBalance();
+      expect(await verifier.claimableFees()).eql(0n);
+
+      // Top up the aggregator collateral
+      const topUpCollateralTx = await worker.sendTransaction({
+        to: await verifier.getAddress(),
+        value: collateral,
+      });
+      await topUpCollateralTx.wait();
+
       // Register vk
       await verifier.registerVK(vk);
 
