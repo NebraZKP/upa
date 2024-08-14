@@ -25,8 +25,8 @@ function fund() {
 mkdir -p _test_upa
 pushd _test_upa
     start_hardhat_node 10545
-    export RPC_ENDPOINT="http://127.0.0.1:10545/"
-    export KEYFILE_PASSWORD=""
+    echo RPC_ENDPOINT="http://127.0.0.1:10545/" > .env
+    echo 'KEYFILE_PASSWORD=' >> .env
 
     KEYFILE="deployer.key"
 
@@ -35,6 +35,7 @@ pushd _test_upa
         upa dev ethkeygen --keyfile ${KEYFILE} --password ${DUMMY_PW}
     fi
     fund ${KEYFILE}
+    deployer_addr=0x`jq -r .address ${KEYFILE}`
 
     # Create and fund user address (no password)
     USER_KEYFILE="user.key"
@@ -69,6 +70,14 @@ pushd _test_upa
                     --keyfile ${KEYFILE} \
                     ${UPA_DIR}/upa/test/data/test.bin \
                     > new_agg_proof_verifier.addr
+    # Test dumpt-tx with a different --from address
+    upa owner set-aggregated-proof-verifier \
+                    --keyfile ${USER_KEYFILE} \
+                    --from ${deployer_addr} \
+                    --dump-tx \
+                    `cat new_agg_proof_verifier.addr` \
+                    ${orig_max_num_inputs}
+
     KEYFILE_PASSWORD=${DUMMY_PW} upa owner set-aggregated-proof-verifier \
                     --keyfile ${KEYFILE} \
                     `cat new_agg_proof_verifier.addr` \

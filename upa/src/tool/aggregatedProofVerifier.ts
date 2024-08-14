@@ -27,6 +27,7 @@ export const setAggregatedProofVerifier = command({
     wait: options.wait(),
     estimateGas: options.estimateGas(),
     dumpTx: options.dumpTx(),
+    fromAddress: options.from(),
     maxFeePerGasGwei: options.maxFeePerGasGwei(),
     address: positional({
       type: string,
@@ -46,6 +47,7 @@ export const setAggregatedProofVerifier = command({
     wait,
     estimateGas,
     dumpTx,
+    fromAddress,
     address,
     maxNumPublicInputs,
   }): Promise<void> {
@@ -55,7 +57,8 @@ export const setAggregatedProofVerifier = command({
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),
-      provider
+      provider,
+      fromAddress
     );
     const { verifier } = await config.upaFromInstanceFile(instance, wallet);
 

@@ -166,22 +166,23 @@ export function balancesUninitialized(balances: Balances): boolean {
 
 export async function getOnChainBalances(
   confidentialCoins: ConfidentialCoins,
-  wallet: ethers.ethers.BaseWallet
+  wallet: ethers.AbstractSigner
 ): Promise<Balances> {
+  const address = await wallet.getAddress();
   const hashedUSDT = await confidentialCoins.userBalanceHashes(
-    wallet.address,
+    address,
     Coin.USDT
   );
   const USDT = toyUnHash(hashedUSDT);
 
   const hashedUSDC = await confidentialCoins.userBalanceHashes(
-    wallet.address,
+    address,
     Coin.USDC
   );
   const USDC = toyUnHash(hashedUSDC);
 
   const hashedDAI = await confidentialCoins.userBalanceHashes(
-    wallet.address,
+    address,
     Coin.DAI
   );
   const DAI = toyUnHash(hashedDAI);

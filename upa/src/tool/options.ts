@@ -10,6 +10,15 @@ export type OptionalOption = ArgParser<string | undefined> &
   ProvidesHelp &
   Partial<Descriptive>;
 
+export function from(): OptionalOption {
+  return option({
+    type: optional(string),
+    long: "from",
+    description:
+      "Use a specific from address (for --estimate-gas or --dump-tx)",
+  });
+}
+
 export function keyfile(
   description?: string | undefined,
   required: boolean = true

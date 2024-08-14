@@ -8,6 +8,7 @@ import {
   getPassword,
   estimateGas,
   dumpTx,
+  from,
   maxFeePerGasGwei,
 } from "./options";
 import { loadWallet, upaFromInstanceFile, handleTxRequest } from "./config";
@@ -33,6 +34,7 @@ export const setFee = command({
     wait: wait(),
     estimateGas: estimateGas(),
     dumpTx: dumpTx(),
+    fromAddress: from(),
     maxFeePerGasGwei: maxFeePerGasGwei(),
   },
   handler: async function ({
@@ -44,10 +46,16 @@ export const setFee = command({
     wait,
     estimateGas,
     dumpTx,
+    fromAddress,
     maxFeePerGasGwei,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const wallet = await loadWallet(keyfile, getPassword(password), provider);
+    const wallet = await loadWallet(
+      keyfile,
+      getPassword(password),
+      provider,
+      fromAddress
+    );
     const upa = await upaFromInstanceFile(instance, wallet);
 
     const fee = parseNumberOrUndefined(feeInGas, "Error parsing fee in gas");

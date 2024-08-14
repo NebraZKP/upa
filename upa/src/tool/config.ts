@@ -37,12 +37,20 @@ export async function upaFromInstanceFile(
   return upaInstanceFromDescriptor(instanceDesc, provider);
 }
 
-/// Create a Signer from an encrypted keyfile.
+/// Create a Signer from an encrypted keyfile, allowing overriding by a
+/// VoidSigner (which cannot actually sign) for a specific fromAddress (for
+/// simulating txs).
 export async function loadWallet(
   keyfile: string,
   password: string,
-  provider?: ethers.Provider
-): Promise<ethers.BaseWallet> {
+  provider?: ethers.Provider,
+  fromAddress?: string
+): Promise<ethers.AbstractSigner> {
+  if (fromAddress) {
+    fromAddress = ethers.getAddress(fromAddress);
+    return new ethers.VoidSigner(fromAddress, provider);
+  }
+
   const keystoreStr = fs.readFileSync(keyfile, "ascii");
   let wallet = await ethers.Wallet.fromEncryptedJson(keystoreStr, password);
   if (provider) {

@@ -8,6 +8,7 @@ import {
   getPassword,
   estimateGas,
   dumpTx,
+  from,
 } from "./options";
 import { handleTxRequest, loadWallet, upaFromInstanceFile } from "./config";
 import * as ethers from "ethers";
@@ -22,6 +23,7 @@ export const unpause = command({
     instance: instance(),
     estimateGas: estimateGas(),
     dumpTx: dumpTx(),
+    fromAddress: from(),
     wait: wait(),
   },
   handler: async function ({
@@ -31,10 +33,16 @@ export const unpause = command({
     instance,
     estimateGas,
     dumpTx,
+    fromAddress,
     wait,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const wallet = await loadWallet(keyfile, getPassword(password), provider);
+    const wallet = await loadWallet(
+      keyfile,
+      getPassword(password),
+      provider,
+      fromAddress
+    );
     const upa = await upaFromInstanceFile(instance, wallet);
 
     const txReq = await upa.verifier.unpause.populateTransaction();
