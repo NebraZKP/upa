@@ -1,5 +1,5 @@
 use crate::{
-    default_values::{OUTER_PK, OUTER_VERIFIER_YUL},
+    default_values::{OUTER_PROOF, OUTER_VERIFIER_YUL},
     file_utils::{
         calldata_file, instance_file, load_calldata, load_instance, load_proof,
         load_yul,
@@ -23,7 +23,7 @@ pub struct VerifyParams {
     pub(crate) verifier_yul: String,
 
     /// Outer circuit proof file
-    #[arg(short = 'p', long, value_name = "outer-proof-file", default_value = OUTER_PK)]
+    #[arg(short = 'p', long, value_name = "outer-proof-file", default_value = OUTER_PROOF)]
     pub(crate) proof: String,
 
     /// Outer circuit public inputs file

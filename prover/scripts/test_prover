@@ -56,7 +56,7 @@ pushd _test_prover
     # Verify the intermediate ubv and keccak proofs
     for j in $(seq 0 $(($outer_batch_size - 1))); do
       proof_file="ubv.proof${j}"
-      instance_file="ubv.proof.instance${j}$"
+      instance_file="ubv.proof.instance${j}"
       prover universal-batch-verifier verify ${PROVER_FLAGS} --proof ${proof_file} --instance ${instance_file}
     done
     prover keccak verify ${PROVER_FLAGS}
