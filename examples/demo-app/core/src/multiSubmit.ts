@@ -57,6 +57,12 @@ export const multiSubmit = command({
         "The maximum submission rate per second. \
       (Measured in submissions/sec, rather than proofs/sec)",
     }),
+    maxConcurrentTxs: option({
+      type: number,
+      long: "max-concurrent-txs",
+      defaultValue: () => 2,
+      description: "The maximum number of transactions concurrently submitted",
+    }),
     skipSolutions: flag({
       type: boolean,
       long: "skip-solutions",
@@ -77,6 +83,7 @@ export const multiSubmit = command({
     submissionSize,
     submitRate,
     maxFeePerGasGwei,
+    maxConcurrentTxs,
     skipSolutions,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
@@ -93,7 +100,7 @@ export const multiSubmit = command({
     const waitTxReceiptPromises: Promise<ContractTransactionReceipt | null>[] =
       [];
     // eslint-disable-next-line
-    const submitSolutionReceiptPromises: Promise<ContractTransactionReceipt | null>[] =
+    const submitSolutionReceiptPromises: Promise<ContractTransactionReceipt>[] =
       [];
 
     const startTimeMilliseconds = Date.now();
@@ -110,7 +117,7 @@ export const multiSubmit = command({
     // Send submissions of `submissionSize` proofs to the UPA until at least
     // `numProofs` proofs have been submitted. Once a submission has been
     // verified, send the corresponding solution to the demo-app contract.
-    const maxConcurrency = 5;
+    const maxConcurrency = maxConcurrentTxs;
     const semaphore = new Sema(maxConcurrency);
     const rateLimiter = RateLimit(submitRate, { uniformDistribution: true });
     // Wrap in semaphore to control number of concurrent transactions.
@@ -195,7 +202,10 @@ export const multiSubmit = command({
                   submission,
                   j
                 );
-                return txResponse.wait();
+
+                const txReceipt = await txResponse.wait();
+                assert(txReceipt);
+                return txReceipt;
               } finally {
                 semaphore.release();
               }

@@ -177,7 +177,8 @@ pushd _test_demo_app
                -n 4 \
                --submit-rate 3 \
                --max-fee-per-gas 20 \
-               --submission-size 2
+               --submission-size 2 \
+               --max-concurrent-txs 3
 
     # Check UPA contract state. 5 total submissions, so `next_id` should be 6.
 
