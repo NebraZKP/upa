@@ -843,8 +843,12 @@ contract UpaVerifier is
         );
 
         // The challenge so far has been successful, so the claimant will get
-        // - the gas spent on this call
-        // back from the aggregator
+        // the gas spent on this call back from the aggregator, at a gasprice
+        // equal to the current basefee.
+        //
+        // The rationale for using block.basefee as the price is to prevent
+        // claimants setting an unreasonably high priorityFee and punishing
+        // the aggregator arbitrarily.
         uint256 gasSpent = startGas - gasleft() + GAS_PER_TRANSACTION;
 
         if (isLastProof) {
@@ -855,7 +859,7 @@ contract UpaVerifier is
             // successful and the aggregator gives the claimant the full amount.
             reimburseFee(
                 gasSpent *
-                    tx.gasprice +
+                    block.basefee +
                     verifierStorage.fixedReimbursement +
                     openChallengeRefundAmount,
                 msg.sender
@@ -865,7 +869,7 @@ contract UpaVerifier is
             // TODO: can we do without the openChallengeRefundAmounts?
             verifierStorage.openChallengeRefundAmounts[submissionId] +=
                 gasSpent *
-                tx.gasprice;
+                block.basefee;
         }
 
         return true;
