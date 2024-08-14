@@ -1,7 +1,7 @@
 {
   "name": "@nebrazkp/upa",
   "license": "MIT",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "UPA contracts, client SDK and tools",
   "repository": "https://github.com/nebrazkp/upa",
   "exports": {
