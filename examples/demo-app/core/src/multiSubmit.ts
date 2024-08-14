@@ -93,7 +93,7 @@ export const multiSubmit = command({
     const waitTxReceiptPromises: Promise<ContractTransactionReceipt | null>[] =
       [];
     // eslint-disable-next-line
-    const submitSolutionTxPromises: Promise<ContractTransactionReceipt | null>[] =
+    const submitSolutionReceiptPromises: Promise<ContractTransactionReceipt | null>[] =
       [];
 
     const startTimeMilliseconds = Date.now();
@@ -113,6 +113,7 @@ export const multiSubmit = command({
     const maxConcurrency = 5;
     const semaphore = new Sema(maxConcurrency);
     const rateLimiter = RateLimit(submitRate, { uniformDistribution: true });
+    // Wrap in semaphore to control number of concurrent transactions.
     const doSubmitTx = async (
       cidProofPIs: CircuitIdProofAndInputs[],
       i: number
@@ -169,34 +170,38 @@ export const multiSubmit = command({
     const submissionHandles = await Promise.all(submitProofTxPromises);
     for (const submissionHandle of submissionHandles) {
       const { txResponse, submission } = submissionHandle;
+      console.log(`submissionId: ${submission.getSubmissionId()}`);
+      console.log(`contains proofIds:`);
+      console.log(submission.getProofIds());
       if (skipSolutions) {
         waitTxReceiptPromises.push(txResponse.wait());
       } else {
         const waitThenSubmitSolution = async () => {
           // Use `upaClient` to wait for this submission to be verified.
-          const waitTxReceipt =
-            await upaClient.waitForSubmissionVerified(submissionHandle);
-
-          // Submit all of the solutions in the submission to demo-app
-          // eslint-disable-next-line
-          const submitSolutionTxResponses: Promise<ethers.ContractTransactionResponse>[] =
-            [];
-          for (let j = 0; j < submissionSize; ++j) {
-            const submitSolutionTxResponse = submitSolution(
-              wallet,
-              demoApp,
-              nonce++,
-              submission,
-              j
-            );
-            submitSolutionTxResponses.push(submitSolutionTxResponse);
-          }
-          await Promise.all(
-            submitSolutionTxResponses.map(async (txResponse) => {
-              const txReceipt = (await txResponse).wait();
-              submitSolutionTxPromises.push(txReceipt!);
-            })
+          const waitTxReceipt = await upaClient.waitForSubmissionVerified(
+            submissionHandle
           );
+
+          for (let j = 0; j < submissionSize; ++j) {
+            // Wrap in semaphore to control number of concurrent transactions.
+            const doSubmitSolution = async () => {
+              try {
+                await semaphore.acquire();
+                await rateLimiter();
+                const txResponse = await submitSolution(
+                  wallet,
+                  demoApp,
+                  nonce++,
+                  submission,
+                  j
+                );
+                return txResponse.wait();
+              } finally {
+                semaphore.release();
+              }
+            };
+            submitSolutionReceiptPromises.push(doSubmitSolution());
+          }
 
           return waitTxReceipt;
         };
@@ -205,7 +210,9 @@ export const multiSubmit = command({
     }
 
     const txReceipts = await Promise.all(waitTxReceiptPromises);
-    const submitSolutionReceipts = await Promise.all(submitSolutionTxPromises);
+    const submitSolutionReceipts = await Promise.all(
+      submitSolutionReceiptPromises
+    );
 
     const endTimeMilliseconds = Date.now(); // Record the end time
     const elapsedTimeSeconds =

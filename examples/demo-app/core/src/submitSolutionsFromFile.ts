@@ -106,7 +106,7 @@ export async function submitSolution(
   solutionIdx: number
 ): Promise<ethers.ContractTransactionResponse> {
   const solution = submission.inputs[solutionIdx];
-  console.log(`$solution ${solution}`);
+  console.log(`Submitted solution ${solution}`);
   if (submission.isMultiProofSubmission()) {
     // If the proof was part of a multi-proof submission, we
     // need to pass a proof reference to the demo-app
