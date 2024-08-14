@@ -1,36 +1,65 @@
 #!/usr/bin/env bash
 
-# Basic tests of the prover commands, primarily to check consistency against
-# the SDK and contract code.
+# Tests keygen, proving and verification
+
+set -e
+set -x
 
 # Build
-pushd ../upa/
-  yarn
-  yarn build
-  yarn
-popd
 cargo build --release
 
 # Shell setup
 shopt -s expand_aliases
 . ./scripts/shell_setup.sh
+. ./scripts/prelude.sh
 
-set -e
-set -x
-
+rm -rf _test_prover
 mkdir -p _test_prover
 pushd _test_prover
 
-    cp ../../circuits/src/tests/data/vk.json vk.json
+    # Get a default config if one is not present.
+    [ -e upa_config.json ] || cp ../tests/upa_config_2.json upa_config.json
+    inner_batch_size=`jq -r .inner_batch_size upa_config.json`
+    max_num_inputs=`jq -r .max_num_app_public_inputs upa_config.json`
+    outer_batch_size=`jq -r .outer_batch_size upa_config.json`
 
-    # Check native and Typescript cids match
-    cid_evm=`upa compute circuit-id vk.json`
-    cid_native=`prover universal-batch-verifier compute-circuit-id --app-vk=vk.json`
-    if ! [ "${cid_evm}" == "${cid_native}" ] ; then
-        echo "cid_evm: ${cid_native}"
-        echo "cid_native: ${cid_native}"
-        exit 1
-    fi
+    # Create `inner_batch_size` (unsafe) keys.
+    for i in $(seq 0 $(($inner_batch_size - 1))); do
+      key_file="vk-${i}.unsafe.json"
+      if [ $(($i % 2)) -eq 0 ]; then
+        prover groth16 generate-fake-vk -i ${max_num_inputs} -v $key_file
+      else
+        prover groth16 generate-fake-vk -i $((${max_num_inputs} / 2)) -v $key_file -c
+      fi
+    done
+
+    # Create `outer_batch_size` inner batches
+    for j in $(seq 0 $(($outer_batch_size - 1))); do
+      prover groth16 generate-proofs \
+        -n ${inner_batch_size} \
+        $(for i in $(seq 0 $(($inner_batch_size - 1))); do echo -v vk-${i}.unsafe.json; done) \
+        -b inner-batch-${j}.json
+    done
+
+    batch_files=""
+    for j in $(seq 0 $(($outer_batch_size - 1))); do
+      batch_files+="--app-vk-proof-batch inner-batch-${j}.json "
+    done
+    echo ${batch_files}
+
+    # Run keygen, prove and verify
+    dummy_srs_setup
+    prover full keygen ${PROVER_FLAGS}
+    prover full prove ${PROVER_FLAGS} ${batch_files}
+    prover full verify ${PROVER_FLAGS}
+
+    # Verify the intermediate ubv and keccak proofs
+    for j in $(seq 0 $(($outer_batch_size - 1))); do
+      proof_file="ubv.proof${j}"
+      instance_file="ubv.proof.instance${j}"
+      prover universal-batch-verifier verify ${PROVER_FLAGS} --proof ${proof_file} --instance ${instance_file}
+    done
+    prover keccak verify ${PROVER_FLAGS}
 
 popd # _test_prover
 

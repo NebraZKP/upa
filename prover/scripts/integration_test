@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+# Checks the definitions of circuitId in the prover and the contracts
+# coincide
+
+# Build
+pushd ../upa/
+  yarn
+  yarn build
+  yarn
+popd
+cargo build --release
+
+# Shell setup
+shopt -s expand_aliases
+. ./scripts/shell_setup.sh
+
+set -e
+set -x
+
+mkdir -p _test_integration
+pushd _test_integration
+
+    cp ../../circuits/src/tests/data/vk.json vk.json
+
+    # Check native and Typescript cids match
+    cid_evm=`upa compute circuit-id vk.json`
+    cid_native=`prover universal-batch-verifier compute-circuit-id --app-vk=vk.json`
+    if ! [ "${cid_evm}" == "${cid_native}" ] ; then
+        echo "cid_evm: ${cid_native}"
+        echo "cid_native: ${cid_native}"
+        exit 1
+    fi
+
+popd # _test_prover
+
+set +x
+set +e
+
+echo "======================================"
+echo "====            PASSED            ===="
+echo "======================================"

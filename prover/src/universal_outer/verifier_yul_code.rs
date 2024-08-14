@@ -19,23 +19,23 @@ use snark_verifier_sdk::SHPLONK;
 pub struct GenerateVerifierParams {
     /// Outer circuit SRS file
     #[arg(long, value_name = "outer-srs-file", default_value = OUTER_SRS)]
-    outer_srs: String,
+    pub(crate) outer_srs: String,
 
     /// Outer circuit gate config file
     #[arg(short = 'g', long, value_name = "gate-config-file", default_value = OUTER_GATE_CONFIG)]
-    gate_config: String,
+    pub(crate) gate_config: String,
 
     /// Outer circuit verification key file
     #[arg(short = 'v', long, value_name = "verification-key-file", default_value = OUTER_VK)]
-    verification_key: String,
+    pub(crate) verification_key: String,
 
     /// Outer circuit num instance file
     #[arg(long, value_name = "num_instance", default_value = OUTER_INSTANCE_SIZE)]
-    num_instance: String,
+    pub(crate) num_instance: String,
 
     /// Output yul code file
     #[arg(short = 'r', long, value_name = "yul-file", default_value = OUTER_VERIFIER_YUL)]
-    yul: String,
+    pub(crate) yul: String,
 }
 
 pub fn generate_evm_verifier(params: GenerateVerifierParams) {

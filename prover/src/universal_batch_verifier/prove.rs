@@ -35,34 +35,34 @@ use std::time::Instant;
 pub struct ProveParams {
     #[arg(short = 'c', long, value_name = "config-file", default_value = UPA_CONFIG)]
     /// UPA configuration file
-    config: String,
+    pub(crate) config: String,
 
     #[arg(short = 's', long, value_name = "srs-file", default_value = UBV_SRS)]
-    srs: String,
+    pub(crate) srs: String,
 
     #[arg(short = 'p', long, value_name = "proving-key-file", default_value = UBV_PK)]
-    proving_key: String,
+    pub(crate) proving_key: String,
 
     #[arg(short = 'g', long, value_name = "gate-config-file", default_value = UBV_GATE_CONFIG)]
     /// Gate configuration file
-    gate_config: String,
+    pub(crate) gate_config: String,
 
     #[arg(short = 'b', long, value_name = "app-vk-proof-batch-file")]
     /// JSON file containing a batch of app_vk, proof, public input triples
     /// to be verified by the BatchVerifier circuit.
-    app_vk_proof_batch: String,
+    pub(crate) app_vk_proof_batch: String,
 
     #[arg(long, value_name = "proof-file")]
     /// Output proof file
-    proof: String,
+    pub(crate) proof: String,
 
     #[arg(long, value_name = "instance-file")]
     /// Output instance file (defaults to <proof-file>.instance if not given)
-    instance: Option<String>,
+    pub(crate) instance: Option<String>,
 
     #[arg(short = 'n', long)]
     /// Load the circuit configs and exit.
-    dry_run: bool,
+    pub(crate) dry_run: bool,
 }
 
 /// Entry point to the `prove` subcommand. Runs the prove process for the

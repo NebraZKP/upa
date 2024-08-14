@@ -1,5 +1,5 @@
 use crate::{
-    default_values::{OUTER_PK, OUTER_VERIFIER_YUL},
+    default_values::{OUTER_PROOF, OUTER_VERIFIER_YUL},
     file_utils::{
         calldata_file, instance_file, load_calldata, load_instance, load_proof,
         load_yul,
@@ -20,23 +20,23 @@ use std::{
 pub struct VerifyParams {
     /// Outer circuit verifier Yul code file
     #[arg(short = 'y', long, value_name = "outer-verifier-yul-file", default_value = OUTER_VERIFIER_YUL)]
-    verifier_yul: String,
+    pub(crate) verifier_yul: String,
 
     /// Outer circuit proof file
-    #[arg(short = 'p', long, value_name = "outer-proof-file", default_value = OUTER_PK)]
-    proof: String,
+    #[arg(short = 'p', long, value_name = "outer-proof-file", default_value = OUTER_PROOF)]
+    pub(crate) proof: String,
 
     /// Outer circuit public inputs file
     #[arg(short = 'i', long, value_name = "outer-instance-file")]
-    instance: Option<String>,
+    pub(crate) instance: Option<String>,
 
     /// Outer circuit calldata file
     #[arg(short = 'c', long, value_name = "outer-calldata-file")]
-    calldata: Option<String>,
+    pub(crate) calldata: Option<String>,
 
     #[arg(short = 'n', long)]
     /// Load the circuit configs and exit.
-    dry_run: bool,
+    pub(crate) dry_run: bool,
 }
 
 /// The system solc version must be 0.8.17. Snark-verifier uses it to compile

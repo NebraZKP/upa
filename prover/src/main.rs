@@ -2,6 +2,7 @@
 #![allow(deprecated)]
 
 use crate::{
+    full::{full, FullParams},
     groth16::{groth16, Groth16Params},
     keccak::{keccak, KeccakParams},
     srs::{srs, SrsParams},
@@ -15,6 +16,7 @@ use log::debug;
 
 mod default_values;
 mod file_utils;
+mod full;
 mod groth16;
 mod keccak;
 mod srs;
@@ -53,6 +55,10 @@ enum Command {
     #[command()]
     /// Groth16 operations
     Groth16(Groth16Params),
+
+    #[command()]
+    /// End-to-end aggregated proofs generation and verification
+    Full(FullParams),
 }
 
 fn main() {
@@ -69,5 +75,6 @@ fn main() {
         Command::Keccak(params) => keccak(params),
         Command::UniversalOuter(params) => universal_outer(params),
         Command::Groth16(params) => groth16(params),
+        Command::Full(params) => full(params),
     }
 }
