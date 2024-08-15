@@ -463,13 +463,11 @@ exports.default = config;
 
   // Now spawn the child process, passing in the same arguments.
   const childProcess = spawn("upa", process.argv.slice(2));
-
   childProcess.stdout.on("data", (data) => {
-    console.log(`stdout: ${data}`);
+    process.stdout.write(`child[stdout]: ${data}`);
   });
-
   childProcess.stderr.on("data", (data) => {
-    console.error(`stderr: ${data}`);
+    process.stderr.write(`child[stderr]: ${data}`);
   });
 
   await new Promise<void>((resolve, reject) => {
