@@ -197,11 +197,6 @@ export const deploy = command({
       short: "receiver",
       description: "Proof receiver contract address",
     }),
-    feeModelAddress: option({
-      type: optional(string),
-      long: "fee-model",
-      description: "Fee model contract address",
-    }),
     feeInGas: options.feeInGas(),
     aggregatorCollateralInWei: options.aggregatorCollateralInWei(),
     fixedReimbursementInWei: option({
