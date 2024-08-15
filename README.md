@@ -24,3 +24,4 @@ The repo is arranged as follows:
 - [`prover`](./prover) - Executable to create aggregation proofs
 - [`examples`](./examples) - Example applications using UPA
 - [`spec`](./spec) - Protocol and circuits specification
+- [`audits`](./audits) - Security audit reports of the UPA circuits and contracts
