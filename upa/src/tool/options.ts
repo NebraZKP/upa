@@ -35,7 +35,6 @@ export function keyfile(
   return option({
     type: string,
     long: "keyfile",
-    short: "k",
     defaultValue,
     description:
       description || "Keyfile to sign tx (defaults to KEYFILE env var)",
@@ -47,7 +46,6 @@ export function password(description?: string | undefined): Option {
   return option({
     type: string,
     long: "password",
-    short: "p",
     defaultValue: () => process.env.KEYFILE_PASSWORD || "",
     description:
       description ||
@@ -82,7 +80,6 @@ export function endpoint(): Option {
   return option({
     type: string,
     long: "endpoint",
-    short: "e",
     defaultValue: () => process.env.RPC_ENDPOINT || "http://127.0.0.1:8545/",
     description: "RPC endpoint to connect to (defaults to ENDPOINT env var)",
   });
@@ -92,7 +89,6 @@ export function instance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "instance",
-    short: "i",
     defaultValue: () => "upa.instance",
     description: description || "UPA instance file",
   });
@@ -107,23 +103,27 @@ export function upaConfigFile(): Option {
   });
 }
 
+/// A JSON file in one of the formats:
+/// - A single object { vk, proof, inputs }
+/// - A single object { circuitId, proof, inputs }
 export function proofFile(): Option {
   return option({
     type: string,
     long: "proof-file",
-    short: "p",
     description:
-      'Proof and public inputs JSON file: {"proof": {..}, "inputs": [..]}',
+      'File containing one proof: {"vk/circuitId": {..}, "proof": {..},' +
+      ' "inputs": [..]}',
   });
 }
 
+/// A JSON file in the format:
+/// - A single object { vk, proof, inputs }
 export function vkProofInputsFile(): Option {
   return option({
     type: string,
     long: "proof-file",
-    short: "p",
     description:
-      'VK, proof, inputs file: {"vk": {..}, "proof": {..}, "inputs": [..]}',
+      'File containing one proof: {"vk": {..}, "proof": {..}, "inputs": [..]}',
   });
 }
 
@@ -136,7 +136,6 @@ export function proofsFile(): Option {
   return option({
     type: string,
     long: "proofs-file",
-    short: "p",
     description: "Proofs file (containing a list of proofs)",
   });
 }
@@ -145,7 +144,6 @@ export function circuitId(): Option {
   return option({
     type: string,
     long: "circuit-id",
-    short: "c",
     description: "Circuit Id",
   });
 }
@@ -164,7 +162,6 @@ export function estimateGas(): Flag {
   return flag({
     type: boolean,
     long: "estimate-gas",
-    short: "g",
     defaultValue: () => false,
     description: "Estimate gas only.  Do not send the tx.",
   });
@@ -174,7 +171,6 @@ export function dumpTx(): Flag {
   return flag({
     type: boolean,
     long: "dump-tx",
-    short: "d",
     defaultValue: () => false,
     description: "Dump the tx request.  Do not send.",
   });
@@ -219,7 +215,6 @@ export function submissionFile(description?: string | undefined): Option {
   return option({
     type: string,
     long: "submission-file",
-    short: "s",
     defaultValue: () => "",
     description: description || "Submission file",
   });
@@ -229,7 +224,6 @@ export function proofReferenceFile(description?: string | undefined): Option {
   return option({
     type: string,
     long: "proof-ref-file",
-    short: "r",
     defaultValue: () => "",
     description: description || "Proof reference file",
   });
@@ -241,7 +235,6 @@ export function owner_keyfile(
   return option({
     type: optional(string),
     long: "owner-keyfile",
-    short: "owner-k",
     description: description || "Owner keyfile",
   });
 }
@@ -253,7 +246,6 @@ export function owner_password(
   return option({
     type: optional(string),
     long: "owner-password",
-    short: "owner-p",
     description: description || "Owner password",
   });
 }

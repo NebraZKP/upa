@@ -31,14 +31,12 @@ export const stats = command({
     listCircuits: flag({
       type: boolean,
       long: "circuits",
-      short: "c",
       defaultValue: () => false,
       description: "List the registered circuit IDs",
     }),
     showvks: flag({
       type: boolean,
       long: "show-vks",
-      short: "s",
       defaultValue: () => false,
       description: "Include VK in circuit info",
     }),

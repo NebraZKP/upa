@@ -158,7 +158,6 @@ const convertVkProofsAndInputsFile = command({
     outCircuitIdProofsAndInputsFile: option({
       type: string,
       long: "circuitid-proofs-inputs-file",
-      short: "i",
       description:
         "Output file containing JSON list of objects " +
         "{ circuitId, proof, inputs }",

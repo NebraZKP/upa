@@ -28,7 +28,6 @@ export const setFee = command({
     feeInGas: option({
       type: string,
       long: "fee",
-      short: "f",
       description: "New fixed fee per proof (in gas)",
     }),
     wait: wait(),

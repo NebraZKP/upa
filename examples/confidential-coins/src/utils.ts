@@ -14,7 +14,6 @@ export function instance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "instance",
-    short: "i",
     defaultValue: () => "confidential-coins.instance",
     description: description || "confidential-coins instance file",
   });

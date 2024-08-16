@@ -136,13 +136,11 @@ const computeFinalDigest = command({
     proofIdsFile: option({
       type: string,
       long: "proof-ids-file",
-      short: "i",
       description: "File containing proofIds of submitted proofs",
     }),
     calldataFile: option({
       type: optional(string),
       long: "calldata-file",
-      short: "p",
       description: "Write a fake calldata file",
     }),
   },
@@ -179,26 +177,22 @@ const submitAggregatedProof = command({
     calldataFile: option({
       type: string,
       long: "calldata-file",
-      short: "p",
       description: "Proof file",
     }),
     submissionFiles: multioption({
       type: array(string),
       long: "submission",
-      short: "s",
       description: "on-chain submission files",
     }),
     offset: option({
       type: number,
       long: "offset",
-      short: "",
       defaultValue: () => 0,
       description: "skip proofs in first on-chain submission (default: 0)",
     }),
     finalCount: option({
       type: optional(number),
       long: "final-count",
-      short: "f",
       description:
         "include only leading proofs from final submission" + " (default: all)",
     }),
