@@ -131,9 +131,10 @@ pushd "$ROOT_DIR/../upa"
     # Build UPA Tool
     yarn
     yarn build
+    yarn
     source scripts/shell_setup.sh
     # Get the deployed bytecode
-    upa get-verifier-bytecode \
+    upa query verifier-bytecode \
         --endpoint $RPC_ENDPOINT \
         --instance "$ROOT_DIR/$UPA_INSTANCE" > $DEPLOYED_VERIFIER
 popd
