@@ -99,7 +99,7 @@ pushd _test_dev_aggregator
            --keyfile ${USER_KEYFILE} \
            --proofs-file ${TEST_PROOFS} \
            --proof-ids-file pids.json \
-           -n ${BATCH_SIZE} \
+           --num-proofs ${BATCH_SIZE} \
            --wait > submit_1.tx.hash
     upa get-submission `cat submit_1.tx.hash` > submit_1.submission.json
 
@@ -175,7 +175,7 @@ pushd _test_dev_aggregator
            --keyfile ${USER_KEYFILE} \
            --proofs-file ${TEST_PROOFS} \
            --skip ${BATCH_SIZE} \
-           -n ${BATCH_SIZE} \
+           --num-proofs ${BATCH_SIZE} \
 
     TOTAL_SUBMITTED=$((${BATCH_SIZE} + ${BATCH_SIZE}))
 
@@ -183,7 +183,7 @@ pushd _test_dev_aggregator
            --keyfile ${USER_KEYFILE} \
            --proofs-file ${TEST_PROOFS} \
            --skip ${TOTAL_SUBMITTED} \
-           -n 1 \
+           --num-proofs 1 \
            --wait
 
     # Give aggregator time to submit two batches (one for the first submission

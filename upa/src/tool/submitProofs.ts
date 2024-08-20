@@ -39,7 +39,6 @@ export const submitProofs = command({
     numProofs: option({
       type: optional(number),
       long: "num-proofs",
-      short: "n",
       description: "Number of proofs to submit",
     }),
     overrideUpaFeeGwei: options.overrideUpaFeeGwei(),
@@ -54,6 +53,7 @@ export const submitProofs = command({
     isDryRun: flag({
       type: boolean,
       long: "dry-run",
+      short: "n",
       defaultValue: () => false,
       description: "Only output the proofId and submission files.",
     }),

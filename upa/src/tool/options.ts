@@ -35,6 +35,7 @@ export function keyfile(
   return option({
     type: string,
     long: "keyfile",
+    short: "k",
     defaultValue,
     description:
       description || "Keyfile to sign tx (defaults to KEYFILE env var)",
@@ -80,6 +81,7 @@ export function endpoint(): Option {
   return option({
     type: string,
     long: "endpoint",
+    short: "e",
     defaultValue: () => process.env.RPC_ENDPOINT || "http://127.0.0.1:8545/",
     description: "RPC endpoint to connect to (defaults to ENDPOINT env var)",
   });
