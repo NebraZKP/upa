@@ -83,7 +83,7 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-      
+
       # If the cache is empty, fetch modules, else run immutable.
       - if: steps.yarn-cache.outputs.cache-hit != 'true'
         run: |
@@ -118,6 +118,10 @@ jobs:
       - name: run test_upa
         run: |
           ./scripts/test_upa
+
+      - name: run test_challenge
+        run: |
+          ./scripts/test_challenge
 
       - name: run test_dev_aggregator
         run: |

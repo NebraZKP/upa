@@ -302,8 +302,9 @@ describe("EventGetter for events", () => {
       startHeight,
       curHeight
     );
-    const withData =
-      await submittedEventGetter.getProofDataForSubmittedEvents(eventSets);
+    const withData = await submittedEventGetter.getProofDataForSubmittedEvents(
+      eventSets
+    );
 
     // Extract proof and input data
 

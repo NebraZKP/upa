@@ -803,6 +803,8 @@ contract UpaVerifier is
         bytes32[] calldata proofIdMerkleProof,
         bytes32[] calldata proofDataMerkleProof
     ) external returns (bool challengeSuccessful) {
+        emit Challenge();
+
         // We track the gas to reimburse the costs to sucessful
         // challenges
         uint256 startGas = gasleft();
@@ -864,6 +866,8 @@ contract UpaVerifier is
                     openChallengeRefundAmount,
                 msg.sender
             );
+
+            emit SubmissionChallengeSuccess();
         } else {
             // If not, it's added to the due balance for this `submissionId`.
             // TODO: can we do without the openChallengeRefundAmounts?

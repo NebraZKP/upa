@@ -59,7 +59,7 @@ export const challenge = command({
     const submission = Submission.fromCircuitIdsProofsAndInputs(
       circuitIdProofAndInputs
     );
-    throw "todo";
+    // throw "todo";
 
     const dupSubmissionIdx = 0;
     const submissionIdx = await verifier.getSubmissionIdx(

@@ -12,6 +12,8 @@ import {
 import {
   IUpaVerifier,
   SubmissionVerifiedEvent,
+  ChallengeEvent,
+  SubmissionChallengeSuccessEvent,
 } from "../../typechain-types/contracts/IUpaVerifier";
 import * as ethers from "ethers";
 import { strict as assert } from "assert";
@@ -19,6 +21,7 @@ import { bytes32IsWellFormed, readBytes32 } from "./utils";
 import { UpaVerifier } from "../../typechain-types";
 // eslint-disable-next-line
 import { SubmissionProofStruct } from "../../typechain-types/contracts/UpaVerifier";
+import { Groth16Proof } from "./application";
 
 export { VKRegisteredEvent, ProofSubmittedEvent, SubmissionVerifiedEvent };
 
@@ -320,4 +323,89 @@ export class VKRegisteredEventGetter extends EventGetterBase<
       vk: args.vk,
     };
   }
+}
+
+// Challenge event data is empty
+// We only use it to retrieve associated tx calldata
+export type ChallengeEventOutput = object;
+
+export class ChallengeEventGetter extends EventGetterBase<
+  ChallengeEvent.Event,
+  ChallengeEventOutput
+> {
+  constructor(upa: IUpaVerifier) {
+    super(upa, upa.filters.Challenge());
+  }
+
+  // eslint-disable-next-line
+  parseEvent(ev: TypedEventLog<ChallengeEvent.Event>): ChallengeEventOutput {
+    return {};
+  }
+}
+
+// Event corresponding to successful challenge of a full submission
+// Note: Does not correspond to success of a single call to challenge
+// but rather the successful challenge of a full submission
+// Since a successful challenge happens during a challenge call, the event
+// data is empty
+export class SubmissionChallengeSuccessEventGetter extends EventGetterBase<
+  SubmissionChallengeSuccessEvent.Event,
+  ChallengeEventOutput
+> {
+  constructor(upa: IUpaVerifier) {
+    super(upa, upa.filters.SubmissionChallengeSuccess());
+  }
+
+  // eslint-disable-next-line
+  parseEvent(ev: TypedEventLog<ChallengeEvent.Event>): ChallengeEventOutput {
+    return {};
+  }
+}
+
+export function getCalldataForChallengeTx(
+  verifier: UpaVerifier,
+  tx: ethers.TransactionResponse
+): {
+  circuitId: string;
+  proof: Groth16Proof;
+  publicInputs: bigint[];
+  submissionId: string;
+  dupSubmissionIdx: bigint;
+  proofIdMerkleProof: string[];
+  proofDataMerkleProof: string[];
+} {
+  const challengeFragment = verifier.getFunction("challenge")!.fragment;
+  const decoded = verifier.interface.decodeFunctionData(
+    challengeFragment,
+    tx.data
+  );
+
+  // The decoded data is dynamically indexed.  Extract everything to make it a
+  // concrete struct.
+
+  const circuitId: string = readBytes32(decoded.circuitId);
+  const proof: Groth16Proof = Groth16Proof.from_solidity(decoded.proof);
+  const publicInputs: bigint[] = decoded.publicInputs.map(BigInt);
+  const submissionId: string = readBytes32(decoded.submissionId);
+  const dupSubmissionIdx: bigint = BigInt(decoded.dupSubmissionIdx);
+  const proofIdMerkleProof: string[] =
+    decoded.proofIdMerkleProof.map(readBytes32);
+  const proofDataMerkleProof: string[] =
+    decoded.proofDataMerkleProof.map(readBytes32);
+
+  assert(bytes32IsWellFormed(circuitId));
+  assert(bytes32IsWellFormed(submissionId));
+  assert("bigint" === typeof dupSubmissionIdx);
+  assert(bytes32IsWellFormed(proofIdMerkleProof[0]));
+  assert(bytes32IsWellFormed(proofDataMerkleProof[0]));
+
+  return {
+    circuitId,
+    proof,
+    publicInputs,
+    submissionId,
+    dupSubmissionIdx,
+    proofIdMerkleProof,
+    proofDataMerkleProof,
+  };
 }
