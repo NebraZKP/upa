@@ -39,14 +39,12 @@ export const submitProofs = command({
     numProofs: option({
       type: optional(number),
       long: "num-proofs",
-      short: "N",
       description: "Number of proofs to submit",
     }),
     overrideUpaFeeGwei: options.overrideUpaFeeGwei(),
     outProofIdsFile: option({
       type: optional(string),
       long: "proof-ids-file",
-      short: "i",
       description: "Output file containing proofIds of submitted proofs",
     }),
     outSubmissionFile: options.submissionFile(

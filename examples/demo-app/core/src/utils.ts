@@ -11,7 +11,6 @@ export function demoAppInstance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "instance",
-    short: "i",
     defaultValue: () => "demo-app.instance",
     description: description || "demo-app instance file",
   });

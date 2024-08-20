@@ -55,13 +55,11 @@ export const send = command({
     destination: option({
       type: string,
       long: "dest",
-      short: "d",
       description: "Destination address",
     }),
     amount: option({
       type: string,
       long: "amount",
-      short: "a",
       description: "ETH amount to send",
     }),
   },
@@ -129,7 +127,6 @@ const fund = command({
     amount: option({
       type: string,
       long: "amount",
-      short: "a",
       defaultValue: () => "1.0",
       description: "ETH amount to fund (default: 1.0 ETH)",
     }),
@@ -177,7 +174,6 @@ const trace = command({
     traceFile: option({
       type: string,
       long: "trace-file",
-      short: "t",
       defaultValue: () => "trace.json",
       description: "File to dump a trace to (default: trace.json)",
     }),
@@ -299,11 +295,10 @@ const groth16Verify = command({
   name: "groth16-verify",
   description: "Verify a groth16 proof",
   args: {
-    proofFile: options.proofFile(),
+    proofFile: options.vkProofInputsFile(),
     doLog: flag({
       type: boolean,
       long: "log",
-      short: "l",
       description: "Log groth16 verification",
     }),
   },

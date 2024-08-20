@@ -165,19 +165,16 @@ export const deploy = command({
     verifier_bin: option({
       type: string,
       long: "verifier",
-      short: "v",
       description: "On-chain verifier binary",
     }),
     owner: option({
       type: optional(string),
       long: "owner",
-      short: "o",
       description: "Owner address (defaults to address of keyfile)",
     }),
     worker: option({
       type: optional(string),
       long: "worker",
-      short: "w",
       description: "Worker address (defaults to address of owner)",
     }),
     feeRecipient: option({
@@ -188,14 +185,7 @@ export const deploy = command({
     groth16VerifierAddress: option({
       type: optional(string),
       long: "groth16",
-      short: "g16",
       description: "Groth16 verifier address",
-    }),
-    proofReceiverAddress: option({
-      type: optional(string),
-      long: "proof-receiver",
-      short: "receiver",
-      description: "Proof receiver contract address",
     }),
     feeInGas: options.feeInGas(),
     aggregatorCollateralInWei: options.aggregatorCollateralInWei(),
