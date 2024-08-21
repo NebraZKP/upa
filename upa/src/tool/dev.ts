@@ -9,9 +9,12 @@ import {
   boolean,
 } from "cmd-ts";
 import {
+  loadAppVkCompressedProofAndInputsFile,
   loadAppVkProofInputsFile,
   loadWallet,
   readAddressFromKeyfile,
+  upaFromInstanceFile,
+  handleTxRequest,
 } from "./config";
 import { endpoint, keyfile, password, getPassword } from "./options";
 import * as log from "./log";
@@ -22,6 +25,9 @@ import { devAggregator } from "./devAggregator";
 import { options } from ".";
 import { Groth16Verifier } from "../sdk";
 import { getLogger } from "./log";
+import { computeCircuitId, parseGweiOrUndefined } from "../sdk/utils";
+import { PayableOverrides } from "../../typechain-types/common";
+import { updateFeeOptions } from "../sdk/upa";
 
 export const ethkeygen = command({
   name: "ethkeygen",
@@ -330,6 +336,68 @@ const groth16Verify = command({
   },
 });
 
+export const submitCompressedProof = command({
+  name: "submit-compressed-proof",
+  args: {
+    endpoint: options.endpoint(),
+    keyfile: options.keyfile(),
+    password: options.password(),
+    instance: options.instance(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    wait: options.wait(),
+    maxFeePerGasGwei: options.maxFeePerGasGwei(),
+    proofFile: options.proofFile(),
+    overrideUpaFeeGwei: options.overrideUpaFeeGwei(),
+  },
+  description:
+    "Make a submission of proofs to UPA using a compressed proof (file " +
+    "format: {vk, proof, inputs}).  Outputs Tx hash to stdout.  ",
+  handler: async function ({
+    endpoint,
+    keyfile,
+    password,
+    instance,
+    estimateGas,
+    dumpTx,
+    wait,
+    maxFeePerGasGwei,
+    proofFile,
+    overrideUpaFeeGwei,
+  }): Promise<void> {
+    const vkProofInputs = loadAppVkCompressedProofAndInputsFile(proofFile);
+
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const wallet = await loadWallet(keyfile, getPassword(password), provider);
+    const { verifier } = await upaFromInstanceFile(instance, wallet);
+
+    // Create the Submission object
+    const cid = computeCircuitId(vkProofInputs.vk);
+    const options: PayableOverrides = {
+      value: parseGweiOrUndefined(overrideUpaFeeGwei),
+      maxFeePerGas: parseGweiOrUndefined(maxFeePerGasGwei),
+    };
+
+    // Submit to the contract (output tx hash, optionally dump tx, wait,
+    // estimate gas, etc)
+    const txReq = await verifier.submit.populateTransaction(
+      [cid],
+      [vkProofInputs.proof.solidity()],
+      [vkProofInputs.inputs],
+      await updateFeeOptions(verifier, 1, options)
+    );
+
+    await handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      verifier.interface
+    );
+  },
+});
+
 export const dev = subcommands({
   name: "dev",
   description: "Utilities for local development",
@@ -347,5 +415,6 @@ export const dev = subcommands({
     "get-block-base-fee": getBlockBaseFee,
     aggregator: devAggregator,
     "groth16-verify": groth16Verify,
+    "submit-compressed-proof": submitCompressedProof,
   },
 });

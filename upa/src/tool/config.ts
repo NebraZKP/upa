@@ -6,12 +6,12 @@ import {
   upaInstanceFromDescriptor,
   UpaConfig,
 } from "../sdk/upa";
+import { AppVkProofInputs, CircuitIdProofAndInputs } from "../sdk/application";
 import {
-  AppVkProofInputs,
   Groth16VerifyingKey,
   Groth16Proof,
-  CircuitIdProofAndInputs,
-} from "../sdk/application";
+  CompressedGroth16Proof,
+} from "../sdk/groth16";
 import { SnarkJSVKey } from "../sdk/snarkjs";
 import * as ethers from "ethers";
 import * as fs from "fs";
@@ -316,6 +316,17 @@ export function loadProofFileAsCircuitIdProofAndInputsArray(
   } else {
     return [singleProofAsCircuitIdProofAndInputs(parsedJSON)];
   }
+}
+
+export function loadAppVkCompressedProofAndInputsFile(
+  filename: string
+): AppVkProofInputs<Groth16VerifyingKey, CompressedGroth16Proof> {
+  const parsedJSON: object[] = JSON.parse(fs.readFileSync(filename, "ascii"));
+  return AppVkProofInputs.from_json(
+    parsedJSON,
+    Groth16VerifyingKey.from_json,
+    CompressedGroth16Proof.from_json
+  );
 }
 
 /// Load the UPA config file that was used to generate the circuits.

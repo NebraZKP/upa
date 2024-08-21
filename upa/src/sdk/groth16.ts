@@ -417,19 +417,48 @@ export class CompressedGroth16Proof {
     this.pok = pok.map((pt) => toBeHex(pt, 32));
   }
 
+  public static from_json(o: object): CompressedGroth16Proof {
+    assert(typeof o === "object");
+    const json_obj = o as CompressedGroth16Proof;
+    assert(typeof json_obj.pi_a === "string");
+    assert(typeof json_obj.pi_b === "object");
+    assert(typeof json_obj.pi_c === "string");
+    assert(typeof json_obj.m === "object");
+    assert(typeof json_obj.pok === "object");
+    return new CompressedGroth16Proof(
+      json_obj.pi_a,
+      json_obj.pi_b,
+      json_obj.pi_c,
+      json_obj.m,
+      json_obj.pok
+    );
+  }
+
   public static from_solidity(
     sol: Groth16CompressedProofStruct
   ): CompressedGroth16Proof {
     return new CompressedGroth16Proof(sol.pA, sol.pB, sol.pC, sol.m, sol.pok);
   }
 
-  public decompress(): Groth16Proof {
+  public decompress(): Groth16Proof | undefined {
     const pi_a = decompressG1Point(this.pi_a);
     const pi_b = decompressG2Point(this.pi_b);
     const pi_c = decompressG1Point(this.pi_c);
     const m = this.m.map(decompressG1Point);
     const pok = this.pok.map(decompressG1Point);
-    return new Groth16Proof(pi_a, pi_b, pi_c, m, pok);
+
+    // Check that decompression worked, otherwise return undefined.
+    if (pi_a && pi_b && pi_c && m.every((x) => x) && pok.every((x) => x)) {
+      return new Groth16Proof(
+        pi_a,
+        pi_b,
+        pi_c,
+        m as G1Point[],
+        pok as G1Point[]
+      );
+    }
+
+    return undefined;
   }
 
   public solidity(): Groth16CompressedProofStruct {

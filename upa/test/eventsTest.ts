@@ -34,8 +34,8 @@ describe("EventGetter for events", () => {
     [],
     []
   );
-  const pf_a = pf_a_compressed.decompress();
-  const pf_b = pf_b_compressed.decompress();
+  const pf_a = pf_a_compressed.decompress()!;
+  const pf_b = pf_b_compressed.decompress()!;
   const pi_a = [11n, 12n, 13n, 14n];
   const pi_b = [21n, 22n, 23n, 24n];
   const pi_c = [31n, 32n, 33n, 34n];
@@ -302,9 +302,8 @@ describe("EventGetter for events", () => {
       startHeight,
       curHeight
     );
-    const withData = await submittedEventGetter.getProofDataForSubmittedEvents(
-      eventSets
-    );
+    const withData =
+      await submittedEventGetter.getProofDataForSubmittedEvents(eventSets);
 
     // Extract proof and input data
 

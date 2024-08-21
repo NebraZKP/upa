@@ -7,7 +7,6 @@ import {
   CompressedG2Point,
 } from "./ecc";
 import * as utils from "./utils";
-import { strict as assert } from "assert";
 const ffjavascript = require("ffjavascript");
 
 /// BN254 base field (FQ) modulus
@@ -41,8 +40,11 @@ export function compressG1Point(g1Point: G1Point): CompressedG1Point {
   return bigintToHex32(BigInt(g1Point[0]) | (sign << 255n));
 }
 
-/// Decompresses `compressedPoint` into a `G1Point`
-export function decompressG1Point(compressedPoint: CompressedG1Point): G1Point {
+/// Decompresses `compressedPoint` into a `G1Point`.  Returns `undefined` if
+/// the sqrt operation fails.
+export function decompressG1Point(
+  compressedPoint: CompressedG1Point
+): G1Point | undefined {
   let x = BigInt(compressedPoint);
   const ySign = (x >> 255n) & 1n;
   x &= (1n << 255n) - 1n;
@@ -51,7 +53,10 @@ export function decompressG1Point(compressedPoint: CompressedG1Point): G1Point {
   const x3: bigint = FQ.mul(x2, x);
   const x3PlusB: bigint = FQ.add(x3, BN254_G1_B);
   const y: bigint = FQ.sqrt(x3PlusB);
-  assert("bigint" == typeof y, "sqrt failed");
+  if (!y) {
+    return undefined;
+  }
+
   const sign = y & 1n;
   const signedY: bigint = (ySign ^ sign) == 1n ? FQ.neg(y) : y;
   const g1Point: G1Point = [bigintToHex32(x), bigintToHex32(signedY)];
@@ -69,8 +74,11 @@ export function compressG2Point(g2Point: G2Point): CompressedG2Point {
   return [bigintToHex32(x0), bigintToHex32(BigInt(x[1]))];
 }
 
-/// Decompresses `compressedPoint` into a `G2Point`.
-export function decompressG2Point(compressedPoint: CompressedG2Point): G2Point {
+/// Decompresses `compressedPoint` into a `G2Point`.  Returns `undefined` if
+/// the sqrt operation fails.
+export function decompressG2Point(
+  compressedPoint: CompressedG2Point
+): G2Point | undefined {
   const x = compressedPoint.map(BigInt);
   const ySign = (x[0] >> 255n) & 1n;
   x[0] &= (1n << 255n) - 1n;
@@ -79,6 +87,10 @@ export function decompressG2Point(compressedPoint: CompressedG2Point): G2Point {
   const x3: [bigint, bigint] = FQ2.mul(x2, x);
   const x3PlusB: [bigint, bigint] = FQ2.add(x3, [BN254_G2_B0, BN254_G2_B1]);
   const y: [bigint, bigint] = FQ2.sqrt(x3PlusB);
+  if (!y) {
+    return undefined;
+  }
+
   const sign = y[1] & 1n;
   const signedY: [bigint, bigint] = (ySign ^ sign) == 1n ? FQ2.neg(y) : y;
   const g2Point: G2Point = [

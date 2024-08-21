@@ -68,12 +68,12 @@ describe("Duplicate Submissions", () => {
       submitCReceipt
     );
 
-    expect(sub1A.submissionId).eql(s2.submissionId);
-    expect(sub1B.submissionId).eql(s2.submissionId);
-    expect(sub1C.submissionId).eql(s2.submissionId);
-    expect(sub1A.getDupSubmissionIdx()).eql(0);
-    expect(sub1B.getDupSubmissionIdx()).eql(1);
-    expect(sub1C.getDupSubmissionIdx()).eql(2);
+    expect(sub1A!.submissionId).eql(s2.submissionId);
+    expect(sub1B!.submissionId).eql(s2.submissionId);
+    expect(sub1C!.submissionId).eql(s2.submissionId);
+    expect(sub1A!.getDupSubmissionIdx()).eql(0);
+    expect(sub1B!.getDupSubmissionIdx()).eql(1);
+    expect(sub1C!.getDupSubmissionIdx()).eql(2);
   });
 
   it("should not allow too many submissions of same Id", async () => {
@@ -125,10 +125,10 @@ describe("Duplicate Submissions", () => {
     const submitBReceipt = await submitB.txResponse.wait();
     assert(submitBReceipt);
 
-    const subB = await Submission.fromTransactionReceipt(
+    const subB = (await Submission.fromTransactionReceipt(
       verifier,
       submitBReceipt
-    );
+    ))!;
 
     // Verify the valid submission (with dupSubmissionIdx = 1)
     await verifier
@@ -166,10 +166,10 @@ describe("Duplicate Submissions", () => {
     const submitBReceipt = await submitB.txResponse.wait();
     assert(submitBReceipt);
 
-    const subB = await Submission.fromTransactionReceipt(
+    const subB = (await Submission.fromTransactionReceipt(
       verifier,
       submitBReceipt
-    );
+    ))!;
 
     // Verify the first 2 of the 3 proofs in the submission.
     const proofIds = subB.proofIds.slice(0, 2);
