@@ -211,14 +211,16 @@ export function splitSubmissionInterval<T>(
  * may contain already verified proofs.
  * @param upaInstance
  * @param newEvents Each `EventSet` contains `ProofSubmittedEvent`s
- * @returns An array of `SubmissionInterval`s that does not include
- * any already verified proofs.
+ * @returns An array of `SubmissionInterval`s that does not include any
+ * already verified proofs.  If event data for a specific submission is
+ * malformed (e.g. contains invalid compressed points), the corresponding
+ * entry in the returned array will be `undefined`.
  */
 export async function submissionIntervalsFromEvents(
   checkVerified: boolean,
   upaInstance: UpaInstance,
   newEvents: EventSet<ProofSubmittedEventWithProofData>[]
-): Promise<SubmissionInterval[]> {
+): Promise<(SubmissionInterval | undefined)[]> {
   const intervalsP = newEvents.map(async (eventSet) => {
     if (checkVerified) {
       // One or more (or all) of the proofs in the first
@@ -236,31 +238,38 @@ export async function submissionIntervalsFromEvents(
       assert(numVerified <= submissionSize);
 
       const submission = Submission.fromSubmittedEvents(eventSet);
-      if (numVerified == submissionSize) {
-        console.log("  ALREADY FULLY VERIFIED");
+      if (submission) {
+        if (numVerified == submissionSize) {
+          console.log("  ALREADY FULLY VERIFIED");
+          return {
+            submission,
+            startIdx: numVerified,
+            numProofs: 0,
+            data: undefined,
+          };
+        }
         return {
           submission,
           startIdx: numVerified,
-          numProofs: 0,
+          numProofs: submissionSize - numVerified,
           data: undefined,
         };
       }
-      return {
-        submission,
-        startIdx: numVerified,
-        numProofs: submissionSize - numVerified,
-        data: undefined,
-      };
     } else {
       const submission = Submission.fromSubmittedEvents(eventSet);
-      const submissionSize = submission.proofs.length;
-      return {
-        submission,
-        startIdx: 0,
-        numProofs: submissionSize,
-        data: undefined,
-      };
+      if (submission) {
+        const submissionSize = submission.proofs.length;
+        return {
+          submission,
+          startIdx: 0,
+          numProofs: submissionSize,
+          data: undefined,
+        };
+      }
     }
+
+    // submission was undefined, indicating that it was malformed.
+    return undefined;
   });
 
   return Promise.all(intervalsP);

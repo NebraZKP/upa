@@ -9,8 +9,47 @@ import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { reverseFq2Elements } from "../src/sdk/ecc";
 import { deployUpaLibTest } from "./upaLibTests";
+import { CompressedGroth16Proof } from "../src/sdk/groth16";
 
-describe("Point compression tests", () => {
+describe("Point (de)compression", () => {
+  it("should fail gracefully for malformed data", async function () {
+    // Log data leading to decompression failure:
+    //
+    // {
+    //   pi_a:
+    //     "0x9e9cfd462aa675a5e01f0d76bf4298f428cb9717099dc6ac292ac096ccae3193",
+    //   pi_b: [
+    //     "0x03e1f468c8773b7416fb1ec155ec13aba0d820d2d36ef0f357b9dda12f8997ff",
+    //     "0x15170de686fdfa030ffdc0b63174767ea136e49e2b541509ad5aefaa8dce2ef7",
+    //   ],
+    //   pi_c:
+    //     "0x1251c54744fffd804ca1b8a8d317252ac6e0ee6ff65170872247464c741d7a92",
+    //   m: [],
+    //   pok: [],
+    // };
+
+    // Results in a non-square y^2 value.  Should fail gracefully.
+    const b = decompressG2Point([
+      "0x03e1f468c8773b7416fb1ec155ec13aba0d820d2d36ef0f357b9dda12f8997ff",
+      "0x15170de686fdfa030ffdc0b63174767ea136e49e2b541509ad5aefaa8dce2ef7",
+    ]);
+    expect(b).to.be.undefined;
+
+    // Equivalent full Groth16 proof decompression should fail gracefully.
+
+    const comp = new CompressedGroth16Proof(
+      "0x9e9cfd462aa675a5e01f0d76bf4298f428cb9717099dc6ac292ac096ccae3193",
+      [
+        "0x03e1f468c8773b7416fb1ec155ec13aba0d820d2d36ef0f357b9dda12f8997ff",
+        "0x15170de686fdfa030ffdc0b63174767ea136e49e2b541509ad5aefaa8dce2ef7",
+      ],
+      "0x1251c54744fffd804ca1b8a8d317252ac6e0ee6ff65170872247464c741d7a92",
+      [],
+      []
+    );
+    expect(comp.decompress()).to.be.undefined;
+  });
+
   it("Checks g1 points compression", async function () {
     const vk = loadAppVK("../circuits/src/tests/data/vk.json");
     const alpha = vk.alpha;
@@ -61,7 +100,7 @@ describe("Point compression tests", () => {
     const beta = vk.beta;
     const compressedBeta = compressG2Point(beta).map(BigInt) as [
       bigint,
-      bigint
+      bigint,
     ];
     const compressedBetaSoldity = await upaLibTest.compressG2Point(
       reverseFq2Elements(beta)
@@ -70,7 +109,7 @@ describe("Point compression tests", () => {
     const gamma = vk.gamma;
     const compressedGamma = compressG2Point(gamma).map(BigInt) as [
       bigint,
-      bigint
+      bigint,
     ];
     const compressedGammaSoldity = await upaLibTest.compressG2Point(
       reverseFq2Elements(gamma)
@@ -79,7 +118,7 @@ describe("Point compression tests", () => {
     const delta = vk.delta;
     const compressedDelta = compressG2Point(delta).map(BigInt) as [
       bigint,
-      bigint
+      bigint,
     ];
     const compressedDeltaSoldity = await upaLibTest.compressG2Point(
       reverseFq2Elements(delta)

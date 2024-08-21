@@ -279,6 +279,7 @@ export async function submitProofs(
   );
 }
 
+/// Throws if the submission was malformed
 export async function waitForSubmissionVerified(
   upaInstance: UpaInstance,
   txReceipt: ethers.TransactionReceipt,
@@ -289,6 +290,10 @@ export async function waitForSubmissionVerified(
     upaInstance.verifier,
     txReceipt
   );
+  if (!submission) {
+    throw "could not parse the submission from the chain";
+  }
+
   const submissionId = submission.submissionId;
   const dupSubmissionIdx = submission.getDupSubmissionIdx();
   const submissionIdx = await upaInstance.verifier.getSubmissionIdx(

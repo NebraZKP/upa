@@ -23,7 +23,7 @@ import {
   JSONstringify,
 } from "./utils";
 import assert from "assert";
-import { CompressedGroth16Proof } from "./groth16";
+import { CompressedGroth16Proof, Groth16Proof } from "./groth16";
 
 /// This must match the value defined in the ProofReceiver contract.  For now,
 /// we use uint16 values as indices, and so the the max submission size is
@@ -329,10 +329,11 @@ export class Submission extends OffChainSubmission {
     );
   }
 
+  /// Return false if the tx contains malformed data
   public static async fromTransactionReceipt(
     proofReceiver: UpaProofReceiver,
     txReceipt: ethers.TransactionReceipt
-  ): Promise<Submission> {
+  ): Promise<Submission | undefined> {
     const provider = proofReceiver.runner!.provider!;
     const tx = await provider.getTransaction(txReceipt.hash);
     return Submission.fromTransactionReceiptAndData(
@@ -342,19 +343,24 @@ export class Submission extends OffChainSubmission {
     );
   }
 
+  /// Return false if the tx contains malformed data
   public static fromTransactionReceiptAndData(
     proofReceiver: UpaProofReceiver,
     txReceipt: ethers.TransactionReceipt,
     tx: ethers.TransactionResponse
-  ): Submission {
+  ): Submission | undefined {
     const { circuitIds, proofs, publicInputs } = getCallDataForSubmitTx(
       proofReceiver,
       tx
     );
-    const groth16Proofs: application.Groth16Proof[] = proofs.map((pf) => {
+    const groth16ProofsOrNull = proofs.map((pf) => {
       return CompressedGroth16Proof.from_solidity(pf).decompress();
     });
+    if (!groth16ProofsOrNull.every((x) => x)) {
+      return undefined;
+    }
 
+    const groth16Proofs = groth16ProofsOrNull as application.Groth16Proof[];
     assert(circuitIds.length == txReceipt.logs.length);
 
     // Extract the proof ids from the events.  As a sanity check, also locally
@@ -391,17 +397,30 @@ export class Submission extends OffChainSubmission {
     );
   }
 
+  /// If data is malformed (e.g. if decompression fails), returns undefined.
   public static fromSubmittedEvents(
     events: EventSet<ProofSubmittedEventWithProofData>
-  ) {
+  ): Submission | undefined {
+    const cidsProofsInputsOrNull = events.events.map((ev) => {
+      const proof = CompressedGroth16Proof.from_solidity(ev.proof).decompress();
+      if (!proof) {
+        return undefined;
+      }
+      return {
+        circuitId: ev.circuitId,
+        proof: proof as Groth16Proof,
+        inputs: ev.publicInputs,
+      };
+    });
+
+    if (!cidsProofsInputsOrNull.every((x) => x)) {
+      return undefined;
+    }
+
+    const cidsProofsInputs =
+      cidsProofsInputsOrNull as application.CircuitIdProofAndInputs[];
     const submission = Submission.fromCircuitIdsProofsInputsAndDupIdx(
-      events.events.map((ev) => {
-        return {
-          circuitId: ev.circuitId,
-          proof: CompressedGroth16Proof.from_solidity(ev.proof).decompress(),
-          inputs: ev.publicInputs,
-        };
-      }),
+      cidsProofsInputs,
       Number(events.events[0].dupSubmissionIdx)
     );
 

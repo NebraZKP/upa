@@ -423,13 +423,25 @@ export class CompressedGroth16Proof {
     return new CompressedGroth16Proof(sol.pA, sol.pB, sol.pC, sol.m, sol.pok);
   }
 
-  public decompress(): Groth16Proof {
+  public decompress(): Groth16Proof | undefined {
     const pi_a = decompressG1Point(this.pi_a);
     const pi_b = decompressG2Point(this.pi_b);
     const pi_c = decompressG1Point(this.pi_c);
     const m = this.m.map(decompressG1Point);
     const pok = this.pok.map(decompressG1Point);
-    return new Groth16Proof(pi_a, pi_b, pi_c, m, pok);
+
+    // Check that decompression worked, otherwise return undefined.
+    if (pi_a && pi_b && pi_c && m.every((x) => x) && pok.every((x) => x)) {
+      return new Groth16Proof(
+        pi_a,
+        pi_b,
+        pi_c,
+        m as G1Point[],
+        pok as G1Point[]
+      );
+    }
+
+    return undefined;
   }
 
   public solidity(): Groth16CompressedProofStruct {

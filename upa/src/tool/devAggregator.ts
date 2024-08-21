@@ -6,6 +6,7 @@ import * as config from "./config";
 import { dummyProofData, UpaInstance } from "../sdk/upa";
 import { strict as assert } from "assert";
 import { NonPayableOverrides } from "../../typechain-types/common";
+import { JSONstringify } from "../sdk/utils";
 import * as log from "./log";
 import {
   siProofIds,
@@ -149,7 +150,7 @@ export const devAggregator = command({
       const newEventsWithData =
         await submittedEventGetter.getProofDataForSubmittedEvents(newEvents);
 
-      const submissions: SubmissionInterval[] =
+      const submissions: (SubmissionInterval | undefined)[] =
         await submissionIntervalsFromEvents(
           checkVerified,
           upaInstance,
@@ -164,10 +165,21 @@ export const devAggregator = command({
       );
 
       submissions.map((si) => {
-        log.info(`Queued submissionId: ${si.submission.submissionId}`);
+        log.info(`Queued submissionId: ${si?.submission.submissionId}`);
       });
-      submissionQueue.push(...submissions);
 
+      // Push only the well-formed submissions.  Log any that were invalid.
+      for (let i = 0; i < submissions.length; ++i) {
+        if (!submissions[i]) {
+          const evData = newEventsWithData[i];
+          log.warning(
+            `Invalid submission for event data: ${JSONstringify(evData)}`
+          );
+          continue;
+        }
+
+        submissionQueue.push(submissions[i] as SubmissionInterval);
+      }
       lastBlockSeen = endBlock;
     }
   },

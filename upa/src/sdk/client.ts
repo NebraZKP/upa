@@ -65,7 +65,8 @@ export class UpaClient {
   }
 
   /// Wait for the submission to be successfully sent to the contract, and
-  /// extract a full Submission object from the Tx receipt.
+  /// extract a full Submission object from the Tx receipt.  Note, this can
+  /// fail if the submission is malformed.
   public async getSubmission(
     submissionHandle: SubmissionHandle
   ): Promise<Submission> {
@@ -73,10 +74,15 @@ export class UpaClient {
     if (!txReceipt) {
       throw `Failed to get receipt for tx ${submissionHandle.txResponse.hash}`;
     }
-    return Submission.fromTransactionReceipt(
+    const submission = await Submission.fromTransactionReceipt(
       this.upaInstance.verifier,
       txReceipt
     );
+    if (!submission) {
+      throw "failed to read submission from tx receipt";
+    }
+
+    return submission;
   }
 
   // Waits for all of the proofs corresponding to a `SubmissionHandle` to be

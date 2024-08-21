@@ -12,7 +12,11 @@ import {
   isProofVerifiedMulti,
   isSubmissionVerifiedById,
 } from "../src/sdk/upa";
-import { computeProofId, computeCircuitId } from "../src/sdk/utils";
+import {
+  computeProofId,
+  computeCircuitId,
+  JSONstringify,
+} from "../src/sdk/utils";
 import { expect } from "chai";
 import { Submission } from "../src/sdk";
 import { UpaVerifier } from "../typechain-types";
@@ -108,9 +112,8 @@ describe("Censorship challenge tests", () => {
       deployAndRegisterResult;
     const { verifier } = upa;
 
-    const user1StartBalance = await verifier.runner!.provider!.getBalance(
-      user1
-    );
+    const user1StartBalance =
+      await verifier.runner!.provider!.getBalance(user1);
 
     // User 1 submits a valid proof
     const firstTx = await submitProof(
@@ -149,9 +152,9 @@ describe("Censorship challenge tests", () => {
 
     return {
       ...deployAndRegisterResult,
-      s1: await s1P,
-      s2: await s2P,
-      s3: await s3P,
+      s1: (await s1P)!,
+      s2: (await s2P)!,
+      s3: (await s3P)!,
       user1StartBalance,
     };
   }
@@ -229,10 +232,10 @@ describe("Censorship challenge tests", () => {
         s2.proofs,
         s2.inputs
       );
-      const dupSubmission = await Submission.fromTransactionReceipt(
+      const dupSubmission = (await Submission.fromTransactionReceipt(
         verifier,
         (await dupSubmissionTx.wait())!
-      );
+      ))!;
 
       // Verify the 3rd submission and this duplicate.
       await verifySubmission(verifier, worker, s3);
@@ -453,18 +456,12 @@ describe("Censorship challenge tests", () => {
       // proofs[5].pi_a in such a way that `x^3 + b` is still a square
       // in Fr.
       const wrongProof = proofs[5];
-      let itDecompresses = false;
       let xCoordinateWrongProof = BigInt(proofs[5].pi_a[0]) + 1n;
       // This loop will end very early because half the elements
       // in the field Fr are squares (which is what may cause
       // `decompressG1Point` to fail).
-      while (!itDecompresses) {
-        try {
-          decompressG1Point(String(xCoordinateWrongProof));
-          itDecompresses = true;
-        } catch {
-          xCoordinateWrongProof += 1n;
-        }
+      while (!decompressG1Point(String(xCoordinateWrongProof))) {
+        xCoordinateWrongProof += 1n;
       }
       wrongProof.pi_a[0] = String(xCoordinateWrongProof);
       const invalidTx = await submitProof(
@@ -473,10 +470,10 @@ describe("Censorship challenge tests", () => {
         wrongProof,
         inputs[5]
       );
-      const invalidSubmission = await Submission.fromTransactionReceipt(
+      const invalidSubmission = (await Submission.fromTransactionReceipt(
         verifier,
         (await invalidTx.wait())!
-      );
+      ))!;
 
       // and a valid one
       const validTx = await submitProof(
@@ -485,10 +482,10 @@ describe("Censorship challenge tests", () => {
         proofs[6],
         inputs[6]
       );
-      const validSubmission = await Submission.fromTransactionReceipt(
+      const validSubmission = (await Submission.fromTransactionReceipt(
         verifier,
         (await validTx.wait())!
-      );
+      ))!;
 
       // the aggregator verifies all valid ones
       await verifySubmission(verifier, worker, s1);
@@ -498,18 +495,23 @@ describe("Censorship challenge tests", () => {
 
       // user1 makes a censorship claim, which should fail because
       // the proof is false
+
+      console.log(`invalidSubmission: ${JSONstringify(invalidSubmission)}`);
+      const invalidCircuitIds = invalidSubmission.circuitIds;
+      console.log(`invalidCircuitIds: ${JSONstringify(invalidCircuitIds)}`);
+      const invalidCid = invalidSubmission.circuitIds[0];
+
       await expect(
-        verifier
-          .connect(user1)
-          .challenge(
-            invalidSubmission.circuitIds[0],
-            invalidSubmission.proofs[0].solidity(),
-            invalidSubmission.inputs[0],
-            invalidSubmission.submissionId,
-            0,
-            invalidSubmission.computeProofIdMerkleProof(0),
-            invalidSubmission.computeProofDataMerkleProof(0)
-          )
+        verifier.connect(user1).challenge(
+          // invalidSubmission.circuitIds[0],
+          invalidCid,
+          invalidSubmission.proofs[0].solidity(),
+          invalidSubmission.inputs[0],
+          invalidSubmission.submissionId,
+          0,
+          invalidSubmission.computeProofIdMerkleProof(0),
+          invalidSubmission.computeProofDataMerkleProof(0)
+        )
       ).to.be.revertedWithCustomError(verifier, "UnsuccessfulChallenge");
 
       // user1 makes a censorship claim, this time with a correct
