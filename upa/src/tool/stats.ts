@@ -1,7 +1,7 @@
 import { command, flag, boolean } from "cmd-ts";
 import { upaFromInstanceFile } from "./config";
 import { endpoint, instance } from "./options";
-import { utils } from "../sdk";
+import { Groth16VerifyingKey, utils } from "../sdk";
 import * as ethers from "ethers";
 import { strict as assert } from "assert";
 // eslint-disable-next-line
@@ -17,7 +17,7 @@ type StateJSON = {
   nextSubmissionIdx: bigint;
   numPendingSubmissions: bigint;
   circuitIds?: string[];
-  verificationKeys?: { [cid: string]: Groth16VKStructOutput };
+  verificationKeys?: { [cid: string]: Groth16VerifyingKey };
   allocatedFee: bigint;
   claimableFees: bigint;
   verifiedProofIdxForAllocatedFee?: bigint;
@@ -64,16 +64,15 @@ export const stats = command({
 
       const circuitIdsP = verifier.getCircuitIds();
       let cids: string[] | undefined = undefined;
-      let vks: { [cid: string]: Groth16VKStructOutput } | undefined = undefined;
+      let vks: { [cid: string]: Groth16VerifyingKey } | undefined = undefined;
 
       if (showvks) {
         vks = {};
         await Promise.all(
-          (
-            await circuitIdsP
-          ).map(async (cidO: ethers.BytesLike) => {
+          (await circuitIdsP).map(async (cidO: ethers.BytesLike) => {
             const cid = utils.readBytes32(cidO);
-            const vk = await verifier.getVK(cid);
+            const vk_sol = await verifier.getVK(cid);
+            const vk = Groth16VerifyingKey.from_solidity(vk_sol);
             assert(vks); // to keep the compiler happy
             vks[cid] = vk;
           })
