@@ -417,6 +417,23 @@ export class CompressedGroth16Proof {
     this.pok = pok.map((pt) => toBeHex(pt, 32));
   }
 
+  public static from_json(o: object): CompressedGroth16Proof {
+    assert(typeof o === "object");
+    const json_obj = o as CompressedGroth16Proof;
+    assert(typeof json_obj.pi_a === "string");
+    assert(typeof json_obj.pi_b === "object");
+    assert(typeof json_obj.pi_c === "string");
+    assert(typeof json_obj.m === "object");
+    assert(typeof json_obj.pok === "object");
+    return new CompressedGroth16Proof(
+      json_obj.pi_a,
+      json_obj.pi_b,
+      json_obj.pi_c,
+      json_obj.m,
+      json_obj.pok
+    );
+  }
+
   public static from_solidity(
     sol: Groth16CompressedProofStruct
   ): CompressedGroth16Proof {
