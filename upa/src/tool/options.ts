@@ -83,7 +83,18 @@ export function endpoint(): Option {
     long: "endpoint",
     short: "e",
     defaultValue: () => process.env.RPC_ENDPOINT || "http://127.0.0.1:8545/",
-    description: "RPC endpoint to connect to (defaults to ENDPOINT env var)",
+    description: "Node RPC endpoint (defaults to RPC_ENDPOINT env var)",
+  });
+}
+
+export function submissionEndpoint(): Option {
+  return option({
+    type: string,
+    long: "endpoint",
+    short: "s",
+    defaultValue: () => process.env.SUBMISSION_ENDPOINT || "",
+    description:
+      "Submission endpoint (defaults to SUBMISSION_ENDPOINT env var)",
   });
 }
 
@@ -126,6 +137,18 @@ export function vkProofInputsFile(): Option {
     long: "proof-file",
     description:
       'File containing one proof: {"vk": {..}, "proof": {..}, "inputs": [..]}',
+  });
+}
+
+/// A JSON file in the format:
+///  [ { vk, proof, inputs }, ... ]
+export function vkProofInputsBatchFile(): Option {
+  return option({
+    type: string,
+    long: "proofs-file",
+    description:
+      "VK, proof, inputs batch file: " +
+      '[{"vk": {..}, "proof": {..}, "inputs": [..]}, ..]',
   });
 }
 
