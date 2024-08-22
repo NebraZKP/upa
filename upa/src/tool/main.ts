@@ -13,6 +13,7 @@ import { version } from "./version";
 import { aggregator } from "./aggregator";
 import { owner } from "./owner";
 import { query } from "./query";
+import { offChain } from "./offChain";
 
 const root = subcommands({
   name: "upa",
@@ -28,6 +29,7 @@ const root = subcommands({
     dev,
     owner,
     aggregator,
+    "off-chain": offChain,
   },
 });
 
