@@ -11,6 +11,9 @@ import { Groth16VerifyingKey } from "./application";
 import { PayableOverrides } from "../../typechain-types/common";
 import { Submission, OffChainSubmission } from "./submission";
 import { application } from ".";
+import { TypedDataDomain } from "ethers";
+import assert from "assert";
+import { UpaOffChainFee__factory } from "../../typechain-types";
 
 /**
  * Returned by the `submitProofs` method of UpaClient.  Holds a
@@ -132,4 +135,88 @@ export class UpaClient {
   ): Promise<ethers.ContractTransactionResponse> {
     return this.upaInstance.verifier.registerVK(vk.solidity());
   }
+}
+
+export type UnsignedOffChainSubmissionRequest = {
+  circuitIdProofAndInputs: application.CircuitIdProofAndInputs[];
+  submissionId: ethers.BytesLike;
+  expirationBlockNumber: bigint;
+  submitterNonce: bigint;
+  fee: bigint;
+  totalFee: bigint;
+};
+
+// Signed request to be sent out-of-band to an aggregator
+export type SignedOffChainSubmissionRequest = {
+  circuitIdProofAndInputs: application.CircuitIdProofAndInputs[];
+  submissionId: ethers.BytesLike;
+  expirationBlockNumber: bigint;
+  submitterNonce: bigint;
+  fee: bigint;
+  totalFee: bigint;
+  signature: string;
+};
+
+// Data to be signed by the requester
+export type SignedData = {
+  submissionId: ethers.BytesLike;
+  expirationBlockNumber: bigint;
+  totalFee: bigint;
+};
+
+export async function getEIP712Domain(
+  wallet: ethers.Signer,
+  offChainFeeContract: ethers.AddressLike
+): Promise<TypedDataDomain> {
+  const upaOffChainFee = UpaOffChainFee__factory.connect(
+    offChainFeeContract.toString()
+  ).connect(wallet);
+  const { chainId, name, version, verifyingContract } =
+    await upaOffChainFee.eip712Domain();
+  return {
+    // Chain where the fee contract is deployed
+    chainId,
+    // Name of the fee contract
+    name,
+    // The version of the fee contract we are sending the request to.
+    // (different from the UPA package version)
+    version,
+    // The address of the off-chain aggregator's fee contract
+    verifyingContract,
+  };
+}
+
+// Note that the type of `EIP712Domain` is inferred by ethers.
+export function getEIP712Types() {
+  return {
+    SignedData: [
+      { name: "submissionId", type: "bytes32" },
+      { name: "expirationBlockNumber", type: "uint256" },
+      { name: "totalFee", type: "uint256" },
+    ],
+  };
+}
+
+export async function signOffChainSubmissionRequest(
+  request: UnsignedOffChainSubmissionRequest,
+  wallet: ethers.Signer,
+  feeContract: ethers.AddressLike
+): Promise<SignedOffChainSubmissionRequest> {
+  const domain = await getEIP712Domain(wallet, feeContract);
+  const types = getEIP712Types();
+
+  const SignedData: SignedData = {
+    submissionId: request.submissionId,
+    expirationBlockNumber: request.expirationBlockNumber,
+    totalFee: request.totalFee,
+  };
+
+  const signature = await wallet.signTypedData(domain, types, SignedData);
+
+  assert(
+    ethers.verifyTypedData(domain, types, SignedData, signature) ==
+      (await wallet.getAddress())
+  );
+
+  return { ...request, signature };
 }
