@@ -590,8 +590,9 @@ describe("UPA", async () => {
       await submitProof(verifier, circuitIds[0], pf_c, pi_c, {
         value: 3n * value,
       });
-      const newFeeModelBalance =
-        await ethers.provider.getBalance(feeModelAddress);
+      const newFeeModelBalance = await ethers.provider.getBalance(
+        feeModelAddress
+      );
       expect(newFeeModelBalance).equals(feeModelBalance + 3n * value);
       expect(await verifier.feeAllocated()).equals(feeDue);
 
@@ -631,8 +632,9 @@ describe("UPA", async () => {
         );
       // If the fee recipient claims it, it will succeed. Let's check the
       // fee recipient received the funds.
-      const feeRecipentBalanceBeforeClaim =
-        await ethers.provider.getBalance(feeRecipient);
+      const feeRecipentBalanceBeforeClaim = await ethers.provider.getBalance(
+        feeRecipient
+      );
       const claimTx = await verifier.connect(feeRecipient).claimAggregatorFee();
       const claimTxReceipt = await claimTx.wait();
       const claimTxCost = claimTxReceipt!.gasUsed * claimTxReceipt!.gasPrice;
@@ -804,8 +806,9 @@ describe("UPA", async () => {
     });
 
     it("submitMultipleCheckReceipts", async () => {
-      const { upa, s1, s2, s3, s1_tx, s2_tx, s3_tx } =
-        await loadFixture(deployAndSubmit);
+      const { upa, s1, s2, s3, s1_tx, s2_tx, s3_tx } = await loadFixture(
+        deployAndSubmit
+      );
       const { verifier } = upa;
 
       // Recover submissions from the tx and check they matches the original.
@@ -830,8 +833,9 @@ describe("UPA", async () => {
     });
 
     it("submitMultipleAndVerifyAll", async () => {
-      const { upa, worker, s1, s2, s3, cid_a } =
-        await loadFixture(deployAndSubmit);
+      const { upa, worker, s1, s2, s3, cid_a } = await loadFixture(
+        deployAndSubmit
+      );
       const { verifier } = upa;
 
       // Submissions
@@ -1014,8 +1018,9 @@ describe("UPA", async () => {
     });
 
     it("submitMultipleAndVerifySubsetsCaseA", async () => {
-      const { upa, worker, s1, s2, s3, cid_a } =
-        await loadFixture(deployAndSubmit);
+      const { upa, worker, s1, s2, s3, cid_a } = await loadFixture(
+        deployAndSubmit
+      );
       const { verifier } = upa;
 
       const isSubmissionVerifiedFn = verifier.getFunction(isSubmissionVerified);
@@ -1134,8 +1139,9 @@ describe("UPA", async () => {
     });
 
     it("submitMultipleAndVerifySubsetsCaseB", async () => {
-      const { upa, worker, s1, s2, s3, cid_a } =
-        await loadFixture(deployAndSubmit);
+      const { upa, worker, s1, s2, s3, cid_a } = await loadFixture(
+        deployAndSubmit
+      );
       const { verifier } = upa;
 
       // Submit 3 submissions (all against cid_a):
@@ -1271,8 +1277,9 @@ describe("UPA", async () => {
     });
 
     it("submitMultipleAndVerifySubsetsCaseC", async () => {
-      const { upa, worker, s1, s2, s3, cid_a } =
-        await loadFixture(deployAndSubmit);
+      const { upa, worker, s1, s2, s3, cid_a } = await loadFixture(
+        deployAndSubmit
+      );
       const { verifier } = upa;
 
       // Submit 3 submissions (all against cid_a):
@@ -1363,8 +1370,9 @@ describe("UPA", async () => {
     });
 
     it("submitMultipleAndVerifySubsetsCaseD", async () => {
-      const { upa, worker, s1, s2, s3, cid_a } =
-        await loadFixture(deployAndSubmit);
+      const { upa, worker, s1, s2, s3, cid_a } = await loadFixture(
+        deployAndSubmit
+      );
       const { verifier } = upa;
 
       // Submit 3 submissions (all against cid_a):
@@ -1584,8 +1592,9 @@ describe("UPA", async () => {
 
       // Very 32 proofs, submitted as submission of the given size.
       async function verifySubmissions(submissionSize: number) {
-        const { upa, worker, submissions } =
-          await deployAndSubmit(submissionSize);
+        const { upa, worker, submissions } = await deployAndSubmit(
+          submissionSize
+        );
         const { verifier } = upa;
 
         const proofIds = submissions.flatMap((s) => s.getProofIds());

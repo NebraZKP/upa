@@ -112,8 +112,9 @@ describe("Censorship challenge tests", () => {
       deployAndRegisterResult;
     const { verifier } = upa;
 
-    const user1StartBalance =
-      await verifier.runner!.provider!.getBalance(user1);
+    const user1StartBalance = await verifier.runner!.provider!.getBalance(
+      user1
+    );
 
     // User 1 submits a valid proof
     const firstTx = await submitProof(
