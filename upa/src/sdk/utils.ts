@@ -268,9 +268,7 @@ export function computeProofId(
 }
 
 /// Given an array of proofIds in a submission, compute the submissionId.
-export function computeSubmissionId(
-  proofIds: string[]
-): ethers.ethers.BytesLike {
+export function computeSubmissionId(proofIds: string[]): string {
   const depth = Math.ceil(Math.log2(proofIds.length));
   const paddedLength = 1 << depth;
   const paddedProofIds = proofIds.slice();
