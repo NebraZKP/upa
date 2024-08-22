@@ -1,11 +1,11 @@
 import { concat, keccak256, BytesLike } from "ethers";
 import { strict as assert } from "assert";
 
-export function evmLeafHashFn(l: BytesLike): BytesLike {
+export function evmLeafHashFn(l: BytesLike): string {
   return keccak256(l);
 }
 
-export function evmInnerHashFn(l: BytesLike, r: BytesLike): BytesLike {
+export function evmInnerHashFn(l: BytesLike, r: BytesLike): string {
   return keccak256(concat([l, r]));
 }
 
