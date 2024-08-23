@@ -33,3 +33,19 @@ pub fn ubv_identifier(config: &UpaConfig) -> String {
 pub fn ubv_file_root(config: &UpaConfig) -> String {
     format!("./benches/_keys/{}", ubv_identifier(config))
 }
+
+pub fn outer_identifier(config: &UpaConfig) -> String {
+    format!(
+        "outer_pi_{}_deg_{}_inner_{}_outer_{}_ubv_deg_{}_keccak_deg_{}",
+        config.max_num_app_public_inputs,
+        config.outer_config.degree_bits,
+        config.inner_batch_size,
+        config.outer_batch_size,
+        config.bv_config.degree_bits,
+        config.keccak_config.degree_bits
+    )
+}
+
+pub fn outer_file_root(config: &UpaConfig) -> String {
+    format!("./benches/_keys/{}", outer_identifier(config))
+}

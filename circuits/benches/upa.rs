@@ -2,12 +2,16 @@
 use core::iter;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use halo2_base::{
+    gates::builder::MultiPhaseThreadBreakPoints,
     halo2_proofs::{
         halo2curves::bn256::{Bn256, Fr, G1Affine},
         plonk::{create_proof, ProvingKey},
-        poly::kzg::{
-            commitment::KZGCommitmentScheme,
-            multiopen::{ProverSHPLONK, VerifierSHPLONK},
+        poly::{
+            commitment::Params,
+            kzg::{
+                commitment::{KZGCommitmentScheme, ParamsKZG},
+                multiopen::{ProverSHPLONK, VerifierSHPLONK},
+            },
         },
         transcript::TranscriptWriterBuffer,
     },
@@ -43,7 +47,7 @@ use upa_circuits::{
         benchmarks::{
             keygen, CONTRACT_BYTE_LIMIT, UNIVERSAL_OUTER_CONFIG_FILE,
         },
-        file::{load_json, open_file_for_read, ubv_file_root},
+        file::{load_json, open_file_for_read, outer_file_root, ubv_file_root},
         upa_config::UpaConfig,
     },
     SafeCircuit,
@@ -233,17 +237,43 @@ pub fn bench(c: &mut Criterion) {
         drop(keccak_pk);
         drop(bv_pk);
         println!("Begin UniversalOuter with config {config:?}");
-        let outer_srs = gen_srs(config.outer_config.degree_bits);
-        let outer_keygen_inputs =
-            OuterKeygenInputs::new(&bv_srs, &keccak_srs, &outer_srs);
+        // let outer_srs = gen_srs(config.outer_config.degree_bits);
         let outer_inputs =
             UniversalOuterCircuitInputs::new(config, bv_snarks, keccak_snark);
-        let (outer_pk, outer_gate_config, outer_break_points) =
-            keygen::<UniversalOuterCircuit>(
-                config,
-                &outer_keygen_inputs,
-                &outer_srs,
+        let (outer_srs, outer_pk, outer_gate_config, outer_break_points) = {
+            // keygen::<UniversalOuterCircuit>(
+            //     config,
+            //     &outer_keygen_inputs,
+            //     &outer_srs,
+            // )
+
+            let srs_file = format!(
+                "./benches/_srs/deg_{}.srs",
+                config.outer_config.degree_bits
             );
+            let mut buf = open_file_for_read(&srs_file);
+            let srs = ParamsKZG::<Bn256>::read(&mut buf)
+                .unwrap_or_else(|e| panic!("failed to read srs: {e}"));
+            // Rather than generating, load from file located at `benches/_keys`
+            let outer_file_root = outer_file_root(config);
+            let gate_config =
+                load_json(&format!("{}.gate_config", outer_file_root));
+            let break_points: MultiPhaseThreadBreakPoints =
+                load_json(&format!("{}.pk.bps", outer_file_root));
+            let mut buf =
+                open_file_for_read(&format!("{}.pk", outer_file_root));
+            let pk = UniversalOuterCircuit::read_proving_key(
+                config,
+                &gate_config,
+                &mut buf,
+            )
+            .unwrap_or_else(|e| panic!("error reading pk: {e}"));
+            (srs, pk, gate_config, break_points)
+        };
+        // TODO: Needed?
+        let outer_keygen_inputs =
+            OuterKeygenInputs::new(&bv_srs, &keccak_srs, &outer_srs);
+
         println!("UniversalOuter gate config {outer_gate_config:?}");
         let (outer_proof, outer_instances) = {
             let outer_timer = Instant::now();
