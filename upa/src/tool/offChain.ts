@@ -13,7 +13,11 @@ import {
   computeProofId,
   computeSubmissionId,
 } from "../sdk/utils";
-import { OffChainClient, Signature } from "../sdk/offchainClient";
+import {
+  OffChainClient,
+  Signature,
+  OffChainSubmissionRequest,
+} from "../sdk/offchainClient";
 
 export const submit = command({
   name: "submit",
@@ -84,15 +88,16 @@ export const submit = command({
     })();
 
     // Send the OffChainSubmissionRequest
-    const submission = {
-      proofs: vksProofsInputs,
-      submission_id: submissionId,
-      submitter_nonce: nonce,
-      fee: submissionFee,
-      total_fee: totalFee,
-      expiration_block_number: expirationBlock,
+    const submission = new OffChainSubmissionRequest(
+      vksProofsInputs,
+      submissionId,
+      submissionFee,
+      expirationBlock,
+      address,
       signature,
-    };
+      nonce,
+      totalFee
+    );
     const response = await client.submit(submission);
 
     // Store the result somewhere (stdout or write to a file)
