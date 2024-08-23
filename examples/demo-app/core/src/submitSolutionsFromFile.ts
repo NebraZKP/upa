@@ -1,5 +1,5 @@
 import { loadDemoAppInstance, demoAppInstance } from "./utils";
-import { OffChainSubmission } from "@nebrazkp/upa/sdk";
+import { SubmissionDescriptor } from "@nebrazkp/upa/sdk";
 import * as ethers from "ethers";
 import { command, option, number, string } from "cmd-ts";
 import { options, config } from "@nebrazkp/upa/tool";
@@ -102,7 +102,7 @@ export async function submitSolution(
   _wallet: ethers.AbstractSigner,
   demoApp: DemoApp,
   nonce: number,
-  submission: OffChainSubmission,
+  submission: SubmissionDescriptor,
   solutionIdx: number
 ): Promise<ethers.ContractTransactionResponse> {
   const solution = submission.inputs[solutionIdx];
