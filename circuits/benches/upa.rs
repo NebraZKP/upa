@@ -43,7 +43,7 @@ use upa_circuits::{
         benchmarks::{
             keygen, CONTRACT_BYTE_LIMIT, UNIVERSAL_OUTER_CONFIG_FILE,
         },
-        file::load_json,
+        file::{load_json, open_file_for_read, ubv_file_root},
         upa_config::UpaConfig,
     },
     SafeCircuit,
@@ -73,8 +73,25 @@ pub fn bench(c: &mut Criterion) {
             UniversalBatchVerifierInputs::sample_mixed(&bv_config, &mut OsRng);
         // UBV Keygen
         let bv_srs = gen_srs(bv_config.degree_bits);
-        let (bv_pk, bv_gate_config, bv_break_points) =
-            keygen::<UniversalBatchVerifyCircuit>(&bv_config, &(), &bv_srs);
+        let (bv_pk, bv_gate_config, bv_break_points) = {
+            // keygen::<UniversalBatchVerifyCircuit>(&bv_config, &(), &bv_srs)
+
+            // Rather than generating, load from file located at `benches/_keys`
+            let ubv_file_root = ubv_file_root(config);
+            let gate_config =
+                load_json(&format!("{}.gate_config", ubv_file_root));
+            let break_points = load_json(&format!("{}.bps", ubv_file_root));
+
+            let mut buf = open_file_for_read(&format!("{}.pk", ubv_file_root));
+            let pk =
+                UniversalBatchVerifyCircuit::<_, G1Affine>::read_proving_key(
+                    &config.into(),
+                    &gate_config,
+                    &mut buf,
+                )
+                .unwrap_or_else(|e| panic!("error reading pk: {e}"));
+            (pk, gate_config, break_points)
+        };
         println!("UBV gate config {bv_gate_config:?}");
         // Measure UBV Proving Time
         let (bv_proof, bv_instance_single) = black_box({

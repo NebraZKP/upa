@@ -1,3 +1,4 @@
+use crate::UpaConfig;
 use serde::de::DeserializeOwned;
 use std::{
     fs::{File, OpenOptions},
@@ -18,4 +19,17 @@ pub fn load_json<T: DeserializeOwned>(filename: &str) -> T {
     )
     .unwrap_or_else(|e| panic!("{filename} JSON: {e:?}"));
     val
+}
+
+pub fn ubv_identifier(config: &UpaConfig) -> String {
+    format!(
+        "ubv_pi_{}_deg_{}_inner_{}",
+        config.max_num_app_public_inputs,
+        config.bv_config.degree_bits,
+        config.inner_batch_size
+    )
+}
+
+pub fn ubv_file_root(config: &UpaConfig) -> String {
+    format!("./benches/_keys/{}", ubv_identifier(config))
 }

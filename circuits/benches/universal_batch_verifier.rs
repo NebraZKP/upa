@@ -2,11 +2,16 @@ use criterion::{
     black_box, criterion_group, criterion_main, BenchmarkId, Criterion,
 };
 use halo2_base::{
+    gates::builder::MultiPhaseThreadBreakPoints,
     halo2_proofs::{
         halo2curves::bn256::{Bn256, Fr, G1Affine},
         plonk::create_proof,
-        poly::kzg::{
-            commitment::KZGCommitmentScheme, multiopen::ProverSHPLONK,
+        poly::{
+            commitment::Params,
+            kzg::{
+                commitment::{KZGCommitmentScheme, ParamsKZG},
+                multiopen::ProverSHPLONK,
+            },
         },
         transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
     },
@@ -21,7 +26,7 @@ use upa_circuits::{
     },
     utils::{
         benchmarks::{keygen, UBV_CONFIG_FILE},
-        file::load_json,
+        file::{load_json, open_file_for_read, ubv_file_root},
         upa_config::UpaConfig,
     },
     SafeCircuit,
@@ -36,6 +41,7 @@ pub fn bench(c: &mut Criterion) {
     let configs = black_box(load_json::<Vec<UpaConfig>>(UBV_CONFIG_FILE));
 
     for config in configs {
+        let upa_config = config.clone();
         let config = black_box(UniversalBatchVerifierConfig::from(&config));
         // Sample app proofs/pi's according to config
         let mut rng = black_box(OsRng);
@@ -43,13 +49,35 @@ pub fn bench(c: &mut Criterion) {
             &config, &mut rng,
         ));
         // SRS
-        let srs = black_box(gen_srs(config.degree_bits));
+        // let srs = black_box(gen_srs(config.degree_bits));
         // Generate pk
-        let (pk, gate_config, break_points) = black_box(keygen::<
-            UniversalBatchVerifyCircuit,
-        >(
-            &config, &(), &srs
-        ));
+        let (srs, pk, gate_config, break_points) = {
+            // Current dir: saturn/upa/circuits
+            // println!("Current dir: {:?}", std::env::current_dir());
+            // keygen::<UniversalBatchVerifyCircuit>(&bv_config, &(), &bv_srs)
+
+            let srs_file = format!("./benches/_srs/deg_{}.srs", config.degree_bits);
+            let mut buf = open_file_for_read(&srs_file);
+            let srs = ParamsKZG::<Bn256>::read(&mut buf)
+                .unwrap_or_else(|e| panic!("failed to read srs: {e}"));
+
+            // Rather than generating, load from file located at `benches/_keys`
+            let ubv_file_root = ubv_file_root(&upa_config);
+            let gate_config =
+                load_json(&format!("{}.gate_config", ubv_file_root));
+            let break_points: MultiPhaseThreadBreakPoints =
+                load_json(&format!("{}.pk.bps", ubv_file_root));
+
+            let mut buf = open_file_for_read(&format!("{}.pk", ubv_file_root));
+            let pk =
+                UniversalBatchVerifyCircuit::<_, G1Affine>::read_proving_key(
+                    &config.into(),
+                    &gate_config,
+                    &mut buf,
+                )
+                .unwrap_or_else(|e| panic!("error reading pk: {e}"));
+            (srs, pk, gate_config, break_points)
+        };
         black_box(println!("Proving UBV Circuit with config: {config:#?}"));
         black_box(println!(
             "Proving UBV Circuit with gate config: {gate_config:#?}"

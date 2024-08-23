@@ -43,3 +43,7 @@ harness = false
 [[bench]]
 name = "universal_outer"
 harness = false
+
+[[bench]]
+name = "upa"
+harness = false
