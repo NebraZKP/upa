@@ -89,7 +89,7 @@ export class ProofReference {
 /**
  * A submission which has not yet been assigned indices on-chain.
  */
-export class OffChainSubmission {
+export class SubmissionDescriptor {
   public circuitIds: string[];
   public proofs: application.Groth16Proof[];
   public inputs: bigint[][];
@@ -129,7 +129,7 @@ export class OffChainSubmission {
 
   public static fromCircuitIdsProofsAndInputs(
     cidProofsAndInputs: application.CircuitIdProofAndInputs[]
-  ): OffChainSubmission {
+  ): SubmissionDescriptor {
     const circuitIds: string[] = [];
     const proofs: application.Groth16Proof[] = [];
     const inputs: bigint[][] = [];
@@ -141,10 +141,10 @@ export class OffChainSubmission {
       inputs.push(pubInputs);
       proofIds.push(computeProofId(cpi.circuitId, pubInputs));
     });
-    return new OffChainSubmission(proofIds, circuitIds, proofs, inputs);
+    return new SubmissionDescriptor(proofIds, circuitIds, proofs, inputs);
   }
 
-  public static from_json(json: string): OffChainSubmission {
+  public static from_json(json: string): SubmissionDescriptor {
     const object = JSON.parse(json);
     const proofs: application.Groth16Proof[] = object.proofs.map(
       application.Groth16Proof.from_json
@@ -153,7 +153,12 @@ export class OffChainSubmission {
       instance.map((x: string) => BigInt(x))
     );
     const proofIds: ethers.BytesLike[] = object.proofIds;
-    return new OffChainSubmission(proofIds, object.circuitIds, proofs, inputs);
+    return new SubmissionDescriptor(
+      proofIds,
+      object.circuitIds,
+      proofs,
+      inputs
+    );
   }
 
   public to_json(): string {
@@ -291,7 +296,7 @@ export class OffChainSubmission {
  * A submission which has been made on-chain, and therefore has ordering
  * indices assigned.
  */
-export class Submission extends OffChainSubmission {
+export class Submission extends SubmissionDescriptor {
   private dupSubmissionIdx: number;
 
   private constructor(
