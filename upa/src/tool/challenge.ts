@@ -91,6 +91,12 @@ export const challenge = command({
         submission.computeProofDataMerkleProof(i),
         optionsPayable
       );
+
+      const populatedTx = await wallet.populateTransaction(txReq);
+      // Hardhat underestimates required gas, so we add
+      // 200K to prevent revert
+      txReq.gasLimit = BigInt(populatedTx!.gasLimit!) + 200000n;
+
       await config.handleTxRequest(
         wallet,
         txReq,

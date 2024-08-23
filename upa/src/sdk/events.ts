@@ -396,8 +396,10 @@ export function getCalldataForChallengeTx(
   assert(bytes32IsWellFormed(circuitId));
   assert(bytes32IsWellFormed(submissionId));
   assert("bigint" === typeof dupSubmissionIdx);
-  assert(bytes32IsWellFormed(proofIdMerkleProof[0]));
-  assert(bytes32IsWellFormed(proofDataMerkleProof[0]));
+  if (proofIdMerkleProof.length > 0) {
+    assert(bytes32IsWellFormed(proofDataMerkleProof[0]));
+    assert(bytes32IsWellFormed(proofIdMerkleProof[0]));
+  }
 
   return {
     circuitId,

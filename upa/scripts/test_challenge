@@ -18,7 +18,7 @@ DUMMY_PW="pw"
 function fund() {
     bal=`upa dev balance --keyfile $1`
     if (( $(echo "${bal} < 100" | bc -l) )) ; then
-        upa dev fund --keyfile $1
+        upa dev fund --keyfile $1 --amount 100
     fi
 }
 
@@ -48,11 +48,9 @@ pushd _test_challenge
     KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy \
                     --keyfile ${KEYFILE} \
                     --verifier ${UPA_DIR}/upa/test/data/test.bin \
+                    --collateral 10000000000000000000 \
                     --use-test-config \
                     --retries 3
-
-    # Print the config
-    upa query config > config.upa.json
 
     # Test data:
     #   vk
@@ -134,7 +132,6 @@ pushd _test_challenge
 
     multi_4_submissionid=`jq -r .submissionId submit-multi-4.submission.json`
 
-
     # Allocate the fees for the submitted proofs.
     KEYFILE_PASSWORD=${DUMMY_PW} upa aggregator allocate-aggregator-fee \
            --keyfile ${KEYFILE} \
@@ -196,9 +193,6 @@ pushd _test_challenge
            --keyfile ${KEYFILE} \
            ${submit_aggregated_proof_flags} \
            --wait > agg-proof.hash
-
-    # Create a dump of the aggregated tx.
-    upa dev trace `cat agg-proof.hash` --trace-file agg-proof.trace.json
 
     # Check that single proof is still NOT verified.
     (! upa query is-verified \
