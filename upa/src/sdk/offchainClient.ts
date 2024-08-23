@@ -18,17 +18,40 @@ export class SubmissionParameters {
 /// TODO
 export type Signature = string;
 
-export class OffChainSubmissionRequest {
+/// Pertinent data about a submission
+export class OffChainSubmission {
   constructor(
     public readonly proofs: AppVkProofInputs[],
     public readonly submission_id: string,
-    public readonly submitter_nonce: bigint,
     public readonly fee: bigint,
-    public readonly total_fee: bigint,
     public readonly expiration_block_number: bigint,
+    public readonly submitter_id: string,
     /// Signature over [submission_id, totalFee, aggregatorAddress]
     public readonly signature: Signature
   ) {}
+}
+
+/// Full request data for a submission
+export class OffChainSubmissionRequest extends OffChainSubmission {
+  constructor(
+    proofs: AppVkProofInputs[],
+    submission_id: string,
+    fee: bigint,
+    expiration_block_number: bigint,
+    submitter_id: string,
+    signature: Signature,
+    public readonly submitter_nonce: bigint,
+    public readonly total_fee: bigint
+  ) {
+    super(
+      proofs,
+      submission_id,
+      fee,
+      expiration_block_number,
+      submitter_id,
+      signature
+    );
+  }
 }
 
 export class AggregationAgreement {
