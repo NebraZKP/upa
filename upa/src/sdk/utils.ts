@@ -18,7 +18,7 @@ import {
   evmInnerHashFn,
   evmLeafHashFn,
 } from "./merkleUtils";
-import { utils } from ".";
+import { AppVkProofInputs, utils } from ".";
 
 // Domain tags for the circuit id calculations.
 // Reproduce the calculation with:
