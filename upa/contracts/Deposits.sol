@@ -7,7 +7,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /// Contract that off-chain aggregators may use for handling fee deposits,
 /// payments, and claims.
-contract UpaOffChainFee is EIP712 {
+contract Deposits is EIP712 {
     // Data to be signed by the submitter
     struct SignedRequestData {
         bytes32 submissionId;
