@@ -18,6 +18,7 @@ import {
   evmInnerHashFn,
   evmLeafHashFn,
 } from "./merkleUtils";
+import { AppVkProofInputs, CircuitIdProofAndInputs } from "./application";
 
 // Domain tags for the circuit id calculations.
 // Reproduce the calculation with:
@@ -278,6 +279,33 @@ export function computeSubmissionId(proofIds: string[]): string {
   proofIds.forEach((pid) => assert(typeof pid === "string"));
 
   return computeMerkleRoot(evmLeafHashFn, evmInnerHashFn, paddedProofIds);
+}
+
+/// Computes an array of proofIds corresponding to `vkProofAndInputs`.
+export function vkProofsInputsToProofIds(
+  vkProofAndInputs: AppVkProofInputs[]
+): string[] {
+  // Convert to CircuitIdProofsInputs[]
+  const cidProofInputs = vkProofAndInputs.map((vpi) => {
+    return CircuitIdProofAndInputs.from_json({
+      circuitId: computeCircuitId(vpi.vk),
+      proof: vpi.proof,
+      inputs: vpi.inputs,
+    });
+  });
+
+  // Compute array of proofIds
+  return cidProofInputs.map((cpi) => {
+    return computeProofId(cpi.circuitId, cpi.inputs);
+  });
+}
+
+/// Computes the submissionId for `vkProofAndInputs`.
+export function vkProofsInputsToSubmissionId(
+  vkProofAndInputs: AppVkProofInputs[]
+): string {
+  const proofIds = vkProofsInputsToProofIds(vkProofAndInputs);
+  return computeSubmissionId(proofIds);
 }
 
 export function computeFinalDigest(proofIds: BytesLike[]): string {

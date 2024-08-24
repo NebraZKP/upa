@@ -709,6 +709,12 @@ contract UpaVerifier is
         return verifierStorage.verifiedAtBlock[submissionId] > 0;
     }
 
+    function offChainSubmissionVerifiedAtBlock(
+        bytes32 submissionId
+    ) external view returns (uint256) {
+        return _getVerifierStorage().verifiedAtBlock[submissionId];
+    }
+
     /// Checks that `proofId` and `proofDigest` correspond to the first
     /// unproven proof in the submission with `submissionId`.  If so, it
     /// updates the state to reflect that it is valid now.  Returns `true` if
