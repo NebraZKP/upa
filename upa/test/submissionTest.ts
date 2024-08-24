@@ -1,5 +1,9 @@
 import { expect } from "chai";
-import { CircuitIdProofAndInputs, Groth16Proof } from "../src/sdk/application";
+import {
+  AppVkProofInputs,
+  CircuitIdProofAndInputs,
+  Groth16Proof,
+} from "../src/sdk/application";
 import {
   ProofReference,
   Submission,
@@ -8,7 +12,13 @@ import {
 } from "../src/sdk/submission";
 // eslint-disable-next-line
 import { packOffChainSubmissionMarkers } from "../src/sdk/aggregatedProofParams";
-import { bigintToHex32 } from "../src/sdk/utils";
+import {
+  bigintToHex32,
+  computeCircuitId,
+  vkProofsInputsToSubmissionId,
+} from "../src/sdk/utils";
+import { loadAppVK } from "../src/tool/config";
+import { pf_c, pf_d, pi_b, pi_c, pi_d } from "./upaTests";
 
 // Fake proofs
 const pf_a = new Groth16Proof(
@@ -188,5 +198,33 @@ describe("Submission", () => {
 
     const proofIds__2 = submission1.getProofIds(undefined, 2);
     expect(proofIds__2).eql([proofIds[0], proofIds[1]]);
+  });
+
+  it("vkProofsInputsToSubmissionId", function () {
+    const vk = loadAppVK("../circuits/src/tests/data/vk.json");
+    const vkProofAndInputs: AppVkProofInputs[] = [
+      { vk, proof: pf_b, inputs: pi_b },
+      { vk, proof: pf_c, inputs: pi_c },
+      { vk, proof: pf_d, inputs: pi_d },
+    ];
+    // Compute submissionId with util function
+    const submissionId = vkProofsInputsToSubmissionId(vkProofAndInputs);
+
+    // Convert to CircuitIdProofsInputs[]
+    const cidProofInputs = vkProofAndInputs.map((vpi) => {
+      return CircuitIdProofAndInputs.from_json({
+        circuitId: computeCircuitId(vpi.vk),
+        proof: vpi.proof,
+        inputs: vpi.inputs,
+      });
+    });
+
+    // Compute submissionId with `Submission` class
+    const submissionIdFromClass =
+      Submission.fromCircuitIdsProofsAndInputs(
+        cidProofInputs
+      ).getSubmissionId();
+
+    expect(submissionId).eql(submissionIdFromClass);
   });
 });

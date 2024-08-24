@@ -48,13 +48,15 @@ export class SubmissionParameters {
 ///
 export type Signature = string;
 
+export const SIGNATURE_LENGTH = 132;
+
 export class UnsignedOffChainSubmissionRequest {
   constructor(
     public readonly proofs: AppVkProofInputs[],
     public readonly submissionId: string,
     public readonly fee: bigint,
     public readonly expirationBlockNumber: number,
-    public readonly submitterId: string,
+    public readonly submitterAddress: string,
     public readonly submitterNonce: bigint,
     public readonly totalFee: bigint
   ) {
@@ -63,7 +65,7 @@ export class UnsignedOffChainSubmissionRequest {
     });
     assert(typeof submissionId === "string");
     assert(typeof expirationBlockNumber === "number");
-    assert(typeof submitterId === "string");
+    assert(typeof submitterAddress === "string");
     assert(typeof submitterNonce === "bigint");
     assert(typeof totalFee === "bigint");
   }
@@ -81,7 +83,7 @@ export class UnsignedOffChainSubmissionRequest {
       json.submissionId,
       BigInt(json.fee),
       json.expirationBlockNumber,
-      json.submitterId,
+      json.submitterAddress,
       BigInt(json.submitterNonce),
       BigInt(json.totalFee)
     );
@@ -96,7 +98,9 @@ export class SignedRequestData {
     public readonly expirationBlockNumber: number,
     /// The totalFee payable to the aggregator after it has aggregated the
     /// submission with the given ID.
-    public readonly totalFee: bigint
+    public readonly totalFee: bigint,
+    /// The submitter address. Identifies the account from which fees are paid.
+    public readonly submitterAddress: string
   ) {}
 }
 
@@ -108,7 +112,7 @@ export class OffChainSubmissionRequest extends UnsignedOffChainSubmissionRequest
     submissionId: string,
     fee: bigint,
     expirationBlockNumber: number,
-    submitterId: string,
+    submitterAddress: string,
     submitterNonce: bigint,
     totalFee: bigint,
     public readonly signature: Signature // signature over: SignedRequestData
@@ -118,11 +122,12 @@ export class OffChainSubmissionRequest extends UnsignedOffChainSubmissionRequest
       submissionId,
       fee,
       expirationBlockNumber,
-      submitterId,
+      submitterAddress,
       submitterNonce,
       totalFee
     );
     assert(typeof signature === "string");
+    assert(signature.length == SIGNATURE_LENGTH);
   }
 
   public static from_json(obj: object): OffChainSubmissionRequest {
@@ -133,7 +138,7 @@ export class OffChainSubmissionRequest extends UnsignedOffChainSubmissionRequest
       unsigned.submissionId,
       unsigned.fee,
       unsigned.expirationBlockNumber,
-      unsigned.submitterId,
+      unsigned.submitterAddress,
       unsigned.submitterNonce,
       unsigned.totalFee,
       json.signature
@@ -152,29 +157,63 @@ export class AggregationAgreement {
     /// submission before `expirationBlockNumber`.
     public readonly fee: bigint,
     /// The address of the submitter who should receive the refund.
-    public readonly submitterId: bigint
+    public readonly submitterAddress: string
   ) {}
 }
 
-export class OffChainSubmissionResponse {
+export class UnsignedOffChainSubmissionResponse {
   constructor(
     public readonly submissionId: string,
     public readonly fee: bigint,
     public readonly expirationBlockNumber: number,
-    public readonly submitterId: string,
+    public readonly submitterAddress: string,
     public readonly submitterNonce: bigint,
-    public readonly totalFee: bigint,
-    public readonly signature: Signature // Signature over AggregationAgreement
+    public readonly totalFee: bigint
   ) {
     assert(typeof submissionId === "string");
     assert(submissionId.length === 66);
     assert(typeof fee === "bigint");
     assert(typeof expirationBlockNumber === "number");
-    assert(typeof submitterId === "string");
+    assert(typeof submitterAddress === "string");
+    assert(submitterAddress.length === 42);
     assert(typeof submitterNonce === "bigint");
     assert(typeof totalFee === "bigint");
+  }
+
+  public static from_json(obj: object): UnsignedOffChainSubmissionResponse {
+    const json = obj as UnsignedOffChainSubmissionResponse;
+    return new UnsignedOffChainSubmissionResponse(
+      json.submissionId,
+      json.fee,
+      json.expirationBlockNumber,
+      json.submitterAddress,
+      json.submitterNonce,
+      json.totalFee
+    );
+  }
+}
+
+// eslint-disable-next-line
+export class OffChainSubmissionResponse extends UnsignedOffChainSubmissionResponse {
+  constructor(
+    public readonly submissionId: string,
+    public readonly fee: bigint,
+    public readonly expirationBlockNumber: bigint,
+    public readonly submitterAddress: string,
+    public readonly submitterNonce: bigint,
+    public readonly totalFee: bigint,
+    public readonly signature: Signature // Signature over AggregationAgreement
+  ) {
+    super(
+      submissionId,
+      fee,
+      expirationBlockNumber,
+      submitterAddress,
+      submitterNonce,
+      totalFee
+    );
     assert(typeof signature === "string");
-    // TODO: signature length assumptions?
+    assert(signature.length == SIGNATURE_LENGTH);
   }
 
   public static from_json(obj: object): OffChainSubmissionResponse {
@@ -183,7 +222,7 @@ export class OffChainSubmissionResponse {
       json.submissionId,
       BigInt(json.fee),
       json.expirationBlockNumber,
-      json.submitterId,
+      json.submitterAddress,
       BigInt(json.submitterNonce),
       BigInt(json.totalFee),
       json.signature
@@ -313,6 +352,19 @@ export function getEIP712RequestType() {
       { name: "submissionId", type: "bytes32" },
       { name: "expirationBlockNumber", type: "uint256" },
       { name: "totalFee", type: "uint256" },
+      { name: "submitterAddress", type: "address" },
+    ],
+  };
+}
+
+/// Gets the EIP-712 message type for `AggregationAgreement`.
+export function getEIP712ResponseType() {
+  return {
+    AggregationAgreement: [
+      { name: "submissionId", type: "bytes32" },
+      { name: "expirationBlockNumber", type: "uint256" },
+      { name: "fee", type: "uint256" },
+      { name: "submitterAddress", type: "address" },
     ],
   };
 }
@@ -325,22 +377,24 @@ export function getSignedRequestData(
     submissionId: signedRequest.submissionId,
     expirationBlockNumber: signedRequest.expirationBlockNumber,
     totalFee: signedRequest.totalFee,
+    submitterAddress: signedRequest.submitterAddress,
   };
 }
 
-/// Sign an off-chain submission request directed to `feeContract`.
+/// Sign an off-chain submission request directed to `depositsContract`.
 export async function signOffChainSubmissionRequest(
   request: UnsignedOffChainSubmissionRequest,
   wallet: ethers.Signer,
-  feeContract: ethers.AddressLike
+  depositsContract: ethers.AddressLike
 ): Promise<OffChainSubmissionRequest> {
-  const domain = await getEIP712Domain(wallet, feeContract);
+  const domain = await getEIP712Domain(wallet, depositsContract);
   const types = getEIP712RequestType();
 
-  const signedRequestData = {
+  const signedRequestData: SignedRequestData = {
     submissionId: request.submissionId,
     expirationBlockNumber: request.expirationBlockNumber,
     totalFee: request.totalFee,
+    submitterAddress: request.submitterAddress,
   };
 
   const signature = await wallet.signTypedData(
@@ -354,5 +408,66 @@ export async function signOffChainSubmissionRequest(
       (await wallet.getAddress())
   );
 
-  return { ...request, signature };
+  return new OffChainSubmissionRequest(
+    request.proofs,
+    request.submissionId,
+    request.fee,
+    request.expirationBlockNumber,
+    request.submitterAddress,
+    request.submitterNonce,
+    request.totalFee,
+    signature
+  );
+}
+
+/// Get the signed portion of the response data.
+export function getSignedResponseData(
+  signedResponse: OffChainSubmissionResponse
+): AggregationAgreement {
+  return {
+    submissionId: signedResponse.submissionId,
+    expirationBlockNumber: signedResponse.expirationBlockNumber,
+    fee: signedResponse.totalFee,
+    submitterAddress: signedResponse.submitterAddress,
+  };
+}
+
+// Method to sign responses here placed in this file for now, but should be
+// moved.
+/// Sign an off-chain submission response directed to `depositsContract`.
+export async function signOffChainSubmissionResponse(
+  response: UnsignedOffChainSubmissionResponse,
+  wallet: ethers.Signer,
+  depositsContract: ethers.AddressLike
+): Promise<OffChainSubmissionResponse> {
+  const domain = await getEIP712Domain(wallet, depositsContract);
+  const types = getEIP712ResponseType();
+
+  const aggregationAgreement: AggregationAgreement = {
+    submissionId: response.submissionId,
+    expirationBlockNumber: response.expirationBlockNumber,
+    fee: response.totalFee,
+    submitterAddress: response.submitterAddress,
+  };
+
+  const signature = await wallet.signTypedData(
+    domain,
+    types,
+    aggregationAgreement
+  );
+
+  assert(
+    ethers.verifyTypedData(domain, types, aggregationAgreement, signature) ==
+      (await wallet.getAddress())
+  );
+
+  return new OffChainSubmissionResponse(
+    response.submissionId,
+    response.fee,
+    response.expirationBlockNumber,
+    response.submitterAddress,
+    response.submitterNonce,
+    response.totalFee,
+    signature
+  );
 }

@@ -21,9 +21,10 @@ import {
 } from "../sdk/utils";
 import {
   OffChainClient,
-  OffChainSubmissionRequest,
+  signOffChainSubmissionRequest,
+  UnsignedOffChainSubmissionRequest,
 } from "../sdk/offChainClient";
-import * as ethers from "ethers";
+import { ethers } from "ethers";
 
 export const submit = command({
   name: "submit",
@@ -33,6 +34,11 @@ export const submit = command({
     keyfile: keyfile(),
     password: password(),
     proofsFile: vkProofInputsBatchFilePositional(),
+    depositsContract: option({
+      type: string,
+      long: "deposits-contract",
+      description: "Address of the aggregator's deposits contract",
+    }),
     nonceString: option({
       type: optional(string),
       long: "nonce",
@@ -56,6 +62,7 @@ export const submit = command({
     keyfile,
     password,
     proofsFile,
+    depositsContract,
     nonceString,
     feeGweiString,
     expirationBlockString,
@@ -108,21 +115,22 @@ export const submit = command({
 
     const totalFee = submitterState.totalFee + submissionFee;
 
-    // TODO: check deposit contract etc.
-
-    // Sign
-    const signature = "sig";
-
-    // Send the OffChainSubmissionRequest
-    const submission = new OffChainSubmissionRequest(
+    // Prepare an UnsignedOffChainSubmissionRequest
+    const unsignedSubmission = new UnsignedOffChainSubmissionRequest(
       vksProofsInputs,
       submissionId,
       submissionFee,
       expirationBlock,
       address,
       nonce,
-      totalFee,
-      signature
+      totalFee
+    );
+
+    // Sign the request
+    const submission = await signOffChainSubmissionRequest(
+      unsignedSubmission,
+      wallet,
+      depositsContract
     );
     log.debug(`submission: ${JSONstringify(submission)}`);
     const response = await client.submit(submission);
