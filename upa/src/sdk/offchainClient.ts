@@ -1,4 +1,7 @@
+import { ethers, TypedDataDomain } from "ethers";
 import { AppVkProofInputs } from "./application";
+import assert from "assert";
+import { Deposits__factory } from "../../typechain-types";
 
 export class SubmitterState {
   constructor(
@@ -22,12 +25,33 @@ export type Signature = string;
 export class OffChainSubmission {
   constructor(
     public readonly proofs: AppVkProofInputs[],
-    public readonly submission_id: string,
+    public readonly submissionId: string,
     public readonly fee: bigint,
-    public readonly expiration_block_number: bigint,
-    public readonly submitter_id: string,
+    public readonly expirationBlockNumber: bigint,
+    public readonly submitterId: string,
     /// Signature over [submission_id, totalFee, aggregatorAddress]
     public readonly signature: Signature
+  ) {}
+}
+
+export class UnsignedOffChainSubmissionRequest {
+  constructor(
+    public readonly proofs: AppVkProofInputs[],
+    public readonly submissionId: string,
+    public readonly expirationBlockNumber: bigint,
+    public readonly submitterNonce: bigint,
+    public readonly submitterId: string,
+    public readonly fee: bigint,
+    public readonly totalFee: bigint
+  ) {}
+}
+
+// Data to be signed by the requester
+export class SignedRequestData {
+  constructor(
+    public readonly submissionId: string,
+    public readonly expirationBlockNumber: bigint,
+    public readonly totalFee: bigint
   ) {}
 }
 
@@ -35,20 +59,20 @@ export class OffChainSubmission {
 export class OffChainSubmissionRequest extends OffChainSubmission {
   constructor(
     proofs: AppVkProofInputs[],
-    submission_id: string,
+    submissionId: string,
     fee: bigint,
-    expiration_block_number: bigint,
-    submitter_id: string,
+    expirationBlockNumber: bigint,
+    submitterId: string,
     signature: Signature,
-    public readonly submitter_nonce: bigint,
-    public readonly total_fee: bigint
+    public readonly submitterNonce: bigint,
+    public readonly totalFee: bigint
   ) {
     super(
       proofs,
-      submission_id,
+      submissionId,
       fee,
-      expiration_block_number,
-      submitter_id,
+      expirationBlockNumber,
+      submitterId,
       signature
     );
   }
@@ -56,17 +80,20 @@ export class OffChainSubmissionRequest extends OffChainSubmission {
 
 export class AggregationAgreement {
   constructor(
-    public readonly submission_id: string,
-    public readonly expiration_block_number: bigint
+    public readonly submissionId: string,
+    public readonly expirationBlockNumber: bigint,
+    public readonly fee: bigint
   ) {}
 }
 
 export class OffChainSubmissionResponse {
   constructor(
-    public readonly submission_id: string,
-    public readonly submitter_nonce: bigint,
+    public readonly submissionId: string,
+    public readonly submitterNonce: bigint,
     public readonly fee: bigint,
-    public readonly total_fee: bigint
+    public readonly totalFee: bigint,
+    /// Signature over [submissionId, expirationBlockNumber, fee]
+    public readonly signature: Signature
   ) {}
 }
 
@@ -105,4 +132,78 @@ export class OffChainClient {
   ): Promise<OffChainSubmissionResponse> {
     throw "todo";
   }
+}
+
+/// Get the EIP-712 domain for the fee contract, to be used to sign requests.
+export async function getEIP712Domain(
+  wallet: ethers.Signer,
+  depositsContract: ethers.AddressLike
+): Promise<TypedDataDomain> {
+  const deposits = Deposits__factory.connect(
+    depositsContract.toString()
+  ).connect(wallet);
+  const { chainId, name, version, verifyingContract } =
+    await deposits.eip712Domain();
+  return {
+    // Chain where the fee contract is deployed
+    chainId,
+    // Name of the fee contract
+    name,
+    // The version of the fee contract we are sending the request to.
+    // (This is different from the UPA package version)
+    version,
+    // The address of the off-chain aggregator's fee contract
+    verifyingContract,
+  };
+}
+
+/// Gets the EIP-712 message type for `SignedRequestData`.
+export function getEIP712RequestType() {
+  return {
+    SignedRequestData: [
+      { name: "submissionId", type: "bytes32" },
+      { name: "expirationBlockNumber", type: "uint256" },
+      { name: "totalFee", type: "uint256" },
+    ],
+  };
+}
+
+/// Get the signed portion of the request data.
+export function getSignedRequestData(
+  signedRequest: OffChainSubmissionRequest
+): SignedRequestData {
+  return {
+    submissionId: signedRequest.submissionId,
+    expirationBlockNumber: signedRequest.expirationBlockNumber,
+    totalFee: signedRequest.totalFee,
+  };
+}
+
+/// Sign an off-chain submission request directed to `feeContract`.
+export async function signOffChainSubmissionRequest(
+  request: UnsignedOffChainSubmissionRequest,
+  wallet: ethers.Signer,
+  feeContract: ethers.AddressLike
+): Promise<OffChainSubmissionRequest> {
+  const domain = await getEIP712Domain(wallet, feeContract);
+  const types = getEIP712RequestType();
+
+  const signedRequestData = {
+    submissionId: request.submissionId,
+    expirationBlockNumber: request.expirationBlockNumber,
+    totalFee: request.totalFee,
+  };
+
+  const signature = await wallet.signTypedData(
+    domain,
+    types,
+    signedRequestData
+  );
+
+  assert(
+    ethers.verifyTypedData(domain, types, signedRequestData, signature) ==
+      (await wallet.getAddress())
+  );
+
+  return { ...request, signature };
 }
