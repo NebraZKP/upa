@@ -35,7 +35,7 @@ if [ ! -d "logs" ]; then
 fi
 LOGS_DIR="$(pwd)/logs"
 
-CONFIGS_FILE="$(pwd)/configs/ubv_configs.json"
+CONFIGS_FILE="$(pwd)/configs/universal_outer_configs.json"
 
 # Generate UBV, Outer Proving Keys without GPU
 jq -c '.[]' "$CONFIGS_FILE" | while IFS= read -r config; do
@@ -66,7 +66,7 @@ jq -c '.[]' "$CONFIGS_FILE" | while IFS= read -r config; do
     OUTER_IDENTIFIER="outer_pi_${NUM_PI}_deg_${OUTER_CIRCUIT_DEGREE}_inner_${INNER_BATCH_SIZE}_outer_${OUTER_BATCH_SIZE}_ubv_deg_${BV_CIRCUIT_DEGREE}_keccak_deg_${KECCAK_CIRCUIT_DEGREE}"
 
     # Need this config in own file for prover tool
-    CONFIG_FILE="${TEST_DATA_DIR}/${BV_IDENTIFIER}.config"
+    CONFIG_FILE="${TEST_DATA_DIR}/${OUTER_IDENTIFIER}.config"
     if [ ! -f $CONFIG_FILE ]; then
         echo $config > "$CONFIG_FILE"
     fi
@@ -82,20 +82,21 @@ jq -c '.[]' "$CONFIGS_FILE" | while IFS= read -r config; do
                 --verification-key "${BV_IDENTIFIER}.vk" \
                 --protocol "${BV_IDENTIFIER}.protocol" \
                 --gate-config "${BV_IDENTIFIER}.gate_config" \
-                $DRY_RUN_FLAG
+                $DRY_RUN_FLAG 2>&1 | tee "${LOGS_DIR}/${BV_IDENTIFIER}_keygen.log"
     fi
     if [ ! -f "${OUTER_IDENTIFIER}.gate_config" ]; then
-        $PROVER universal-outer keygen \
-            --config $config \
-            --outer-srs $OUTER_SRS \
-            --bv-srs $BV_SRS \
-            --keccak-srs $KECCAK_SRS \
-            --proving-key "${OUTER_IDENTIFIER}.pk" \
-            --verification-key "${OUTER_IDENTIFIER}.vk" \
-            --protocol "${OUTER_IDENTIFIER}.protocol" \
-            --gate-config "${OUTER_IDENTIFIER}.gate_config" \
-            --num-instance "${OUTER_IDENTIFIER}.num_instance" \
-            $DRY_RUN_FLAG
+        /usr/bin/time -f "Keygen time: %E, max memory usage: %M KB" \
+            $PROVER universal-outer keygen \
+                --config $CONFIG_FILE \
+                --outer-srs $OUTER_SRS \
+                --bv-srs $BV_SRS \
+                --keccak-srs $KECCAK_SRS \
+                --proving-key "${OUTER_IDENTIFIER}.pk" \
+                --verification-key "${OUTER_IDENTIFIER}.vk" \
+                --protocol "${OUTER_IDENTIFIER}.protocol" \
+                --gate-config "${OUTER_IDENTIFIER}.gate_config" \
+                --num-instance "${OUTER_IDENTIFIER}.num_instance" \
+                $DRY_RUN_FLAG 2>&1 | tee "${LOGS_DIR}/${OUTER_IDENTIFIER}_keygen.log"
     fi
     popd
 done
@@ -103,7 +104,7 @@ done
 # Benchmark UBV Prover with GPU
 # Must run from saturn directory to have GPU feature
 pushd ../../../
-    cargo bench --features gpu --bench universal_batch_verifier | tee "${LOGS_DIR}/upa_large_config_bench.log"
+    cargo bench --features gpu --bench upa 2>&1 | tee "${LOGS_DIR}/upa_large_config_bench.log"
 popd
 
 set +x

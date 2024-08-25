@@ -29,7 +29,11 @@ use snark_verifier_sdk::{
     halo2::{PoseidonTranscript, POSEIDON_SPEC},
     CircuitExt, Snark, SHPLONK,
 };
-use std::time::Instant;
+use std::{
+    fs::{File, OpenOptions},
+    io::Write,
+    time::Instant,
+};
 use upa_circuits::{
     batch_verify::universal::{
         types::{UniversalBatchVerifierConfig, UniversalBatchVerifierInputs},
@@ -40,14 +44,17 @@ use upa_circuits::{
         KeccakCircuit, KeccakConfig,
     },
     outer::{
-        universal, utils::gen_outer_evm_verifier, OuterCircuitInputs,
+        self, universal, utils::gen_outer_evm_verifier, OuterCircuitInputs,
         OuterCircuitWrapper, OuterKeygenInputs,
     },
     utils::{
         benchmarks::{
             keygen, CONTRACT_BYTE_LIMIT, UNIVERSAL_OUTER_CONFIG_FILE,
         },
-        file::{load_json, open_file_for_read, outer_file_root, ubv_file_root},
+        file::{
+            load_json, open_file_for_read, outer_file_root, outer_identifier,
+            ubv_file_root,
+        },
         upa_config::UpaConfig,
     },
     SafeCircuit,
@@ -76,15 +83,22 @@ pub fn bench(c: &mut Criterion) {
         let bv_inputs =
             UniversalBatchVerifierInputs::sample_mixed(&bv_config, &mut OsRng);
         // UBV Keygen
-        let bv_srs = gen_srs(bv_config.degree_bits);
-        let (bv_pk, bv_gate_config, bv_break_points) = {
+        // let bv_srs = gen_srs(bv_config.degree_bits);
+        let (bv_srs, bv_pk, bv_gate_config, bv_break_points) = {
             // keygen::<UniversalBatchVerifyCircuit>(&bv_config, &(), &bv_srs)
+            let srs_file = format!(
+                "./benches/_srs/deg_{}.srs",
+                config.bv_config.degree_bits
+            );
+            let mut buf = open_file_for_read(&srs_file);
+            let srs = ParamsKZG::<Bn256>::read(&mut buf)
+                .unwrap_or_else(|e| panic!("failed to read srs: {e}"));
 
             // Rather than generating, load from file located at `benches/_keys`
             let ubv_file_root = ubv_file_root(config);
             let gate_config =
                 load_json(&format!("{}.gate_config", ubv_file_root));
-            let break_points = load_json(&format!("{}.bps", ubv_file_root));
+            let break_points = load_json(&format!("{}.pk.bps", ubv_file_root));
 
             let mut buf = open_file_for_read(&format!("{}.pk", ubv_file_root));
             let pk =
@@ -94,7 +108,7 @@ pub fn bench(c: &mut Criterion) {
                     &mut buf,
                 )
                 .unwrap_or_else(|e| panic!("error reading pk: {e}"));
-            (pk, gate_config, break_points)
+            (srs, pk, gate_config, break_points)
         };
         println!("UBV gate config {bv_gate_config:?}");
         // Measure UBV Proving Time
@@ -318,6 +332,13 @@ pub fn bench(c: &mut Criterion) {
             (proof, instances[0].clone())
         };
 
+        // Save outer proof
+        println!("Size of outer_proof: {} bytes", outer_proof.len());
+        save_proof(
+            &format!("./benches/_test_data/{}", outer_identifier(config)),
+            &outer_proof,
+        );
+
         // EVM check, report gas
         let gas_per_proof = black_box(
             match evm_verify(
@@ -343,6 +364,21 @@ pub fn bench(c: &mut Criterion) {
 
 criterion_group!(benches, bench);
 criterion_main!(benches);
+
+/// Create a new file. Panic if the file already exists.
+pub fn create_file_no_overwrite(path: &str) -> File {
+    return OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .unwrap_or_else(|e| panic!("failed to create file {path}: {e}"));
+}
+
+pub fn save_proof(path: &str, proof: &[u8]) {
+    let mut f = create_file_no_overwrite(path);
+    f.write_all(proof)
+        .unwrap_or_else(|e| panic!("failed writing proof: {e}"));
+}
 
 /// Verifies `proof` against `instances` on an EVM.
 fn evm_verify(
