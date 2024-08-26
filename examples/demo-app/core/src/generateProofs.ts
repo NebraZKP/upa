@@ -6,8 +6,10 @@ import {
   generateProof,
   demoAppInstance,
   loadDemoAppInstance,
+  vkFile,
 } from "./utils";
 import * as fs from "fs";
+import { config } from "@nebrazkp/upa/tool";
 
 export const generateProofs = command({
   name: "generate-proofs",
@@ -20,6 +22,7 @@ export const generateProofs = command({
       description: "The number of proofs to generate.",
     }),
     demoAppInstanceFile: demoAppInstance(),
+    vkFile: vkFile(),
     circuitWasm: circuitWasm(),
     circuitZkey: circuitZkey(),
     proofOutputFile: proofOutputFile(),
@@ -31,17 +34,19 @@ export const generateProofs = command({
     circuitWasm,
     circuitZkey,
     proofOutputFile,
+    vkFile,
   }): Promise<undefined> {
     const startTimeMilliseconds = Date.now();
 
     const demoAppInstance = loadDemoAppInstance(demoAppInstanceFile);
     const circuitId = demoAppInstance.circuitId;
+    const vk = config.loadAppVK(vkFile);
 
-    const cidProofsPIs = [];
+    const cidVKProofsPIs = [];
 
     for (let i = 0; i < numProofs; i++) {
       const [proof, inputs] = await generateProof(circuitWasm, circuitZkey);
-      cidProofsPIs.push({ circuitId, proof, inputs });
+      cidVKProofsPIs.push({ vk, circuitId, proof, inputs });
 
       console.log(`Generated proof ${i}.`);
     }
@@ -54,7 +59,7 @@ export const generateProofs = command({
       `Generated ${numProofs} proofs in ${elapsedTimeSeconds} seconds.`
     );
 
-    fs.writeFileSync(proofOutputFile, JSON.stringify(cidProofsPIs, null, 2));
+    fs.writeFileSync(proofOutputFile, JSON.stringify(cidVKProofsPIs, null, 2));
 
     console.log(`Generated proofs written to file ${proofOutputFile}.`);
   },
