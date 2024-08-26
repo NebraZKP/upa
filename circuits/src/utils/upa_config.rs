@@ -32,7 +32,9 @@ pub struct UpaConfig {
     /// Config for Outer circuit.
     pub outer_config: CircuitWithLimbsConfig,
 
-    /// Output the submission Id
+    /// Output submission Id. If `true`, the circuits output the submissionId of
+    /// the proofIds it computes as the final digest. If `false`, it outputs the
+    /// keccak hash of all proofIds.
     pub output_submission_id: bool,
 }
 

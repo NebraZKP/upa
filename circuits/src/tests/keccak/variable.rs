@@ -79,6 +79,7 @@ fn check_words() {
         inner_batch_size: 1,
         outer_batch_size: 1,
         lookup_bits: KECCAK_LOOKUP_BITS,
+        output_submission_id: false, // Irrelevant for this test
     };
     // This input has `app_public_inputs` of length `len` + `filler_len`.
     let keccak_input = KeccakPaddedCircuitInput {

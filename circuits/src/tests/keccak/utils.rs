@@ -246,6 +246,7 @@ fn keccak_var_len_input_serialization() {
         outer_batch_size: 1,
         num_app_public_inputs,
         lookup_bits: KECCAK_LOOKUP_BITS,
+        output_submission_id: false, // Irrelevant for this test
     };
     let mut inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
     inputs.inputs[0]
@@ -273,6 +274,7 @@ fn circuit_id_and_proof_id_test() {
         outer_batch_size: 1,
         num_app_public_inputs,
         lookup_bits: KECCAK_LOOKUP_BITS,
+        output_submission_id: false, // Irrelevant for this test
     };
     let keccak_inputs = KeccakCircuitInputs::sample(&config, &mut rng);
     let circuit_inputs = KeccakPaddedCircuitInputs::from_keccak_circuit_inputs(

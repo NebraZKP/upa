@@ -3,9 +3,10 @@
 use crate::{
     batch_verify::universal::native::compute_circuit_id,
     keccak::{
-        self, inputs::KeccakCircuitInputs, AssignedKeccakInput,
-        AssignedVerifyingKeyLimbs, KeccakConfig, KeccakPaddedCircuitInput,
-        PaddedVerifyingKeyLimbs, KECCAK_LOOKUP_BITS, LIMB_BITS, NUM_LIMBS,
+        self, inputs::KeccakCircuitInputs, utils::compute_submission_id,
+        AssignedKeccakInput, AssignedVerifyingKeyLimbs, KeccakConfig,
+        KeccakPaddedCircuitInput, PaddedVerifyingKeyLimbs, KECCAK_LOOKUP_BITS,
+        LIMB_BITS, NUM_LIMBS,
     },
     tests::utils::check_instance,
     utils::commitment_point::{
@@ -81,9 +82,10 @@ pub enum KeccakCircuitInconsistency<F> {
     /// Public Output Mismatch Error.
     ///
     /// The field elements given as the public output don't decompose into
-    /// the keccak output bytes of the last keccak query. Returns the actual
+    /// the keccak output bytes of the last keccak query. Returns the actual value,
+    /// the value computed from the pair of field elements in the instance
     /// and the expected value, in order.
-    PublicOutput(Vec<u8>, Vec<u8>),
+    PublicOutput(Vec<u8>, Vec<u8>, Vec<u8>),
 
     /// Commitment Query Mismatch Error.
     ///
@@ -240,23 +242,24 @@ impl KeccakCircuit {
                 chunk.into_iter().map(|v| v.value().to_bytes_le()[0])
             })
             .collect_vec();
-        let last_expected_bytes = keccak256(last_input_bytes);
-        // Keccak output bytes contains `proof_id` and `commitment_hash`
-        // for each input, i.e. 2 * 32 bytes of output per input.
+        // The last bytes will be either the submission Id or the keccak
+        // of the proof Ids.
+        let last_expected_bytes = match config.output_submission_id {
+            true => {
+                let proof_ids_chunks = last_input_bytes.into_iter().chunks(32);
+                let proof_ids = proof_ids_chunks.into_iter().map(|chunk| <[u8; 32]>::try_from(chunk.collect_vec())
+                .expect("Conversion from vector into array is not allowed to fail"));
+                compute_submission_id(proof_ids)
+            }
+            false => keccak256(last_input_bytes),
+        };
+        // The last 32 keccak output bytes must match `last_expected_bytes`.
+        let num_keccak_output_bytes = self.keccak_output_bytes().len();
         let last_output_bytes = self.keccak_output_bytes()
-            [3 * 32 * (last_index as usize + 1)..]
+            [num_keccak_output_bytes - 32..]
             .iter()
             .map(|v| v.value().to_bytes_le()[0])
             .collect_vec();
-        (last_output_bytes == last_expected_bytes)
-            .then_some(())
-            .ok_or_else(|| {
-                KeccakCircuitInconsistency::KeccakProofId(
-                    last_index + 1,
-                    last_output_bytes.clone(),
-                    last_expected_bytes.to_vec(),
-                )
-            })?;
         let public_output = self.public_output.map(|field_element| {
             field_element
                 .value()
@@ -268,12 +271,16 @@ impl KeccakCircuit {
         });
         let mut output_bytes = public_output[1].clone();
         output_bytes.extend(public_output[0].iter());
-        (last_output_bytes == output_bytes).then_some(()).ok_or({
-            KeccakCircuitInconsistency::PublicOutput(
-                output_bytes,
-                last_output_bytes,
-            )
-        })?;
+        (last_output_bytes == output_bytes
+            && last_output_bytes == last_expected_bytes)
+            .then_some(())
+            .ok_or({
+                KeccakCircuitInconsistency::PublicOutput(
+                    last_output_bytes,
+                    output_bytes,
+                    last_expected_bytes.into(),
+                )
+            })?;
         self.are_commitment_point_queries_well_constructed(
             last_index as usize + 1,
         )?;
@@ -303,6 +310,7 @@ fn test_keccak_mock() {
         inner_batch_size: INNER_BATCH_SIZE,
         outer_batch_size: OUTER_BATCH_SIZE,
         lookup_bits: KECCAK_LOOKUP_BITS,
+        output_submission_id: true,
     };
     let mut rng = OsRng;
     let inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
@@ -340,6 +348,7 @@ fn test_keccak_prover() {
         inner_batch_size: INNER_BATCH_SIZE,
         outer_batch_size: OUTER_BATCH_SIZE,
         lookup_bits: KECCAK_LOOKUP_BITS,
+        output_submission_id: false,
     };
     let mut rng = OsRng;
     let inputs = KeccakCircuitInputs::sample(&config, &mut rng);
