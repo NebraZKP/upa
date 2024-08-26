@@ -77,7 +77,7 @@ export const submit = command({
     // Use submitter state to fill in nonce, fee, expirationBlock if not given
     const nonce = nonceString
       ? BigInt(nonceString)
-      : submitterState.submitterNonce;
+      : submitterState.lastNonce + 1n;
     const expirationBlock: bigint = await (async () => {
       throw "todo";
     })();
