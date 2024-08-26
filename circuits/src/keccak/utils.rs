@@ -396,6 +396,63 @@ pub fn compute_final_digest(
     output
 }
 
+/// Computes the Merkle leaf corresponding to `proof_id`.
+fn compute_leaf(proof_id: impl Borrow<[u8; 32]>) -> [u8; 32] {
+    let mut leaf = [0u8; 32];
+    let mut hasher = Keccak::v256();
+    hasher.update(proof_id.borrow());
+    hasher.finalize(&mut leaf);
+    leaf
+}
+
+/// Computes the keccak hash of `left` and `right`.
+fn hash_pair(left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
+    let mut output = [0u8; 32];
+    let mut hasher = Keccak::v256();
+
+    hasher.update(left);
+    hasher.update(right);
+
+    hasher.finalize(&mut output);
+    output
+}
+
+/// Hashes the elements of `row` by pairs.
+fn hash_row(row: Vec<[u8; 32]>) -> Vec<[u8; 32]> {
+    let mut next_row = Vec::new();
+    let row_len = row.len();
+    for i in (0..row_len).step_by(2) {
+        next_row.push(hash_pair(&row[i], &row[i + 1]));
+    }
+    next_row
+}
+
+/// Computes the submission id corresponding to `proof_ids`.
+pub fn compute_submission_id(
+    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; 32]>>,
+) -> [u8; 32] {
+    let mut current_row = proof_ids
+        .into_iter()
+        .map(|proof_id| compute_leaf(proof_id))
+        .collect_vec();
+    let num_leaves = current_row.len();
+    assert_eq!(
+        (num_leaves & (num_leaves - 1)),
+        0,
+        "The number of leaves must be a power of two in submission id mode"
+    );
+    assert!(
+        num_leaves > 1,
+        "Only circuits with more than 1 proof id supported"
+    );
+
+    while current_row.len() > 1 {
+        current_row = hash_row(current_row);
+    }
+
+    current_row[0]
+}
+
 /// Compute the representation of a 32-byte Keccak digest as a pair of field
 /// elements.  The elements are the low and high order 128-bit halves
 /// (respectivaly) of the digest when interpretted as a 256-bit word.  Namely,
