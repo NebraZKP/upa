@@ -7,7 +7,6 @@ import {
   vkProofInputsBatchFile,
   submissionEndpoint,
 } from "./options";
-import * as log from "./log";
 import {
   computeCircuitId,
   computeProofId,
@@ -53,8 +52,11 @@ export const submit = command({
     feeString,
     expirationBlockString,
   }): Promise<void> {
-    let vksProofsInputs = loadAppVkProofInputsBatchFile(proofsFile);
-    let proofIds = vksProofsInputs.map((vpi) => {
+    feeString as unknown;
+    expirationBlockString as unknown;
+
+    const vksProofsInputs = loadAppVkProofInputsBatchFile(proofsFile);
+    const proofIds = vksProofsInputs.map((vpi) => {
       const circuitId = computeCircuitId(vpi.vk);
       return computeProofId(circuitId, vpi.inputs);
     });
@@ -66,13 +68,13 @@ export const submit = command({
 
     // Load submitter state. (A custom client can keep track of nonce, etc and
     // potentially avoid querying at each submission.)
-    let address = await wallet.getAddress();
-    let submitterState = await client.getSubmitterState(address);
+    const address = await wallet.getAddress();
+    const submitterState = await client.getSubmitterState(address);
 
     // Use submitter state to fill in nonce, fee, expirationBlock if not given
     const nonce = nonceString
       ? BigInt(nonceString)
-      : submitterState.submitter_nonce;
+      : submitterState.submitterNonce;
     const expirationBlock: bigint = await (async () => {
       throw "todo";
     })();
@@ -80,7 +82,7 @@ export const submit = command({
       throw "todo";
     })();
     const submissionFee = BigInt(vksProofsInputs.length) * feePerProof;
-    const totalFee = submitterState.total_fee + submissionFee;
+    const totalFee = submitterState.totalFee + submissionFee;
 
     // Sign
     const signature: Signature = (() => {
@@ -94,11 +96,12 @@ export const submit = command({
       submissionFee,
       expirationBlock,
       address,
-      signature,
       nonce,
-      totalFee
+      totalFee,
+      signature
     );
     const response = await client.submit(submission);
+    response as unknown;
 
     // Store the result somewhere (stdout or write to a file)
   },
