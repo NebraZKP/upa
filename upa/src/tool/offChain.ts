@@ -1,5 +1,9 @@
 import { subcommands, command, string, option, optional } from "cmd-ts";
-import { loadWallet, loadAppVkProofInputsBatchFile } from "./config";
+import {
+  loadWallet,
+  loadAppVkProofInputsBatchFile,
+  readAddressFromKeyfile,
+} from "./config";
 import {
   password,
   getPassword,
@@ -11,17 +15,16 @@ import {
   computeCircuitId,
   computeProofId,
   computeSubmissionId,
+  JSONstringify,
 } from "../sdk/utils";
 import {
   OffChainClient,
-  Signature,
   OffChainSubmissionRequest,
 } from "../sdk/offchainClient";
 
 export const submit = command({
   name: "submit",
   args: {
-    // endpoint: op
     endpoint: submissionEndpoint(),
     keyfile: keyfile(),
     password: password(),
@@ -42,7 +45,7 @@ export const submit = command({
       description: "Submission expiry block number (default: query server)",
     }),
   },
-  description: "Generate an ethereum key and save to an encrypted keyfile",
+  description: "Submit a set of proofs to an off-chain aggregator",
   handler: async function ({
     endpoint,
     keyfile,
@@ -85,9 +88,7 @@ export const submit = command({
     const totalFee = submitterState.totalFee + submissionFee;
 
     // Sign
-    const signature: Signature = (() => {
-      throw "todo";
-    })();
+    const signature = "sig";
 
     // Send the OffChainSubmissionRequest
     const submission = new OffChainSubmissionRequest(
@@ -107,10 +108,41 @@ export const submit = command({
   },
 });
 
+export const getParameters = command({
+  name: "get-parameters",
+  args: {
+    endpoint: submissionEndpoint(),
+  },
+  description: "Get the current parameters for an off-chain aggregator",
+  handler: async function ({ endpoint }): Promise<void> {
+    const client = await OffChainClient.init(endpoint);
+    const submissionParameters = await client.getSubmissionParameters();
+    console.log(JSONstringify(submissionParameters));
+  },
+});
+
+export const getState = command({
+  name: "get-state",
+  args: {
+    endpoint: submissionEndpoint(),
+    keyfile: keyfile(),
+  },
+  description: "Get the submitter state held by an off-chain aggregator",
+  handler: async function ({ endpoint, keyfile }): Promise<void> {
+    // Create the client, read the address and make the query.
+    const client = await OffChainClient.init(endpoint);
+    const address = readAddressFromKeyfile(keyfile);
+    const submitterState = await client.getSubmitterState(address);
+    console.log(JSONstringify(submitterState));
+  },
+});
+
 export const offChain = subcommands({
-  name: "off- chain",
+  name: "off-chain",
   description: "Utilities for off-chain submission",
   cmds: {
     submit,
+    "get-state": getState,
+    "get-parameters": getParameters,
   },
 });
