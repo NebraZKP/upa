@@ -31,16 +31,13 @@ export class SubmitterStateRequest {
 
 export class SubmitterState {
   constructor(
-    public readonly submitterNonce: bigint,
+    public readonly lastNonce: bigint,
     public readonly totalFee: bigint
   ) {}
 
   public static from_json(obj: object): SubmitterState {
     const json = obj as SubmitterState;
-    return new SubmitterState(
-      BigInt(json.submitterNonce),
-      BigInt(json.totalFee)
-    );
+    return new SubmitterState(BigInt(json.lastNonce), BigInt(json.totalFee));
   }
 }
 
@@ -62,19 +59,6 @@ export class SubmissionParameters {
 
 ///
 export type Signature = string;
-
-// /// Pertinent data about a submission
-// export class OffChainSubmission {
-//   constructor(
-//     public readonly proofs: AppVkProofInputs[],
-//     public readonly submissionId: string,
-//     public readonly fee: bigint,
-//     public readonly expirationBlockNumber: bigint,
-//     public readonly submitterId: string,
-//     /// Signature over [submission_id, totalFee, aggregatorAddress]
-//     public readonly signature: Signature
-//   ) {}
-// }
 
 export class UnsignedOffChainSubmissionRequest {
   constructor(
@@ -218,18 +202,19 @@ export class OffChainSubmissionResponse {
 
 export class OffChainClient {
   private constructor(
-    private readonly baseUrl: string,
-    private readonly contractAddress: string
+    private readonly baseUrl: string // private readonly contractAddress: string
   ) {
-    assert(typeof contractAddress === "string");
+    // assert(typeof contractAddress === "string");
     if (!baseUrl.endsWith("/")) {
       this.baseUrl += "/";
     }
   }
 
   public static async init(baseUrl: string): Promise<OffChainClient> {
-    const contractAddress = await jsonPostRequest("contract", {});
-    return new OffChainClient(baseUrl, contractAddress as unknown as string);
+    // const contractAddress = await jsonGetRequest("contract", {});
+    return new OffChainClient(
+      baseUrl /*, contractAddress as unknown as string */
+    );
   }
 
   /// Returns the current expected latency in blocks, the expected fee per
@@ -275,7 +260,7 @@ async function processResponse(
       : "";
   }
 
-  const resp = response.json() as ResponseObject;
+  const resp = (await response.json()) as ResponseObject;
   assert(typeof resp === "object");
 
   if (resp.error) {
@@ -291,7 +276,6 @@ async function processResponse(
 
 async function getRequest(url: string): Promise<object> {
   const response = await fetch(url, {
-    method: "GET",
     dispatcher: new Agent({
       connect: { timeout: DEFAULT_TIMEOUT_MS },
       headersTimeout: DEFAULT_TIMEOUT_MS,
