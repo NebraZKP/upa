@@ -67,7 +67,7 @@ function start_daemon() {
             stop_daemon $1
         fi
 
-         if [ "$4" == "" ] ; then
+        if [ "$4" == "" ] ; then
             eval "${start} > ${log_file} 2>&1 &"
             pid=$!
         else
@@ -129,9 +129,13 @@ function start_hardhat_node() {
 
     launch_command=$2
     if [ "${launch_command}" == "" ] ; then
+        if [ "${DOCKER}" == "1" ] ; then
+            launch_command='docker run --rm --name Hardhat -p '"${port}:${port}"' -itd --entrypoint "/bin/bash" hardhat -c "/upa/node_modules/.bin/hardhat node --port '"${port}"'"'
+        else
+            launch_command="${UPA_DIR}/node_modules/.bin/hardhat node ${node_flags}"
+        fi
         # This must be run inside the upa dir, or Hardhat
         # complains we're not in a Hardhat project.
-        launch_command="${UPA_DIR}/node_modules/.bin/hardhat node ${node_flags}"
         start_dir=${UPA_DIR}/upa
     fi
 
