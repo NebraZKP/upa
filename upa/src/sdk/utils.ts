@@ -18,7 +18,6 @@ import {
   evmInnerHashFn,
   evmLeafHashFn,
 } from "./merkleUtils";
-import { AppVkProofInputs, utils } from ".";
 
 // Domain tags for the circuit id calculations.
 // Reproduce the calculation with:
@@ -180,7 +179,7 @@ export async function requestWithRetry<T>(
         // eslint-disable-next-line
         const data = (error as any)?.data?.data || (error as any)?.data;
         if (data) {
-          throw utils.JSONstringify({
+          throw JSONstringify({
             error: error,
             msg: contractInterface.parseError(data),
           });
