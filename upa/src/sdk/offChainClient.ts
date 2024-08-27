@@ -18,17 +18,6 @@ type ResponseObject = {
   error?: string;
 };
 
-export class SubmitterStateRequest {
-  constructor(public readonly submitterAddress: string) {
-    assert(typeof submitterAddress === "string");
-  }
-
-  public static from_json(obj: object): SubmitterStateRequest {
-    const json = obj as SubmitterStateRequest;
-    return new SubmitterStateRequest(json.submitterAddress);
-  }
-}
-
 export class SubmitterState {
   constructor(
     public readonly lastNonce: bigint,
@@ -91,10 +80,10 @@ export class UnsignedOffChainSubmissionRequest {
         )
       ),
       json.submissionId,
-      BigInt(json.expirationBlockNumber),
-      BigInt(json.submitterNonce),
-      json.submitterId,
       BigInt(json.fee),
+      BigInt(json.expirationBlockNumber),
+      json.submitterId,
+      BigInt(json.submitterNonce),
       BigInt(json.totalFee)
     );
   }
@@ -173,28 +162,31 @@ export class OffChainSubmissionResponse {
     public readonly submissionId: string,
     public readonly fee: bigint,
     public readonly expirationBlockNumber: bigint,
-    public readonly submitterId: bigint,
+    public readonly submitterId: string,
     public readonly submitterNonce: bigint,
     public readonly totalFee: bigint,
     public readonly signature: Signature // Signature over AggregationAgreement
   ) {
     assert(typeof submissionId === "string");
     assert(submissionId.length === 66);
+    assert(typeof fee === "bigint");
+    assert(typeof expirationBlockNumber === "bigint");
+    assert(typeof submitterId === "string");
     assert(typeof submitterNonce === "bigint");
     assert(typeof totalFee === "bigint");
     assert(typeof signature === "string");
-    // TODO: length assumptions?
+    // TODO: signature length assumptions?
   }
 
   public static from_json(obj: object): OffChainSubmissionResponse {
     const json = obj as OffChainSubmissionResponse;
     return new OffChainSubmissionResponse(
       json.submissionId,
-      json.fee,
-      json.expirationBlockNumber,
+      BigInt(json.fee),
+      BigInt(json.expirationBlockNumber),
       json.submitterId,
-      json.submitterNonce,
-      json.totalFee,
+      BigInt(json.submitterNonce),
+      BigInt(json.totalFee),
       json.signature
     );
   }
@@ -250,28 +242,27 @@ export class OffChainClient {
 async function processResponse(
   response: Response,
   url: string,
-  body?: string
+  reqBody?: string
 ): Promise<object> {
+  const body = (await response.json()) as ResponseObject;
+  assert(typeof body === "object");
   if (!response.ok) {
-    throw `Request (${url}) failed with status: ${response.status}, ` +
-      `, response:\n${await response.text()}\nEND OF RESPONSE` +
-      body
-      ? `\nRequest body:\n${body}\nEND OF REQUEST\n`
-      : "";
+    throw (
+      `Request (${url}) failed (status ${response.status}): ` +
+      `${utils.JSONstringify(body)}\nEND OF RESPONSE` +
+      (reqBody ? `\nRequest body:\n${reqBody}\nEND OF REQUEST\n` : "")
+    );
   }
 
-  const resp = (await response.json()) as ResponseObject;
-  assert(typeof resp === "object");
-
-  if (resp.error) {
-    throw `Request (${url}) status OK, but error string: ${resp.error}`;
+  if (body.error) {
+    throw `Request (${url}) status OK, but error string: ${body.error}`;
   }
 
-  if (resp.data === undefined) {
+  if (body.data === undefined) {
     throw `Request (${url}) got status OK, but contained no data`;
   }
 
-  return resp.data;
+  return body.data;
 }
 
 async function getRequest(url: string): Promise<object> {
