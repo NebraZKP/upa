@@ -57,6 +57,7 @@ export function sisFromSubmissions(
 export function siBrief<T>(si: SubmissionInterval<T>): string {
   return JSONstringify({
     submissionId: si.submission.submissionId,
+    dupIdx: si.submission.getDupSubmissionIdx(),
     startIdx: si.startIdx,
     numProofs: si.numProofs,
     data: si.data,
@@ -77,6 +78,43 @@ export function siComputeSubmissionProof<T>(
   si: SubmissionInterval<T>
 ): SubmissionProof | undefined {
   return si.submission.computeSubmissionProof(si.startIdx, si.numProofs);
+}
+
+export function siCanMerge<T>(
+  left: SubmissionInterval<T>,
+  right: SubmissionInterval<T>
+): boolean {
+  const lSub = left.submission;
+  const rSub = right.submission;
+
+  // In order to be considered for merging, the submissionId and
+  // dupSubmissionIdx must match.  If both match, then the indices in the
+  // interval MUST line up (or the caller has done something wrong).
+  if (
+    lSub.getSubmissionId() == rSub.getSubmissionId() &&
+    lSub.getDupSubmissionIdx() == rSub.getDupSubmissionIdx()
+  ) {
+    // Sanity checks if SubmissionIds match
+
+    // Check the intervals line up
+    const lEndIdx = left.startIdx + left.numProofs;
+    if (right.startIdx != lEndIdx) {
+      // SubmissionIds match, so indices should line up
+      throw `right interval startIdx ${right.startIdx} (expected ${lEndIdx})`;
+    }
+
+    // Check the data matches
+    if (left.data != right.data) {
+      throw (
+        `data mismatch: left data ${JSONstringify(left.data)}` +
+        ` (right data ${JSONstringify(right.data)})`
+      );
+    }
+
+    return true;
+  }
+
+  return false;
 }
 
 /// Given an array of entries, each holding a list of submission intervals.
@@ -118,31 +156,15 @@ export function mergeSubmissionIntervals<T>(
       // No intervals shall be merged past this point
       doNotMerge = true;
     }
-    if (!doNotMerge && nextSubmissionId == curSubId) {
-      if (curInterval.data != nextInterval.data) {
-        throw (
-          `nextInterval data ${nextInterval.data}` +
-          `(expected ${curInterval.data})`
-        );
-      }
-      const curEndIdx = curInterval.startIdx + curInterval.numProofs;
-      if (nextInterval.startIdx == curEndIdx) {
-        // The intervals can be merged.
-        // Add next into the current interval;
-        curInterval = {
-          submission: curInterval.submission,
-          startIdx: curInterval.startIdx,
-          numProofs: curInterval.numProofs + nextInterval.numProofs,
-          data: curInterval.data,
-        };
-        continue;
-      } else {
-        // SubmissionIds match, so indices should line up
-        throw (
-          `nextInterval w/ startIdx ${nextInterval.startIdx} ` +
-          `(expected ${curEndIdx})`
-        );
-      }
+    if (!doNotMerge && siCanMerge(curInterval, nextInterval)) {
+      // The intervals can be merged.  Add next into current.
+      curInterval = {
+        submission: curInterval.submission,
+        startIdx: curInterval.startIdx,
+        numProofs: curInterval.numProofs + nextInterval.numProofs,
+        data: curInterval.data,
+      };
+      continue;
     } else {
       // SubmissionIds do NOT match, so curInterval should include the
       // tail of the submission, and `nextInterval` should include

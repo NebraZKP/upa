@@ -262,6 +262,10 @@ describe("SubmissionInterval", () => {
       ].map(CircuitIdProofAndInputs.from_json),
       0
     );
+    const sADup = Submission.fromCircuitIdsProofsInputsAndDupIdx(
+      sA.getCircuitIdsProofsAndInputs(),
+      1
+    );
 
     const sB = Submission.fromCircuitIdsProofsInputsAndDupIdx(
       [
@@ -926,6 +930,18 @@ describe("SubmissionInterval", () => {
           },
         ])
       ).to.throw();
+    });
+
+    it("dont attempt to merge submissions with different dupIdxs", () => {
+      // sA and sADup have the same proofs, and therefore the same submission
+      // Id.  They should NOT be considered for merging, and should not cause
+      // an error. (internal issue #1079).
+
+      const siL = { submission: sA, startIdx: 0, numProofs: 4, data: "A" };
+      const siR = { submission: sADup, startIdx: 0, numProofs: 4, data: "B" };
+
+      const merged = mergeSubmissionIntervals([siL, siR]);
+      expect(merged).eql([siL, siR]);
     });
 
     it("mismatched data should throw", () => {
