@@ -27,7 +27,7 @@ import {
   getSignedRequestData,
   signOffChainSubmissionRequest,
   UnsignedOffChainSubmissionRequest,
-} from "../src/sdk/offchainClient";
+} from "../src/sdk/offChainClient";
 
 type DeployAndSubmitResult = {
   worker: Signer;
