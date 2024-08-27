@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev:setup": "mkdir -p public/instances ; cp ../core/circuits/circuit_js/circuit.wasm ../core/circuits/circuit.zkey public ; cp ../core/_test_demo_app/upa.instance public/instances/upa.instance.json ; cp ../core/_test_demo_app/demo-app.instance public/instances/demo-app.instance.json",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
