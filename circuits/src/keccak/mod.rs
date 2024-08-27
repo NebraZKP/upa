@@ -1003,13 +1003,13 @@ where
         next_row
     }
 
-    /// Computes the submission id from `proof_ids`.
-    fn compute_submission_id(
+    /// Computes the submission id from `proof_ids` as bytes.
+    pub(crate) fn compute_submission_id_bytes(
         ctx: &mut Context<F>,
         range: &RangeChip<F>,
         keccak: &mut KeccakChip<F>,
         proof_ids: &[AssignedValue<F>],
-    ) -> [AssignedValue<F>; 2] {
+    ) -> [AssignedValue<F>; 32] {
         // First, compute the leaves
         let mut current_row = proof_ids
             .iter()
@@ -1038,13 +1038,24 @@ where
         while current_row.len() > 1 {
             current_row = Self::hash_row(ctx, range, keccak, current_row);
         }
-        let root_bytes = current_row
+        current_row
             .into_iter()
             .next()
             .expect("Retrieving the root bytes is not allowed to fail")
             .try_into()
-            .expect("Conversion from vector to array is not allowed to fail");
-        encode_digest_as_field_elements(ctx, range, &root_bytes)
+            .expect("Conversion from vector to array is not allowed to fail")
+    }
+
+    /// Computes the submission id from `proof_ids`.
+    fn compute_submission_id(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        proof_ids: &[AssignedValue<F>],
+    ) -> [AssignedValue<F>; 2] {
+        let submission_id_bytes =
+            Self::compute_submission_id_bytes(ctx, range, keccak, proof_ids);
+        encode_digest_as_field_elements(ctx, range, &submission_id_bytes)
     }
 
     /// Computes the final digest as the keccak hash of all `proof_ids`.

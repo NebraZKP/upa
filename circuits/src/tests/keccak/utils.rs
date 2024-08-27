@@ -4,13 +4,14 @@ use crate::{
         universal::native::compute_circuit_id,
     },
     keccak::{
+        chip::KeccakChip,
         inputs::KeccakCircuitInputs,
         utils::{
             assert_byte_decomposition_is_in_field, byte_decomposition,
             byte_decomposition_powers, compose_into_field_element,
-            compute_final_digest, compute_proof_id, digest_as_field_elements,
-            encode_digest_as_field_elements, field_max_element_into_parts,
-            g1_point_limbs_to_bytes,
+            compute_final_digest, compute_proof_id, compute_submission_id,
+            digest_as_field_elements, encode_digest_as_field_elements,
+            field_max_element_into_parts, g1_point_limbs_to_bytes,
         },
         KeccakCircuit, KeccakConfig, KeccakPaddedCircuitInputs,
         KECCAK_LOOKUP_BITS, LIMB_BITS, NUM_LIMBS,
@@ -447,5 +448,37 @@ fn test_compose_into_field_element() {
         field_element.value(),
         &expected_element,
         "Field element mismatch"
+    );
+}
+
+/// Checks the submission id computed in circuit coincides with the native
+/// computation
+#[test]
+fn test_submission_id() {
+    const NUMBER_OF_PROOFS: usize = 8;
+    let mut builder = GateThreadBuilder::<Fr>::mock();
+    let ctx = builder.main(0);
+    let range = RangeChip::default(8);
+    let mut keccak_chip = KeccakChip::default();
+    let mut rng = OsRng;
+    let proof_ids: Vec<[u8; 32]> =
+        (0..NUMBER_OF_PROOFS).map(|_| rng.gen()).collect_vec();
+    let proof_ids_fr = proof_ids
+        .iter()
+        .flat_map(|bytes| bytes.map(|byte| Fr::from(byte as u64)).to_vec())
+        .collect_vec();
+    let assigned_proof_ids = ctx.assign_witnesses(proof_ids_fr);
+    let circuit_sid =
+        KeccakCircuit::<_, G1Affine>::compute_submission_id_bytes(
+            ctx,
+            &range,
+            &mut keccak_chip,
+            &assigned_proof_ids,
+        )
+        .map(|assigned_byte| assigned_byte.value().get_lower_32() as u8);
+    let native_sid = compute_submission_id(proof_ids);
+    assert_eq!(
+        circuit_sid, native_sid,
+        "Native and circuit submission id mismatch"
     );
 }
