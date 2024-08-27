@@ -1,4 +1,5 @@
 import { subcommands, command, string, option, optional } from "cmd-ts";
+import * as log from "./log";
 import {
   loadWallet,
   loadAppVkProofInputsBatchFile,
@@ -8,8 +9,9 @@ import {
   password,
   getPassword,
   keyfile,
-  vkProofInputsBatchFile,
+  vkProofInputsBatchFilePositional,
   submissionEndpoint,
+  endpoint,
 } from "./options";
 import {
   computeCircuitId,
@@ -20,24 +22,26 @@ import {
 import {
   OffChainClient,
   OffChainSubmissionRequest,
-} from "../sdk/offchainClient";
+} from "../sdk/offChainClient";
+import * as ethers from "ethers";
 
 export const submit = command({
   name: "submit",
   args: {
-    endpoint: submissionEndpoint(),
+    endpoint: endpoint(),
+    submissionEndpoint: submissionEndpoint(),
     keyfile: keyfile(),
     password: password(),
-    proofsFile: vkProofInputsBatchFile(),
+    proofsFile: vkProofInputsBatchFilePositional(),
     nonceString: option({
       type: optional(string),
       long: "nonce",
       description: "Submitter nonce (default: query server)",
     }),
-    feeString: option({
+    feeGweiString: option({
       type: optional(string),
-      long: "fee-gwei-per-proof",
-      description: "Submission fee per proof, in gwei (default: query server)",
+      long: "fee-gwei",
+      description: "Total submission fee, in gwei (default: query server)",
     }),
     expirationBlockString: option({
       type: optional(string),
@@ -48,16 +52,14 @@ export const submit = command({
   description: "Submit a set of proofs to an off-chain aggregator",
   handler: async function ({
     endpoint,
+    submissionEndpoint,
     keyfile,
     password,
     proofsFile,
     nonceString,
-    feeString,
+    feeGweiString,
     expirationBlockString,
   }): Promise<void> {
-    feeString as unknown;
-    expirationBlockString as unknown;
-
     const vksProofsInputs = loadAppVkProofInputsBatchFile(proofsFile);
     const proofIds = vksProofsInputs.map((vpi) => {
       const circuitId = computeCircuitId(vpi.vk);
@@ -65,27 +67,48 @@ export const submit = command({
     });
     const submissionId = computeSubmissionId(proofIds);
 
-    // Create the client and load the wallet
-    const client = await OffChainClient.init(endpoint);
+    // Create the submission client and load the wallet
+    const client = await OffChainClient.init(submissionEndpoint);
     const wallet = await loadWallet(keyfile, getPassword(password));
 
     // Load submitter state. (A custom client can keep track of nonce, etc and
     // potentially avoid querying at each submission.)
     const address = await wallet.getAddress();
     const submitterState = await client.getSubmitterState(address);
+    const submissionParameters = await client.getSubmissionParameters();
+
+    // On-chain provider (for current block number)
+    let provider: undefined | ethers.Provider;
+    const getProvider = () => {
+      if (!provider) {
+        provider = new ethers.JsonRpcProvider(endpoint);
+      }
+      return provider;
+    };
 
     // Use submitter state to fill in nonce, fee, expirationBlock if not given
     const nonce = nonceString
       ? BigInt(nonceString)
       : submitterState.lastNonce + 1n;
-    const expirationBlock: bigint = await (async () => {
-      throw "todo";
-    })();
-    const feePerProof: bigint = await (async () => {
-      throw "todo";
-    })();
-    const submissionFee = BigInt(vksProofsInputs.length) * feePerProof;
+
+    // If not specified explicitly, expiration block is given by the current
+    // block number + expected latency.
+    const expirationBlock = expirationBlockString
+      ? BigInt(expirationBlockString)
+      : BigInt(await getProvider().getBlockNumber()) +
+        submissionParameters.expectedLatency;
+
+    // If not given explicitly, set a fee of 'minFeePerProof * numProofs'.
+    const submissionFee = feeGweiString
+      ? ethers.parseUnits(feeGweiString, "gwei")
+      : BigInt(vksProofsInputs.length) * submissionParameters.minFeePerProof;
+    log.info(`feePerProof: ${submissionParameters.minFeePerProof}`);
+    log.info(`numProofs: ${vksProofsInputs.length}`);
+    log.info(`submissionFee: ${submissionFee}`);
+
     const totalFee = submitterState.totalFee + submissionFee;
+
+    // TODO: check deposit contract etc.
 
     // Sign
     const signature = "sig";
@@ -101,10 +124,11 @@ export const submit = command({
       totalFee,
       signature
     );
+    log.debug(`submission: ${JSONstringify(submission)}`);
     const response = await client.submit(submission);
     response as unknown;
 
-    // Store the result somewhere (stdout or write to a file)
+    console.log(JSONstringify(response));
   },
 });
 

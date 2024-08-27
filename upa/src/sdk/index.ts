@@ -22,4 +22,4 @@ export { SubmissionDescriptor, Submission } from "./submission";
 export * as submissionIntervals from "./submissionIntervals";
 export * as aggregatedProofParams from "./aggregatedProofParams";
 export * as typechain from "../../typechain-types";
-export * as offchain from "./offchainClient";
+export * as offchain from "./offChainClient";

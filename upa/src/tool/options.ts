@@ -1,4 +1,4 @@
-import { string, option, boolean, flag, optional } from "cmd-ts";
+import { string, option, boolean, flag, optional, positional } from "cmd-ts";
 import { ArgParser } from "cmd-ts/dist/cjs/argparser";
 import { Descriptive, ProvidesHelp } from "cmd-ts/dist/cjs/helpdoc";
 import "dotenv/config";
@@ -90,8 +90,7 @@ export function endpoint(): Option {
 export function submissionEndpoint(): Option {
   return option({
     type: string,
-    long: "endpoint",
-    short: "s",
+    long: "submission-endpoint",
     defaultValue: () => process.env.SUBMISSION_ENDPOINT || "",
     description:
       "Submission endpoint (defaults to SUBMISSION_ENDPOINT env var)",
@@ -146,6 +145,18 @@ export function vkProofInputsBatchFile(): Option {
   return option({
     type: string,
     long: "proofs-file",
+    description:
+      "VK, proof, inputs batch file: " +
+      '[{"vk": {..}, "proof": {..}, "inputs": [..]}, ..]',
+  });
+}
+
+/// A JSON file in the format:
+///  [ { vk, proof, inputs }, ... ]
+export function vkProofInputsBatchFilePositional(): Option {
+  return positional({
+    type: string,
+    displayName: "proofs-file",
     description:
       "VK, proof, inputs batch file: " +
       '[{"vk": {..}, "proof": {..}, "inputs": [..]}, ..]',
