@@ -1,4 +1,3 @@
-import { fetch, Agent, Response } from "undici";
 import { ethers, TypedDataDomain } from "ethers";
 import {
   AppVkProofInputs,
@@ -8,9 +7,6 @@ import {
 import assert from "assert";
 import { Deposits__factory } from "../../typechain-types";
 import * as utils from "./utils";
-
-// 1 minute timeout
-const DEFAULT_TIMEOUT_MS = 1 * 60 * 1000;
 
 /// The outer type returned by off-chain submission API calls.
 type ResponseObject = {
@@ -266,12 +262,7 @@ async function processResponse(
 }
 
 async function getRequest(url: string): Promise<object> {
-  const response = await fetch(url, {
-    dispatcher: new Agent({
-      connect: { timeout: DEFAULT_TIMEOUT_MS },
-      headersTimeout: DEFAULT_TIMEOUT_MS,
-    }),
-  });
+  const response = await fetch(url);
   return processResponse(response, url);
 }
 
@@ -284,10 +275,6 @@ async function jsonPostRequest<Request>(
     method: "POST",
     body: requestBody,
     headers: { "Content-Type": "application/json" },
-    dispatcher: new Agent({
-      connect: { timeout: DEFAULT_TIMEOUT_MS },
-      headersTimeout: DEFAULT_TIMEOUT_MS,
-    }),
   });
 
   return processResponse(response, url, requestBody);
