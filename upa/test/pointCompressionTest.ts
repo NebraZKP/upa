@@ -100,7 +100,7 @@ describe("Point (de)compression", () => {
     const beta = vk.beta;
     const compressedBeta = compressG2Point(beta).map(BigInt) as [
       bigint,
-      bigint,
+      bigint
     ];
     const compressedBetaSoldity = await upaLibTest.compressG2Point(
       reverseFq2Elements(beta)
@@ -109,7 +109,7 @@ describe("Point (de)compression", () => {
     const gamma = vk.gamma;
     const compressedGamma = compressG2Point(gamma).map(BigInt) as [
       bigint,
-      bigint,
+      bigint
     ];
     const compressedGammaSoldity = await upaLibTest.compressG2Point(
       reverseFq2Elements(gamma)
@@ -118,7 +118,7 @@ describe("Point (de)compression", () => {
     const delta = vk.delta;
     const compressedDelta = compressG2Point(delta).map(BigInt) as [
       bigint,
-      bigint,
+      bigint
     ];
     const compressedDeltaSoldity = await upaLibTest.compressG2Point(
       reverseFq2Elements(delta)

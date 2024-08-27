@@ -69,7 +69,9 @@ export const stats = command({
       if (showvks) {
         vks = {};
         await Promise.all(
-          (await circuitIdsP).map(async (cidO: ethers.BytesLike) => {
+          (
+            await circuitIdsP
+          ).map(async (cidO: ethers.BytesLike) => {
             const cid = utils.readBytes32(cidO);
             const vk_sol = await verifier.getVK(cid);
             const vk = Groth16VerifyingKey.from_solidity(vk_sol);

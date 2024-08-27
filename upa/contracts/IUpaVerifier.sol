@@ -42,6 +42,12 @@ interface IUpaVerifier {
     /// for proofs in the corresponding submission.
     event SubmissionVerified(bytes32 indexed submissionId);
 
+    /// Emitted when challenge function is called.
+    event Challenge();
+
+    // Emitted when a full submission is successfully challenged.
+    event SubmissionChallengeSuccess();
+
     /// Return the version of this contract. vXX.YY.ZZ is always encoded as
     /// DECIMAL XXYYZZ.
     function version() external view returns (uint32);

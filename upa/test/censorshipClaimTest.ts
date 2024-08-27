@@ -28,6 +28,11 @@ import {
 import { computeAggregatedProofParameters } from "../src/sdk/aggregatedProofParams";
 import { siFromSubmission } from "../src/sdk/submissionIntervals";
 import { decompressG1Point } from "../src/sdk/pointCompression";
+import {
+  ChallengeEventGetter,
+  getCalldataForChallengeTx,
+  SubmissionChallengeSuccessEventGetter,
+} from "../src/sdk/events";
 
 describe("Censorship challenge tests", () => {
   type DeployAndSubmitResult = DeployAndRegisterResult & {
@@ -112,8 +117,9 @@ describe("Censorship challenge tests", () => {
       deployAndRegisterResult;
     const { verifier } = upa;
 
-    const user1StartBalance =
-      await verifier.runner!.provider!.getBalance(user1);
+    const user1StartBalance = await verifier.runner!.provider!.getBalance(
+      user1
+    );
 
     // User 1 submits a valid proof
     const firstTx = await submitProof(
@@ -347,6 +353,50 @@ describe("Censorship challenge tests", () => {
           )
         ).to.be.true;
       }
+
+      // Test Challenge Event Getters
+      const startHeight = upa.deploymentBlockNumber;
+      const currHeight = await provider.getBlockNumber();
+      const challengeEventGetter = new ChallengeEventGetter(upa.verifier);
+      const cEventSets = await challengeEventGetter.getFullGroupedByTransaction(
+        startHeight,
+        currHeight
+      );
+      const successChallengeEventGetter =
+        new SubmissionChallengeSuccessEventGetter(upa.verifier);
+      const scEventSets =
+        await successChallengeEventGetter.getFullGroupedByTransaction(
+          startHeight,
+          currHeight
+        );
+
+      // Number of challenge events should be
+      // equal to number of proofs in submission
+      expect(cEventSets.length).equal(numProofsInS2);
+      // Number of success challenge events should be 1
+      expect(scEventSets.length).equal(1);
+      const firstChallengeTxHash = cEventSets[0].txHash;
+      const firstChallengeTx = await provider.getTransaction(
+        firstChallengeTxHash
+      );
+      expect(firstChallengeTx).to.not.be.null;
+      const firstChallengeCalldata = getCalldataForChallengeTx(
+        upa.verifier,
+        firstChallengeTx!
+      );
+
+      // Test calldata parsing function (getCalldataForChallengeTx)
+      expect(firstChallengeCalldata.circuitId).equal(s2.circuitIds[0]);
+      expect(firstChallengeCalldata.proof).deep.equal(s2.proofs[0]);
+      expect(firstChallengeCalldata.publicInputs).eql(s2.inputs[0]);
+      expect(firstChallengeCalldata.submissionId).equal(s2.submissionId);
+      expect(firstChallengeCalldata.dupSubmissionIdx).equal(0);
+      expect(firstChallengeCalldata.proofIdMerkleProof).eql(
+        s2.computeProofIdMerkleProof(0)
+      );
+      expect(firstChallengeCalldata.proofDataMerkleProof).eql(
+        s2.computeProofDataMerkleProof(0)
+      );
     }).timeout(200000);
 
     it("wrong claimant should fail", async function () {
