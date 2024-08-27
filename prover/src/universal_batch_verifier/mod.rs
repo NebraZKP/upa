@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 pub use self::{
     compute_circuit_id::{compute_circuit_id, ComputeCircuitIDParams},
     compute_proof_id::{compute_proof_id, ComputeProofIDParams},
+    compute_submission_id::{compute_submission_id, ComputeSubmissionIdParams},
     keygen::{keygen, KeygenParams},
     prove::{prove, ProveParams},
     verify::{verify, VerifyParams},
@@ -10,6 +11,7 @@ pub use self::{
 
 mod compute_circuit_id;
 mod compute_proof_id;
+mod compute_submission_id;
 mod keygen;
 mod prove;
 mod verify;
@@ -36,6 +38,10 @@ enum UniversalBatchVerifierCommand {
     #[command()]
     ComputeProofID(ComputeProofIDParams),
 
+    /// Compute the submission Id for a batch of triples {VK, proof, inputs}
+    #[command()]
+    ComputeSubmissionId(ComputeSubmissionIdParams),
+
     /// Generate proving, verification key and protocol file
     #[command()]
     Keygen(KeygenParams),
@@ -56,6 +62,9 @@ pub fn universal_batch_verifier(params: UniversalBatchVerifierParams) {
         }
         UniversalBatchVerifierCommand::ComputeProofID(params) => {
             compute_proof_id(params)
+        }
+        UniversalBatchVerifierCommand::ComputeSubmissionId(params) => {
+            compute_submission_id(params)
         }
         UniversalBatchVerifierCommand::Keygen(params) => keygen(params),
         UniversalBatchVerifierCommand::Prove(params) => prove(params),
