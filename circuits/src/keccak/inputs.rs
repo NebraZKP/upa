@@ -74,9 +74,13 @@ where
 
 /// Keccak Circuit Inputs type
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct KeccakCircuitInputs<F>(pub Vec<KeccakVarLenInput<F>>)
+pub struct KeccakCircuitInputs<F>
 where
-    F: EccPrimeField<Repr = [u8; 32]>;
+    F: EccPrimeField<Repr = [u8; 32]>,
+{
+    pub inputs: Vec<KeccakVarLenInput<F>>,
+    pub num_proof_ids: Option<usize>,
+}
 
 impl<F> KeccakCircuitInputs<F>
 where
@@ -86,10 +90,10 @@ where
     where
         R: RngCore,
     {
-        Self(
+        Self::from(
             (0..config.inner_batch_size * config.outer_batch_size)
                 .map(|_| KeccakVarLenInput::sample(config, rng))
-                .collect(),
+                .collect::<Vec<_>>(),
         )
     }
 }
@@ -99,6 +103,9 @@ where
     F: EccPrimeField<Repr = [u8; 32]>,
 {
     fn from(value: Vec<KeccakVarLenInput<F>>) -> Self {
-        Self(value)
+        Self {
+            inputs: value,
+            num_proof_ids: None,
+        }
     }
 }
