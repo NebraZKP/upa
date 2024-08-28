@@ -37,7 +37,6 @@ contract Deposits is EIP712 {
         bytes32 submissionId;
         uint256 expirationBlockNumber;
         uint256 totalFee;
-        address submitterAddress;
     }
 
     // Data to be signed by the aggregator
@@ -69,7 +68,7 @@ contract Deposits is EIP712 {
     bytes32 private constant SIGNED_REQUEST_DATA_TYPE_HASH =
         keccak256(
             // solhint-disable-next-line
-            "SignedRequestData(bytes32 submissionId,uint256 expirationBlockNumber,uint256 totalFee,address submitterAddress)"
+            "SignedRequestData(bytes32 submissionId,uint256 expirationBlockNumber,uint256 totalFee)"
         );
 
     bytes32 private constant SIGNED_AGGREGATION_AGREEMENT_TYPE_HASH =
@@ -155,11 +154,6 @@ contract Deposits is EIP712 {
         bytes calldata signature
     ) external onlyAggregator {
         address submitter = recoverRequestSigner(signedRequestData, signature);
-        // Check that the signature matches the submitter address
-        require(
-            submitter == signedRequestData.submitterAddress,
-            BadSignature()
-        );
         // Check that there are unclaimed fees
         SubmitterAccount storage submitterAccount = accounts[submitter];
         require(
