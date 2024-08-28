@@ -57,6 +57,8 @@ contract Deposits is EIP712 {
     /// Submitter accounts
     mapping(address => SubmitterAccount) public accounts;
 
+    // TODO: Can we remove this?
+
     /// Mapping from an `AggregationAgreement` hash to whether a refund claim
     /// has been issued for that agreement.
     mapping(bytes32 => bool) public submissionRefunded;
