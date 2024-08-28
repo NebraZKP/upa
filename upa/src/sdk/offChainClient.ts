@@ -325,11 +325,10 @@ async function jsonPostRequest<Request>(
 /// Get the EIP-712 domain for the fee contract, to be used to sign requests.
 export async function getEIP712Domain(
   wallet: ethers.Signer,
-  depositsContract: ethers.AddressLike
+  depositsContract: string
 ): Promise<TypedDataDomain> {
-  const deposits = Deposits__factory.connect(
-    depositsContract.toString()
-  ).connect(wallet);
+  assert(typeof depositsContract === "string");
+  const deposits = Deposits__factory.connect(depositsContract).connect(wallet);
   const { chainId, name, version, verifyingContract } =
     await deposits.eip712Domain();
   return {
@@ -385,7 +384,7 @@ export function getSignedRequestData(
 export async function signOffChainSubmissionRequest(
   request: UnsignedOffChainSubmissionRequest,
   wallet: ethers.Signer,
-  depositsContract: ethers.AddressLike
+  depositsContract: string
 ): Promise<OffChainSubmissionRequest> {
   const domain = await getEIP712Domain(wallet, depositsContract);
   const types = getEIP712RequestType();
@@ -438,7 +437,7 @@ export function getSignedResponseData(
 export async function signOffChainSubmissionResponse(
   response: UnsignedOffChainSubmissionResponse,
   wallet: ethers.Signer,
-  depositsContract: ethers.AddressLike
+  depositsContract: string
 ): Promise<OffChainSubmissionResponse> {
   const domain = await getEIP712Domain(wallet, depositsContract);
   const types = getEIP712ResponseType();
