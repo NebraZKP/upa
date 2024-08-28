@@ -1,4 +1,4 @@
-import { deployUpaDummyVerifier } from "./upaTests";
+import { deployUpaDummyVerifier } from "./deploy";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { loadAppVkProofInputsBatchFile } from "../src/tool/config";
 import { BigNumberish, Signer } from "ethers";

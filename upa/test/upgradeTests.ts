@@ -8,7 +8,7 @@ import {
 } from "../typechain-types";
 import { testUpaInstanceFromDescriptor } from "../src/sdk/upa";
 import { assert } from "console";
-import { deployAndUpgradeUpa, deployUpaWithVerifier } from "./upaTests";
+import { deployUpaWithVerifier, deployAndUpgradeUpa } from "./deploy";
 import { versionUintToString } from "../src/sdk/utils";
 import * as pkg from "../package.json";
 
