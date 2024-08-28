@@ -46,6 +46,7 @@ export type UpaConfig = {
   bv_config: CircuitWithLimbsConfig;
   keccak_config: CircuitConfig;
   outer_config: CircuitWithLimbsConfig;
+  output_submission_id: boolean;
 };
 
 /// Configuration for a circuit with limbs.
