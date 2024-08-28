@@ -226,7 +226,8 @@ describe("Off-chain submission fees", async () => {
         0
       );
 
-    // Attempt to claim with the wrong signature. Should fail.
+    // Attempt to claim with the wrong signature (signed by an address with no
+    // deposits).
     const badSignedRequest = await signOffChainSubmissionRequest(
       offChainSubmissionRequest,
       worker,
@@ -237,7 +238,7 @@ describe("Off-chain submission fees", async () => {
       deposits
         .connect(worker)
         .claimFees(signedRequestData, badSignedRequest.signature)
-    ).to.be.revertedWithCustomError(deposits, "BadSignature");
+    ).to.be.revertedWithCustomError(deposits, "InsufficientBalance");
 
     // Claim fees using the correctly signed request
     const workerBalanceBefore = await provider.getBalance(

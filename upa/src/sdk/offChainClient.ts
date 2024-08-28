@@ -98,9 +98,7 @@ export class SignedRequestData {
     public readonly expirationBlockNumber: number,
     /// The totalFee payable to the aggregator after it has aggregated the
     /// submission with the given ID.
-    public readonly totalFee: bigint,
-    /// The submitter address. Identifies the account from which fees are paid.
-    public readonly submitterAddress: string
+    public readonly totalFee: bigint
   ) {}
 }
 
@@ -322,7 +320,8 @@ async function jsonPostRequest<Request>(
   return processResponse(response, url, requestBody);
 }
 
-/// Get the EIP-712 domain for the fee contract, to be used to sign requests.
+/// Get the EIP-712 domain for the deposits contract, to be used to sign
+/// requests.
 export async function getEIP712Domain(
   wallet: ethers.Signer,
   depositsContract: string
@@ -332,14 +331,14 @@ export async function getEIP712Domain(
   const { chainId, name, version, verifyingContract } =
     await deposits.eip712Domain();
   return {
-    // Chain where the fee contract is deployed
+    // Chain where the deposits contract is deployed
     chainId,
-    // Name of the fee contract
+    // Name of the deposits contract
     name,
-    // The version of the fee contract we are sending the request to.
+    // The version of the deposits contract we are sending the request to.
     // (This is different from the UPA package version)
     version,
-    // The address of the off-chain aggregator's fee contract
+    // The address of the off-chain aggregator's deposits contract
     verifyingContract,
   };
 }
@@ -351,7 +350,6 @@ export function getEIP712RequestType() {
       { name: "submissionId", type: "bytes32" },
       { name: "expirationBlockNumber", type: "uint256" },
       { name: "totalFee", type: "uint256" },
-      { name: "submitterAddress", type: "address" },
     ],
   };
 }
@@ -376,7 +374,6 @@ export function getSignedRequestData(
     submissionId: signedRequest.submissionId,
     expirationBlockNumber: signedRequest.expirationBlockNumber,
     totalFee: signedRequest.totalFee,
-    submitterAddress: signedRequest.submitterAddress,
   };
 }
 
@@ -393,7 +390,6 @@ export async function signOffChainSubmissionRequest(
     submissionId: request.submissionId,
     expirationBlockNumber: request.expirationBlockNumber,
     totalFee: request.totalFee,
-    submitterAddress: request.submitterAddress,
   };
 
   const signature = await wallet.signTypedData(
