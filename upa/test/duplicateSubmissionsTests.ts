@@ -1,10 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import {
-  DeployResult,
-  deployUpaDummyVerifier,
-  makeSubmissions,
-} from "./upaTests";
+import { makeSubmissions } from "./upaTests";
+import { DeployResult, deployUpaDummyVerifier } from "./deploy";
 import { Submission, UpaClient } from "../src/sdk";
 import { strict as assert } from "assert";
 import { dummyProofData, updateFeeOptions } from "../src/sdk/upa";

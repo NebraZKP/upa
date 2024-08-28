@@ -1,6 +1,5 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import {
-  deployUpaDummyVerifier,
   pf_a,
   pf_b,
   pf_c,
@@ -14,6 +13,7 @@ import {
   pi_e,
   pi_f,
 } from "./upaTests";
+import { deployUpaDummyVerifier } from "./deploy";
 import { UpaClient } from "../src/sdk/client";
 import { dummyProofData, UpaInstance } from "../src/sdk/upa";
 import { loadAppVK } from "../src/tool/config";

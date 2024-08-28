@@ -14,7 +14,7 @@ import {
   packOffChainSubmissionMarkers,
 } from "../src/sdk/aggregatedProofParams";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployUpaDummyVerifier, DeployResult } from "./upaTests";
+import { deployUpaDummyVerifier, DeployResult } from "./deploy";
 import {
   dummyProofData,
   isProofVerifiedMulti,
