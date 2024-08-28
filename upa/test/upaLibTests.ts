@@ -1,7 +1,8 @@
 // UPA tests
 import { UpaLibTest, UpaLibTest__factory } from "../typechain-types";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployUpaDummyVerifier, pf_a, pf_b } from "./upaTests";
+import { pf_a, pf_b } from "./upaTests";
+import { deployUpaDummyVerifier } from "./deploy";
 import { expect } from "chai";
 import {
   CircuitIdProofAndInputs,

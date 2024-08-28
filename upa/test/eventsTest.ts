@@ -1,7 +1,7 @@
 import { loadAppVK } from "../src/tool/config";
 import { dummyProofData } from "../src/sdk/upa";
 import * as utils from "../src/sdk/utils";
-import { deployUpaDummyVerifier } from "./upaTests";
+import { deployUpaDummyVerifier } from "./deploy";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";

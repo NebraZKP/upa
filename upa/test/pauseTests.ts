@@ -1,6 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { deployUpaDummyVerifier } from "./upaTests";
+import { deployUpaDummyVerifier } from "./deploy";
 import { loadAppVK } from "../src/tool/config";
 import { Groth16Proof } from "../src/sdk/application";
 import { updateFeeOptions } from "../src/sdk/upa";
