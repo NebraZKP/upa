@@ -29,14 +29,17 @@ export class SubmitterState {
 /// The current required parameters for submission.
 export class SubmissionParameters {
   constructor(
-    public readonly expectedLatency: bigint,
+    public readonly expectedLatency: number,
     public readonly minFeePerProof: bigint
-  ) {}
+  ) {
+    assert(typeof expectedLatency === "number");
+    assert(typeof minFeePerProof === "bigint");
+  }
 
   public static from_json(obj: object): SubmissionParameters {
     const json = obj as SubmissionParameters;
     return new SubmissionParameters(
-      BigInt(json.expectedLatency),
+      json.expectedLatency,
       BigInt(json.minFeePerProof)
     );
   }
@@ -50,7 +53,7 @@ export class UnsignedOffChainSubmissionRequest {
     public readonly proofs: AppVkProofInputs[],
     public readonly submissionId: string,
     public readonly fee: bigint,
-    public readonly expirationBlockNumber: bigint,
+    public readonly expirationBlockNumber: number,
     public readonly submitterId: string,
     public readonly submitterNonce: bigint,
     public readonly totalFee: bigint
@@ -59,7 +62,7 @@ export class UnsignedOffChainSubmissionRequest {
       assert(vpi instanceof AppVkProofInputs);
     });
     assert(typeof submissionId === "string");
-    assert(typeof expirationBlockNumber === "bigint");
+    assert(typeof expirationBlockNumber === "number");
     assert(typeof submitterId === "string");
     assert(typeof submitterNonce === "bigint");
     assert(typeof totalFee === "bigint");
@@ -77,7 +80,7 @@ export class UnsignedOffChainSubmissionRequest {
       ),
       json.submissionId,
       BigInt(json.fee),
-      BigInt(json.expirationBlockNumber),
+      json.expirationBlockNumber,
       json.submitterId,
       BigInt(json.submitterNonce),
       BigInt(json.totalFee)
@@ -90,7 +93,7 @@ export class SignedRequestData {
   constructor(
     /// The submissionId being submitted.
     public readonly submissionId: string,
-    public readonly expirationBlockNumber: bigint, // TODO: required?
+    public readonly expirationBlockNumber: number,
     /// The totalFee payable to the aggregator after it has aggregated the
     /// submission with the given ID.
     public readonly totalFee: bigint
@@ -104,7 +107,7 @@ export class OffChainSubmissionRequest extends UnsignedOffChainSubmissionRequest
     proofs: AppVkProofInputs[],
     submissionId: string,
     fee: bigint,
-    expirationBlockNumber: bigint,
+    expirationBlockNumber: number,
     submitterId: string,
     submitterNonce: bigint,
     totalFee: bigint,
@@ -157,7 +160,7 @@ export class OffChainSubmissionResponse {
   constructor(
     public readonly submissionId: string,
     public readonly fee: bigint,
-    public readonly expirationBlockNumber: bigint,
+    public readonly expirationBlockNumber: number,
     public readonly submitterId: string,
     public readonly submitterNonce: bigint,
     public readonly totalFee: bigint,
@@ -166,7 +169,7 @@ export class OffChainSubmissionResponse {
     assert(typeof submissionId === "string");
     assert(submissionId.length === 66);
     assert(typeof fee === "bigint");
-    assert(typeof expirationBlockNumber === "bigint");
+    assert(typeof expirationBlockNumber === "number");
     assert(typeof submitterId === "string");
     assert(typeof submitterNonce === "bigint");
     assert(typeof totalFee === "bigint");
@@ -179,7 +182,7 @@ export class OffChainSubmissionResponse {
     return new OffChainSubmissionResponse(
       json.submissionId,
       BigInt(json.fee),
-      BigInt(json.expirationBlockNumber),
+      json.expirationBlockNumber,
       json.submitterId,
       BigInt(json.submitterNonce),
       BigInt(json.totalFee),

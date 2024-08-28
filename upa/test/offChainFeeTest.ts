@@ -101,7 +101,7 @@ describe("Off-chain submission fees", async () => {
       proofs: vkProofAndInputs_1,
       submissionId: keccak256("0x1234"),
       submitterId: await worker.getAddress(),
-      expirationBlockNumber: 100000n,
+      expirationBlockNumber: 100000,
       submitterNonce: 0n,
       fee: 0n,
       totalFee: 0n,
