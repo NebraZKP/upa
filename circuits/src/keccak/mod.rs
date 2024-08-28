@@ -27,6 +27,7 @@ use crate::{
         },
     },
     utils::{
+        bitmask::first_i_bits_bitmask,
         commitment_point::{
             commitment_hash_from_commitment_point_limbs, g1affine_into_limbs,
             g2affine_into_limbs, limbs_into_g1affine, limbs_into_g2affine,
@@ -477,9 +478,12 @@ where
 /// proving key (namely, the vk_hash followed by all app public inputs). Note,
 /// this does NOT represent an instance of the circuit.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct KeccakPaddedCircuitInputs<F: EccPrimeField<Repr = [u8; 32]>>(
-    pub(crate) Vec<KeccakPaddedCircuitInput<F>>,
-);
+pub(crate) struct KeccakPaddedCircuitInputs<F: EccPrimeField<Repr = [u8; 32]>> {
+    pub(crate) inputs: Vec<KeccakPaddedCircuitInput<F>>,
+    /// Number of proof ids to take into account for the submission id
+    /// computation
+    pub(crate) num_proof_ids: Option<F>,
+}
 
 impl<F> KeccakPaddedCircuitInputs<F>
 where
@@ -488,8 +492,9 @@ where
     pub(crate) fn from_var_len_inputs(
         value: &[KeccakVarLenInput<F>],
         max_num_public_inputs: usize,
+        num_proof_ids: Option<u64>,
     ) -> Self {
-        let circuit_inputs: Vec<KeccakPaddedCircuitInput<F>> = value
+        let inputs: Vec<KeccakPaddedCircuitInput<F>> = value
             .iter()
             .map(|var_len_input| {
                 KeccakPaddedCircuitInput::from_var_len_input(
@@ -498,8 +503,12 @@ where
                 )
             })
             .collect();
+        let num_proof_ids = num_proof_ids.map(F::from);
 
-        KeccakPaddedCircuitInputs(circuit_inputs)
+        KeccakPaddedCircuitInputs {
+            inputs,
+            num_proof_ids,
+        }
     }
 
     pub(crate) fn from_keccak_circuit_inputs(
@@ -509,6 +518,7 @@ where
         KeccakPaddedCircuitInputs::from_var_len_inputs(
             &value.inputs,
             max_num_public_inputs,
+            value.num_proof_ids,
         )
     }
 }
@@ -516,24 +526,32 @@ where
 impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakPaddedCircuitInputs<F> {
     /// Creates some dummy [`KeccakPaddedCircuitInputs`] for `config` with `input_type`.
     pub fn dummy(config: &KeccakConfig) -> Self {
-        Self(
-            (0..config.inner_batch_size * config.outer_batch_size)
+        let num_proof_ids = config.output_submission_id.then_some(F::from(
+            (config.inner_batch_size * config.outer_batch_size) as u64,
+        ));
+        Self {
+            inputs: (0..config.inner_batch_size * config.outer_batch_size)
                 .map(|_| KeccakPaddedCircuitInput::dummy(config))
                 .collect(),
-        )
+            num_proof_ids,
+        }
     }
 
     /// Checks if `self` consists of valid public inputs for `config`.
     pub fn is_well_constructed(&self, config: &KeccakConfig) -> bool {
         // Total number of inputs should match `inner_batch_size` * `outer_batch_size`
         if config.inner_batch_size * config.outer_batch_size
-            != self.0.len() as u32
+            != self.inputs.len() as u32
         {
             return false;
         }
 
+        if config.output_submission_id ^ self.num_proof_ids.is_some() {
+            return false;
+        }
+
         // Each individual input should be well-constructed.
-        self.0.iter().all(|input| {
+        self.inputs.iter().all(|input| {
             KeccakPaddedCircuitInput::is_well_constructed(input, config)
         })
     }
@@ -708,9 +726,16 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
 
 /// Assigned Keccak Inputs
 #[derive(Clone, Debug)]
-pub(crate) struct AssignedKeccakInputs<F: ScalarField>(
-    pub Vec<AssignedKeccakInput<F>>,
-);
+pub(crate) struct AssignedKeccakInputs<F: ScalarField> {
+    pub inputs: Vec<AssignedKeccakInput<F>>,
+    /// Number of proof ids for the submission id computation.
+    /// Note: this is a witness and not part of the instance
+    #[allow(dead_code)] // Kept for consistency with the other two
+    // keccak input structs. Also it is useful in case we want to make
+    // num_proof_ids a public input (instead of a witness) in the
+    // future
+    pub num_proof_ids: Option<AssignedValue<F>>,
+}
 
 impl<F> AssignedKeccakInputs<F>
 where
@@ -718,7 +743,7 @@ where
 {
     /// Flattens `self`.
     pub fn to_instance_values(&self) -> Vec<AssignedValue<F>> {
-        self.0
+        self.inputs
             .iter()
             .flat_map(AssignedKeccakInput::to_instance_values)
             .collect()
@@ -1003,38 +1028,75 @@ where
         next_row
     }
 
+    /// Groups `proof_ids` in groups of 32 bytes (each representing a proof id).
+    /// Keeps the first `num_proof_ids` groups and replaces the rest with zeroes.
+    fn pad_proof_ids(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
+    ) -> Vec<Vec<AssignedValue<F>>> {
+        let mut proof_ids = proof_ids
+            .iter()
+            .chunks(32)
+            .into_iter()
+            .map(|chunk| chunk.into_iter().copied().collect_vec())
+            .collect_vec();
+        let total_num_proof_ids = proof_ids.len();
+        assert_eq!(
+            (total_num_proof_ids & (total_num_proof_ids - 1)),
+            0,
+            "The number of (padded) proof ids must be a power of two in submission id mode"
+        );
+        assert!(
+            total_num_proof_ids > 1,
+            "Only circuits with more than 1 proof id supported"
+        );
+
+        let zero = ctx.load_constant(F::zero());
+        let bitmask = first_i_bits_bitmask(
+            ctx,
+            &range.gate,
+            num_proof_ids,
+            total_num_proof_ids as u64,
+        );
+
+        for (proof_id, bit) in proof_ids.iter_mut().zip(bitmask.iter()) {
+            for byte in proof_id.iter_mut() {
+                *byte = range.gate.select(ctx, *byte, zero, *bit)
+            }
+        }
+
+        proof_ids
+    }
+
+    /// Computes the leaves of the Merkle tree from `proof_ids`,
+    fn compute_leaves(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
+    ) -> Vec<Vec<AssignedValue<F>>> {
+        let proof_ids =
+            Self::pad_proof_ids(ctx, range, proof_ids, num_proof_ids);
+        proof_ids
+            .into_iter()
+            .map(|proof_id| Self::compute_leaf(ctx, range, keccak, &proof_id))
+            .collect_vec()
+    }
+
     /// Computes the submission id from `proof_ids` as bytes.
     pub(crate) fn compute_submission_id_bytes(
         ctx: &mut Context<F>,
         range: &RangeChip<F>,
         keccak: &mut KeccakChip<F>,
         proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
     ) -> [AssignedValue<F>; 32] {
-        // First, compute the leaves
-        let mut current_row = proof_ids
-            .iter()
-            .chunks(32)
-            .into_iter()
-            .map(|proof_id| {
-                Self::compute_leaf(
-                    ctx,
-                    range,
-                    keccak,
-                    &proof_id.into_iter().copied().collect_vec(),
-                )
-            })
-            .collect_vec();
-        // Make sure the number of leaves is a power of two
-        let num_leaves = current_row.len();
-        assert_eq!(
-            (num_leaves & (num_leaves - 1)),
-            0,
-            "The number of leaves must be a power of two in submission id mode"
-        );
-        assert!(
-            num_leaves > 1,
-            "Only circuits with more than 1 proof id supported"
-        );
+        let mut current_row =
+            Self::compute_leaves(ctx, range, keccak, proof_ids, num_proof_ids);
+
         while current_row.len() > 1 {
             current_row = Self::hash_row(ctx, range, keccak, current_row);
         }
@@ -1052,9 +1114,15 @@ where
         range: &RangeChip<F>,
         keccak: &mut KeccakChip<F>,
         proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
     ) -> [AssignedValue<F>; 2] {
-        let submission_id_bytes =
-            Self::compute_submission_id_bytes(ctx, range, keccak, proof_ids);
+        let submission_id_bytes = Self::compute_submission_id_bytes(
+            ctx,
+            range,
+            keccak,
+            proof_ids,
+            num_proof_ids,
+        );
         encode_digest_as_field_elements(ctx, range, &submission_id_bytes)
     }
 
@@ -1090,7 +1158,21 @@ where
         let range = RangeChip::default(lookup_bits);
         let mut keccak = KeccakChip::default();
         let mut public_inputs = Vec::new();
-        for input in inputs.0 {
+        // Assign and constrain `num_proof_ids`
+        assert!(
+            config.output_submission_id ^ inputs.num_proof_ids.is_none(),
+            "Config incompatible with inputs"
+        );
+        let num_proof_ids =
+            inputs.num_proof_ids.map(|npi| ctx.load_constant(npi));
+        if config.output_submission_id {
+            range.check_less_than_safe(
+                ctx,
+                num_proof_ids.expect("Num proof ids has been assigned before"),
+                (config.inner_batch_size * config.outer_batch_size + 1).into(),
+            );
+        }
+        for input in inputs.inputs {
             let assigned_input = AssignedKeccakInput::from_keccak_padded_input(
                 ctx, &range, input,
             );
@@ -1135,6 +1217,7 @@ where
                 &range,
                 &mut keccak,
                 &proof_ids,
+                num_proof_ids.expect("Num proof ids has been assigned before"),
             ),
             false => Self::compute_linear_final_digest(
                 ctx,
@@ -1162,7 +1245,10 @@ where
             builder: RefCell::new(builder),
             break_points: RefCell::new(Default::default()),
             keccak,
-            public_inputs: AssignedKeccakInputs(public_inputs),
+            public_inputs: AssignedKeccakInputs {
+                inputs: public_inputs,
+                num_proof_ids,
+            },
             public_output,
             config,
             _marker: PhantomData,

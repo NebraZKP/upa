@@ -25,6 +25,7 @@ use crate::{
     utils::commitment_point::{self, g1affine_into_limbs},
     EccPrimeField, SafeCircuit,
 };
+use core::iter;
 use halo2_base::{
     gates::builder::GateThreadBuilder,
     halo2_proofs::halo2curves::bn256::{Fq, Fr, G1Affine},
@@ -283,11 +284,12 @@ fn circuit_id_and_proof_id_test() {
         num_app_public_inputs as usize,
     );
 
-    let number_of_field_elements = circuit_inputs.0[0].num_field_elements();
-    let circuit_id = compute_circuit_id(&keccak_inputs.inputs[0].app_vk);
+    let number_of_field_elements =
+        circuit_inputs.inputs[0].num_field_elements();
+    let circuit_id = compute_circuit_id(&public_inputs.inputs[0].app_vk);
     let proof_id = compute_proof_id(
         &circuit_id,
-        &circuit_inputs.0[0].app_public_inputs[..number_of_field_elements],
+        &circuit_inputs.inputs[0].app_public_inputs[..number_of_field_elements],
     )
     .to_vec();
     // Creating the circuit computes automatically the byte decomposition of
@@ -455,7 +457,7 @@ fn test_compose_into_field_element() {
 /// computation
 #[test]
 fn test_submission_id() {
-    const NUMBER_OF_PROOFS: usize = 8;
+    const NUMBER_OF_PROOFS: u64 = 8;
     let mut builder = GateThreadBuilder::<Fr>::mock();
     let ctx = builder.main(0);
     let range = RangeChip::default(8);
@@ -468,15 +470,28 @@ fn test_submission_id() {
         .flat_map(|bytes| bytes.map(|byte| Fr::from(byte as u64)).to_vec())
         .collect_vec();
     let assigned_proof_ids = ctx.assign_witnesses(proof_ids_fr);
+    let num_proof_ids = NUMBER_OF_PROOFS;
+    //let num_proof_ids = rng.gen_range(1..=NUMBER_OF_PROOFS);
+    let proof_ids_with_zero_padding = proof_ids
+        .iter()
+        .copied()
+        .take(num_proof_ids as usize)
+        .chain(
+            iter::repeat([0u8; 32])
+                .take((NUMBER_OF_PROOFS - num_proof_ids) as usize),
+        )
+        .collect_vec();
+    let assigned_num_proof_ids = ctx.load_constant(Fr::from(num_proof_ids));
     let circuit_sid =
         KeccakCircuit::<_, G1Affine>::compute_submission_id_bytes(
             ctx,
             &range,
             &mut keccak_chip,
             &assigned_proof_ids,
+            assigned_num_proof_ids,
         )
         .map(|assigned_byte| assigned_byte.value().get_lower_32() as u8);
-    let native_sid = compute_submission_id(proof_ids);
+    let native_sid = compute_submission_id(proof_ids_with_zero_padding);
     assert_eq!(
         circuit_sid, native_sid,
         "Native and circuit submission id mismatch"

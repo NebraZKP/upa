@@ -15,6 +15,7 @@ use crate::{
     EccPrimeField, SafeCircuit,
 };
 use ark_std::{end_timer, start_timer};
+use core::iter;
 use ethers_core::utils::keccak256;
 use halo2_base::{
     halo2_proofs::{
@@ -105,7 +106,7 @@ impl KeccakCircuit {
         &self,
         starting_index_commitment_queries: usize,
     ) -> Result<(), KeccakCircuitInconsistency<Fr>> {
-        for (i, input) in self.public_inputs.0.iter().enumerate() {
+        for (i, input) in self.public_inputs.inputs.iter().enumerate() {
             let expected_commitment_hash = input.commitment_hash.value();
             let commitment_query_index =
                 i + 2 * starting_index_commitment_queries;
@@ -163,7 +164,7 @@ impl KeccakCircuit {
         config: &KeccakConfig,
     ) -> Result<(), KeccakCircuitInconsistency<Fr>> {
         let mut last_index = 0;
-        for (i, input) in self.public_inputs.0.iter().enumerate() {
+        for (i, input) in self.public_inputs.inputs.iter().enumerate() {
             last_index = i as u32;
             let number_of_field_elements = input.num_field_elements();
             let has_commitment = input.has_commitment();
@@ -247,8 +248,26 @@ impl KeccakCircuit {
         let last_expected_bytes = match config.output_submission_id {
             true => {
                 let proof_ids_chunks = last_input_bytes.into_iter().chunks(32);
-                let proof_ids = proof_ids_chunks.into_iter().map(|chunk| <[u8; 32]>::try_from(chunk.collect_vec())
-                .expect("Conversion from vector into array is not allowed to fail"));
+                let num_proof_ids = self
+                    .public_inputs
+                    .num_proof_ids
+                    .expect(
+                        "num_proof_ids must exist when the circuit outputs submission id",
+                    )
+                    .value()
+                    .get_lower_32() as usize;
+                let proof_ids = proof_ids_chunks
+                    .into_iter()
+                    .map(|chunk| {
+                        <[u8; 32]>::try_from(chunk.collect_vec()).expect(
+                            "Conversion from vector into array is not allowed to fail",
+                        )
+                    })
+                    .take(num_proof_ids)
+                    .chain(
+                        iter::repeat([0u8; 32])
+                            .take(last_index as usize + 1 - num_proof_ids),
+                    );
                 compute_submission_id(proof_ids)
             }
             false => keccak256(last_input_bytes),
@@ -292,13 +311,8 @@ impl KeccakCircuit {
 ///
 /// # Note
 ///
-/// The test fails for KECCAK_DEGREE values below 13.
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock
-#[test]
-fn test_keccak_mock() {
+/// The test fails for KECCAK_DEGREE values below 17.
+fn test_keccak_mock(output_submission_id: bool) {
     let _ = env_logger::builder().is_test(true).try_init();
     let k: u32 = var("KECCAK_DEGREE")
         .unwrap_or_else(|_| "18".to_string())
@@ -310,7 +324,7 @@ fn test_keccak_mock() {
         inner_batch_size: INNER_BATCH_SIZE,
         outer_batch_size: OUTER_BATCH_SIZE,
         lookup_bits: KECCAK_LOOKUP_BITS,
-        output_submission_id: true,
+        output_submission_id,
     };
     let mut rng = OsRng;
     let inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
@@ -325,21 +339,31 @@ fn test_keccak_mock() {
         .assert_satisfied();
 }
 
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock_output_sid
+#[test]
+fn test_keccak_mock_output_sid() {
+    test_keccak_mock(true);
+}
+
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock_no_sid
+#[test]
+fn test_keccak_mock_no_sid() {
+    test_keccak_mock(false);
+}
+
 /// Instantiates a [`KeccakCircuitBuilder`] with random inputs and generates/verifies a proof.
 ///
 /// # Note
 ///
-/// The test fails for KECCAK_DEGREE values below 13.
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=15 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover
-#[ignore = "takes too long"]
-#[test]
-fn test_keccak_prover() {
+/// The test fails for KECCAK_DEGREE values below 17.
+fn test_keccak_prover(output_submission_id: bool) {
     let _ = env_logger::builder().is_test(true).try_init();
     let k: u32 = var("KECCAK_DEGREE")
-        .unwrap_or_else(|_| "15".to_string())
+        .unwrap_or_else(|_| "18".to_string())
         .parse()
         .expect("Parsing error");
     let config = KeccakConfig {
@@ -348,7 +372,7 @@ fn test_keccak_prover() {
         inner_batch_size: INNER_BATCH_SIZE,
         outer_batch_size: OUTER_BATCH_SIZE,
         lookup_bits: KECCAK_LOOKUP_BITS,
-        output_submission_id: false,
+        output_submission_id,
     };
     let mut rng = OsRng;
     let inputs = KeccakCircuitInputs::sample(&config, &mut rng);
@@ -409,6 +433,24 @@ fn test_keccak_prover() {
     )
     .expect("verification failure");
     end_timer!(timer);
+}
+
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover_output_sid
+#[test]
+#[ignore = "takes too long"]
+fn test_keccak_prover_output_sid() {
+    test_keccak_prover(true);
+}
+
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover_no_sid
+#[test]
+#[ignore = "takes too long"]
+fn test_keccak_prover_no_sid() {
+    test_keccak_prover(false);
 }
 
 /// Unit test checking that [`KeccakPaddedCircuitInputs::to_instance_values`]
