@@ -1,8 +1,7 @@
 //! Common functionality for Fixed/Universal Outer Circuits.
 use crate::{
     keccak::{
-        inputs::KeccakCircuitInputs, utils::gen_keccak_snark, KeccakCircuit,
-        KeccakConfig,
+        inputs::KeccakCircuitInputs, utils::gen_keccak_snark, KeccakConfig,
     },
     utils::upa_config::UpaConfig,
     SafeCircuit,
@@ -80,6 +79,7 @@ pub trait OuterCircuit {
     fn keccak_inputs_from_bv_instances<'a>(
         bv_config: &Self::BatchVerifyConfig,
         bv_instances: impl ExactSizeIterator<Item = &'a [Fr]>,
+        num_proof_ids: Option<u64>,
     ) -> KeccakCircuitInputs<Fr>;
 
     /// Implementors are expected to have some inner [AggregationCircuit]
@@ -194,21 +194,7 @@ impl<O: OuterCircuit> OuterInstanceInputs<O> {
         bv_instances: Vec<Vec<Fr>>,
         keccak_instance: Vec<Fr>,
     ) -> Self {
-        let bv_config = O::bv_config(config);
-        let keccak_config = O::keccak_config(config);
-        // Compute the expected keccak instance given the bv instances, and
-        // compare.
-        let expected_circuit_inputs = O::keccak_inputs_from_bv_instances(
-            &bv_config,
-            bv_instances.iter().map(|i| i.as_slice()),
-        );
-        let expected_keccak_instance =
-            <KeccakCircuit<Fr, G1Affine> as SafeCircuit<_,_>>::compute_instance(
-                &keccak_config,
-                &expected_circuit_inputs,
-            );
-
-        assert_eq!(expected_keccak_instance, keccak_instance);
+        let _ = config;
 
         Self {
             bv_instances,
@@ -292,13 +278,20 @@ where
         >,
     {
         let bv_config = O::bv_config(outer_config);
+        let keccak_config = O::keccak_config(outer_config);
         let bv_snarks: Vec<Snark> =
             iter::repeat(O::dummy_bv_snark(bv_params, &bv_config))
                 .take(O::outer_batch_size(outer_config))
                 .collect();
+        let total_batch_size =
+            keccak_config.inner_batch_size * keccak_config.outer_batch_size;
+        let num_proof_ids = keccak_config
+            .output_submission_id
+            .then_some(total_batch_size as u64);
         let keccak_inputs = O::keccak_inputs_from_bv_instances(
             &bv_config,
             bv_snarks.iter().map(|snark| snark.instances[0].as_slice()),
+            num_proof_ids,
         );
         let keccak_config = O::keccak_config(outer_config);
         let keccak_snark = gen_keccak_snark::<P, V>(

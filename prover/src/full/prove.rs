@@ -66,6 +66,15 @@ pub struct ProveParams {
     #[arg(long, value_name = "app-vk-proof-batch-file")]
     app_vk_proof_batch: Vec<String>,
 
+    /// Number of proof ids.
+    ///
+    /// # Note
+    ///
+    /// This number must be provided if and only if the circuit outputs the
+    /// submissionId, which is specified in the config.
+    #[arg(long, value_name = "num-proof-ids")]
+    pub(crate) num_proof_ids: Option<u64>,
+
     /// Output UBV proof file base
     #[arg(long, value_name = "ubv-proof-file-base", default_value = UBV_PROOF_BASE)]
     ubv_proof: String,
@@ -164,6 +173,7 @@ impl From<&ProveParams> for keccak::ProveParams {
             proof: value.keccak_proof,
             instance: value.keccak_instance,
             dry_run: value.dry_run,
+            num_proof_ids: value.num_proof_ids,
         }
     }
 }

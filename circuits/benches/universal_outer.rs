@@ -28,6 +28,7 @@ use upa_circuits::{
         types::UniversalBatchVerifierInputs, utils::gen_ubv_snark,
     },
     keccak::{
+        inputs::KeccakCircuitInputs,
         utils::{gen_keccak_snark, keccak_inputs_from_ubv_instances},
         KeccakConfig,
     },
@@ -83,15 +84,18 @@ fn outer_input_setup(
     // Get the corresponding keccak snark
     let keccak_snark = {
         info!("Generating keccak snark for outer keygen");
-        let inputs = keccak_inputs_from_ubv_instances(
-            bv_snarks.iter().map(|s| s.instances[0].as_slice()),
-            outer_config.max_num_app_public_inputs as usize,
-            outer_config.inner_batch_size as usize,
+        let inputs = KeccakCircuitInputs::from_inputs_and_config(
+            keccak_inputs_from_ubv_instances(
+                bv_snarks.iter().map(|s| s.instances[0].as_slice()),
+                outer_config.max_num_app_public_inputs as usize,
+                outer_config.inner_batch_size as usize,
+            ),
+            keccak_config,
         );
         gen_keccak_snark::<ProverSHPLONK<Bn256>, VerifierSHPLONK<Bn256>>(
             keygen_inputs.keccak_params(),
             keccak_config,
-            &inputs.into(),
+            &inputs,
         )
     };
 
