@@ -1,8 +1,7 @@
 import { handleTxRequestInternal, loadWallet } from "./config";
 import { keyfile, endpoint, password, getPassword, instance } from "./options";
-import { command, option, optional, positional, string } from "cmd-ts";
+import { command, option, optional, string } from "cmd-ts";
 import * as ethers from "ethers";
-import * as fs from "fs";
 import * as options from "./options";
 import * as utils from "../sdk/utils";
 import { strict as assert } from "assert";
@@ -54,7 +53,7 @@ export const deployDeposits = command({
     aggregator = aggregator || (await wallet.getAddress());
     // Sanity check address string
     aggregator = ethers.getAddress(aggregator);
-    const upaDesc = await config.loadInstance(instance);
+    const upaDesc = config.loadInstance(instance);
 
     const depositsFactory = new Deposits__factory(wallet);
     const deployTx = await depositsFactory.getDeployTransaction(
