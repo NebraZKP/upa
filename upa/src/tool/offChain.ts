@@ -94,8 +94,8 @@ export const submit = command({
     // If not specified explicitly, expiration block is given by the current
     // block number + expected latency.
     const expirationBlock = expirationBlockString
-      ? BigInt(expirationBlockString)
-      : BigInt(await getProvider().getBlockNumber()) +
+      ? Number(expirationBlockString)
+      : (await getProvider().getBlockNumber()) +
         submissionParameters.expectedLatency;
 
     // If not given explicitly, set a fee of 'minFeePerProof * numProofs'.
