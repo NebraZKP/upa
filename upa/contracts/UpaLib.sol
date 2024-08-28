@@ -133,13 +133,16 @@ library UpaLib {
         return (digestUint & ((1 << 128) - 1), digestUint >> 128);
     }
 
-    function digestFromFieldElements(
-        uint256 l,
-        uint256 r
+    // Recombine two 128-bit field elements into a 32-byte digest.
+    function fieldElementsAsDigest(
+        uint256 lower,
+        uint256 higher
     ) internal pure returns (bytes32) {
-        require(l >> 128 == 0);
-        require(r >> 128 == 0);
-        return bytes32(l | (r << 128));
+        require(lower < (1 << 128), "Lower part too large");
+        require(higher < (1 << 128), "Higher part too large");
+
+        uint256 digestUint = (higher << 128) | lower;
+        return bytes32(digestUint);
     }
 
     // The stored proofDigestRoot is actually the keccak of the Merkle root

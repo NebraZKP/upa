@@ -46,6 +46,7 @@ export async function deployUpaWithVerifier(
     undefined /* feeInGas */,
     undefined /* aggregatorCollateral */,
     undefined /* fixedReimbursement */,
+    undefined /* sid verifier hex */,
     version,
     noOpenZeppelin
   )) as UpaInstanceDescriptor;
