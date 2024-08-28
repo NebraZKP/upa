@@ -286,7 +286,7 @@ fn circuit_id_and_proof_id_test() {
 
     let number_of_field_elements =
         circuit_inputs.inputs[0].num_field_elements();
-    let circuit_id = compute_circuit_id(&public_inputs.inputs[0].app_vk);
+    let circuit_id = compute_circuit_id(&keccak_inputs.inputs[0].app_vk);
     let proof_id = compute_proof_id(
         &circuit_id,
         &circuit_inputs.inputs[0].app_public_inputs[..number_of_field_elements],

@@ -41,7 +41,7 @@ use chip::{
     assign_prover, assigned_cell_from_assigned_value, rows_per_round,
     KeccakChip,
 };
-use core::{cell::RefCell, fmt, marker::PhantomData, slice::Iter};
+use core::{cell::RefCell, fmt, iter, marker::PhantomData, slice::Iter};
 use halo2_base::{
     gates::{
         builder::{
@@ -1579,7 +1579,23 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
         };
 
         let final_digest = match config.output_submission_id {
-            true => compute_submission_id(proof_ids),
+            true => {
+                let total_batch_size = (config.outer_batch_size
+                    * config.inner_batch_size)
+                    as usize;
+                let num_proof_ids = inputs.num_proof_ids.expect(
+                    "Num proof ids must be provided for the submission id computation",
+                ) as usize;
+                let proof_ids = proof_ids
+                    .into_iter()
+                    .take(num_proof_ids)
+                    .chain(
+                        iter::repeat([0u8; 32])
+                            .take(total_batch_size - num_proof_ids),
+                    )
+                    .collect_vec();
+                compute_submission_id(proof_ids)
+            }
             false => compute_final_digest(proof_ids),
         };
 
