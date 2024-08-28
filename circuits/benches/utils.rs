@@ -69,6 +69,7 @@ fn write_upa_configs_fixed_size() {
                                 CircuitWithLimbsConfig::from_degree_bits(
                                     *outer_degree_bits,
                                 ),
+                            output_submission_id: false,
                         });
                     }
                 }
@@ -101,6 +102,7 @@ fn write_keccak_configs() {
                         lookup_bits: KECCAK_LOOKUP_BITS,
                     },
                     outer_config: CircuitWithLimbsConfig::from_degree_bits(1),
+                    output_submission_id: false,
                 });
             }
         }
@@ -131,6 +133,7 @@ fn write_bv_configs(is_universal: bool) {
                     lookup_bits: 0,
                 },
                 outer_config: CircuitWithLimbsConfig::from_degree_bits(1),
+                output_submission_id: false,
             });
         }
     }
@@ -184,6 +187,7 @@ fn write_outer_configs() {
                         outer_config: CircuitWithLimbsConfig::from_degree_bits(
                             *degree_bits,
                         ),
+                        output_submission_id: false,
                     });
                 }
             }
@@ -239,6 +243,7 @@ fn write_outer_configs_fixed_size() {
                         outer_config: CircuitWithLimbsConfig::from_degree_bits(
                             *degree_bits,
                         ),
+                        output_submission_id: false,
                     });
                 }
             }
@@ -289,6 +294,7 @@ fn write_universal_outer_configs_fixed_size() {
                         outer_config: CircuitWithLimbsConfig::from_degree_bits(
                             *degree_bits,
                         ),
+                        output_submission_id: false,
                     });
                 }
             }

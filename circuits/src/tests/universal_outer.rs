@@ -69,6 +69,7 @@ const EVM_OUTER_CONFIG: UniversalOuterConfig = UniversalOuterConfig {
         num_limbs: 3,
         limb_bits: 88,
     },
+    output_submission_id: false,
 };
 
 const TINY_INNER_BATCH_SIZE: u32 = 1;
@@ -114,6 +115,7 @@ const DEFAULT_OUTER_CONFIG: UniversalOuterConfig = UniversalOuterConfig {
         num_limbs: 3,
         limb_bits: 88,
     },
+    output_submission_id: false,
 };
 
 fn compute_proof_id_from_ubv_input(

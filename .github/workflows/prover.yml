@@ -50,7 +50,7 @@ jobs:
     defaults:
       run:
         working-directory: prover
-    
+
     strategy:
       fail-fast: true
       matrix:
@@ -120,7 +120,7 @@ jobs:
 
       - name: Run aggregation benchmark
         run: |
-          DRY_RUN=1 ./scripts/aggregation_benchmark.sh
+          DRY_RUN=1 ./scripts/aggregation_benchmark
 
   stop-runner:
     name: Stop EC2 runner

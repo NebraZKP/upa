@@ -31,6 +31,9 @@ pub struct UpaConfig {
 
     /// Config for Outer circuit.
     pub outer_config: CircuitWithLimbsConfig,
+
+    /// Output the submission Id
+    pub output_submission_id: bool,
 }
 
 impl UpaConfig {

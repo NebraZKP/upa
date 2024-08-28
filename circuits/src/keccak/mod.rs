@@ -501,7 +501,7 @@ where
         max_num_public_inputs: usize,
     ) -> Self {
         KeccakPaddedCircuitInputs::from_var_len_inputs(
-            &value.0,
+            &value.inputs,
             max_num_public_inputs,
         )
     }
@@ -1322,7 +1322,7 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
             Vec<[u8; 32]>,
             Vec<KeccakPaddedCircuitInput<Fr>>,
         ) = {
-            let input_slice = &inputs.0;
+            let input_slice = &inputs.inputs;
             let proof_ids: Vec<[u8; 32]> = input_slice
                 .iter()
                 .map(|i| {

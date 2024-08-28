@@ -17,5 +17,6 @@
     "lookup_bits": 23,
     "num_limbs": 3,
     "limb_bits": 88
-  }
+  },
+  "output_submission_id": false
 }
