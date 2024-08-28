@@ -77,6 +77,7 @@ type DeployArgs = {
   aggregatorCollateralInWei?: string;
   groth16VerifierAddress?: string;
   fixedReimbursementInWei?: string;
+  sid_verifier_bin?: string;
 };
 
 const deployHandler = async function (args: DeployArgs): Promise<void> {
@@ -108,6 +109,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     aggregatorCollateralInWei,
     groth16VerifierAddress,
     fixedReimbursementInWei,
+    sid_verifier_bin,
     maxRetries,
     prepare,
   } = args;
@@ -137,6 +139,9 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
 
   // Load binary contract
   const contract_hex = "0x" + fs.readFileSync(verifier_bin, "utf-8").trim();
+  const sid_contract_hex = sid_verifier_bin
+    ? "0x" + fs.readFileSync(sid_verifier_bin, "utf-8").trim()
+    : undefined;
   const upaInstance = await deployUpa(
     wallet,
     contract_hex,
@@ -149,7 +154,8 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     feeRecipient,
     fixedFeePerProof,
     collateral,
-    fixedReimbursement
+    fixedReimbursement,
+    sid_contract_hex
   );
   if (!prepare) {
     fs.writeFileSync(instance, JSON.stringify(upaInstance));
@@ -297,6 +303,7 @@ export async function deployUpa(
   feeInGas?: bigint,
   aggregatorCollateral?: bigint,
   fixedReimbursement?: bigint,
+  sid_verifier_hex?: string,
   versionString?: string,
   noOpenZeppelin?: boolean
 ): Promise<UpaInstanceDescriptor | DeployPrepareData> {
@@ -336,6 +343,12 @@ export async function deployUpa(
     );
   nonce = newNonce;
 
+  // Deploy the sid verifier from the binary, if provided.
+  // Otherwise it defaults to `binVerifierAddr`.
+  const sidVerifierAddr = sid_verifier_hex
+    ? await utils.deployBinaryContract(signer, sid_verifier_hex, nonce++)
+    : binVerifierAddr;
+
   // Deploy the UPA implementation contract.
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
   const deployArgs = [
@@ -348,6 +361,7 @@ export async function deployUpa(
     feeInGas,
     aggregatorCollateral,
     maxNumInputs,
+    sidVerifierAddr,
     versionNum,
   ];
   const deployImplNonce = nonce;
