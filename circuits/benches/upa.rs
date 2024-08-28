@@ -128,13 +128,14 @@ pub fn bench(c: &mut Criterion) {
         // Compute Keccak proof, report
         let keccak_config: KeccakConfig = config.into();
         println!("Begin Keccak with config {keccak_config:?}");
-        let keccak_inputs: KeccakCircuitInputs<Fr> =
+        let keccak_inputs = KeccakCircuitInputs::from_inputs_and_config(
             keccak_inputs_from_ubv_instances(
                 bv_instances.iter().map(|s| s[0].as_slice()),
                 keccak_config.num_app_public_inputs as usize,
                 config.inner_batch_size as usize,
-            )
-            .into();
+            ),
+            &keccak_config,
+        );
         let keccak_srs = gen_srs(keccak_config.degree_bits);
         let (keccak_pk, keccak_gate_config, keccak_break_points) =
             keygen::<KeccakCircuit>(&keccak_config, &(), &keccak_srs);

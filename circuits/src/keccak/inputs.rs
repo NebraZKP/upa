@@ -79,7 +79,7 @@ where
     F: EccPrimeField<Repr = [u8; 32]>,
 {
     pub inputs: Vec<KeccakVarLenInput<F>>,
-    pub num_proof_ids: Option<usize>,
+    pub num_proof_ids: Option<u64>,
 }
 
 impl<F> KeccakCircuitInputs<F>
@@ -90,22 +90,33 @@ where
     where
         R: RngCore,
     {
-        Self::from(
-            (0..config.inner_batch_size * config.outer_batch_size)
-                .map(|_| KeccakVarLenInput::sample(config, rng))
-                .collect::<Vec<_>>(),
-        )
-    }
-}
-
-impl<F> From<Vec<KeccakVarLenInput<F>>> for KeccakCircuitInputs<F>
-where
-    F: EccPrimeField<Repr = [u8; 32]>,
-{
-    fn from(value: Vec<KeccakVarLenInput<F>>) -> Self {
+        let total_batch_size =
+            config.inner_batch_size * config.outer_batch_size;
+        let num_proof_ids = config
+            .output_submission_id
+            .then_some(rng.gen_range(1..=total_batch_size) as u64);
         Self {
-            inputs: value,
-            num_proof_ids: None,
+            inputs: (0..config.inner_batch_size * config.outer_batch_size)
+                .map(|_| KeccakVarLenInput::sample(config, rng))
+                .collect(),
+            num_proof_ids,
+        }
+    }
+
+    /// Constructs a default [`KeccakCircuitInputs`] from `inputs`
+    /// compatible with `config.output_submission_id`.
+    pub fn from_inputs_and_config(
+        inputs: Vec<KeccakVarLenInput<F>>,
+        config: &KeccakConfig,
+    ) -> Self {
+        let total_batch_size =
+            config.inner_batch_size * config.outer_batch_size;
+        let num_proof_ids = config
+            .output_submission_id
+            .then_some(total_batch_size as u64);
+        Self {
+            inputs,
+            num_proof_ids,
         }
     }
 }

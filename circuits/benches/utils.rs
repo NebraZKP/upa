@@ -33,6 +33,7 @@ fn write_upa_configs_fixed_size() {
     let keccak_degree_range: Vec<u32> = vec![19];
     let outer_degree_range: Vec<u32> = vec![24];
     let max_num_pub_input_range: Vec<u32> = vec![8, 16];
+    let output_submission_id = false;
 
     // Desired total batch sizes
     let total_batch_size_range: Vec<u32> = vec![16, 20, 32, 40];
@@ -69,7 +70,7 @@ fn write_upa_configs_fixed_size() {
                                 CircuitWithLimbsConfig::from_degree_bits(
                                     *outer_degree_bits,
                                 ),
-                            output_submission_id: false,
+                            output_submission_id,
                         });
                     }
                 }
@@ -86,6 +87,7 @@ fn write_keccak_configs() {
     let degree_range: Vec<u32> = vec![19];
     let inner_batch_range: Vec<u32> = vec![8];
     let outer_batch_range: Vec<u32> = vec![4];
+    let output_submission_id = false;
     let mut configs = Vec::new();
     for degree_bits in degree_range.iter() {
         for inner_batch_size in inner_batch_range.iter() {
@@ -102,7 +104,7 @@ fn write_keccak_configs() {
                         lookup_bits: KECCAK_LOOKUP_BITS,
                     },
                     outer_config: CircuitWithLimbsConfig::from_degree_bits(1),
-                    output_submission_id: false,
+                    output_submission_id,
                 });
             }
         }
@@ -116,6 +118,7 @@ fn write_keccak_configs() {
 fn write_bv_configs(is_universal: bool) {
     let degree_range: Vec<u32> = vec![23];
     let batch_range: Vec<u32> = vec![8];
+    let output_submission_id = false;
     let mut configs = Vec::new();
     for degree_bits in degree_range.iter() {
         for batch_size in batch_range.iter() {
@@ -133,7 +136,7 @@ fn write_bv_configs(is_universal: bool) {
                     lookup_bits: 0,
                 },
                 outer_config: CircuitWithLimbsConfig::from_degree_bits(1),
-                output_submission_id: false,
+                output_submission_id,
             });
         }
     }
@@ -166,6 +169,7 @@ fn write_outer_configs() {
     let degree_range: Vec<u32> = vec![24];
     let inner_batch_range: Vec<u32> = vec![8];
     let outer_batch_range: Vec<u32> = vec![4];
+    let output_submission_id = false;
     let mut configs = Vec::new();
     for degree_bits in degree_range.iter() {
         for outer_batch_size in outer_batch_range.iter() {
@@ -187,7 +191,7 @@ fn write_outer_configs() {
                         outer_config: CircuitWithLimbsConfig::from_degree_bits(
                             *degree_bits,
                         ),
-                        output_submission_id: false,
+                        output_submission_id,
                     });
                 }
             }
@@ -203,6 +207,7 @@ fn write_outer_configs_fixed_size() {
     let bv_degree_range: Vec<u32> = vec![22, 23];
     let outer_degree_range: Vec<u32> = vec![23];
     let max_num_pub_input_range: Vec<u32> = vec![8, 16];
+    let output_submission_id = false;
 
     // Desired total batch sizes
     let total_batch_size_range: Vec<u32> = vec![8, 16, 32];
@@ -243,7 +248,7 @@ fn write_outer_configs_fixed_size() {
                         outer_config: CircuitWithLimbsConfig::from_degree_bits(
                             *degree_bits,
                         ),
-                        output_submission_id: false,
+                        output_submission_id,
                     });
                 }
             }
@@ -260,6 +265,7 @@ fn write_universal_outer_configs_fixed_size() {
     let bv_degree_range: Vec<u32> = vec![23];
     let outer_degree_range: Vec<u32> = vec![24];
     let max_num_pub_input_range: Vec<u32> = vec![16];
+    let output_submission_id = false;
 
     // Desired total batch sizes
     let total_batch_size_range: Vec<u32> = vec![32];
@@ -294,7 +300,7 @@ fn write_universal_outer_configs_fixed_size() {
                         outer_config: CircuitWithLimbsConfig::from_degree_bits(
                             *degree_bits,
                         ),
-                        output_submission_id: false,
+                        output_submission_id,
                     });
                 }
             }
@@ -313,21 +319,30 @@ fn write_keccak_configs_from_outer_configs() {
     // Keccak circuit degree_bits to generate configs for
     let degree_range: Vec<u32> = vec![15, 16, 17, 18];
     // Extract all unique (inner, outer) batch size pairs
-    let batch_sizes: Vec<(u32, u32)> = outer_configs
+    let batch_sizes: Vec<(u32, u32, bool)> = outer_configs
         .into_iter()
-        .map(|config| (config.inner_batch_size, config.outer_batch_size))
+        .map(|config| {
+            (
+                config.inner_batch_size,
+                config.outer_batch_size,
+                config.output_submission_id,
+            )
+        })
         .unique()
         .collect();
     let mut configs = Vec::new();
     for num_pub_in in num_pub_in_range {
         for degree_bits in degree_range.iter() {
-            for (inner_batch_size, outer_batch_size) in batch_sizes.iter() {
+            for (inner_batch_size, outer_batch_size, output_submission_id) in
+                batch_sizes.iter()
+            {
                 configs.push(KeccakConfig {
                     degree_bits: *degree_bits,
                     num_app_public_inputs: num_pub_in,
                     inner_batch_size: *inner_batch_size,
                     outer_batch_size: *outer_batch_size,
                     lookup_bits: KECCAK_LOOKUP_BITS,
+                    output_submission_id: *output_submission_id,
                 })
             }
         }
