@@ -332,11 +332,11 @@ async function jsonPostRequest<Request>(
 /// requests.
 export async function getEIP712Domain(
   wallet: ethers.Signer,
-  depositsContract: string
+  depositContract: string
 ): Promise<TypedDataDomain> {
-  assert(typeof depositsContract === "string");
+  assert(typeof depositContract === "string");
   // TODO: do we need the signer here?
-  const deposits = Deposits__factory.connect(depositsContract).connect(wallet);
+  const deposits = Deposits__factory.connect(depositContract).connect(wallet);
   const { chainId, name, version, verifyingContract } =
     await deposits.eip712Domain();
   return {
@@ -386,13 +386,13 @@ export function getSignedRequestData(
   };
 }
 
-/// Sign an off-chain submission request directed to `depositsContract`.
+/// Sign an off-chain submission request directed to `depositContract`.
 export async function signOffChainSubmissionRequest(
   request: UnsignedOffChainSubmissionRequest,
   wallet: ethers.Signer,
-  depositsContract: string
+  depositContract: string
 ): Promise<OffChainSubmissionRequest> {
-  const domain = await getEIP712Domain(wallet, depositsContract);
+  const domain = await getEIP712Domain(wallet, depositContract);
   const types = getEIP712RequestType();
 
   const signedRequestData: SignedRequestData = {
@@ -438,13 +438,13 @@ export function getSignedResponseData(
 
 // Method to sign responses here placed in this file for now, but should be
 // moved.
-/// Sign an off-chain submission response directed to `depositsContract`.
+/// Sign an off-chain submission response directed to `depositContract`.
 export async function signOffChainSubmissionResponse(
   response: UnsignedOffChainSubmissionResponse,
   wallet: ethers.Signer,
-  depositsContract: string
+  depositContract: string
 ): Promise<OffChainSubmissionResponse> {
-  const domain = await getEIP712Domain(wallet, depositsContract);
+  const domain = await getEIP712Domain(wallet, depositContract);
   const types = getEIP712ResponseType();
 
   const aggregationAgreement: AggregationAgreement = {

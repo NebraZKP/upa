@@ -56,8 +56,6 @@ contract Deposits is EIP712 {
     /// Submitter accounts
     mapping(address => SubmitterAccount) public accounts;
 
-    // TODO: Can we remove this?
-
     /// Mapping from an `AggregationAgreement` hash to whether a refund claim
     /// has been issued for that agreement.
     mapping(bytes32 => bool) public submissionRefunded;
@@ -97,7 +95,8 @@ contract Deposits is EIP712 {
         UPA_VERIFIER = IUpaVerifier(_upaVerifierAddress);
     }
 
-    /// Return the total fees for this submitter, and a flag indicating if
+    /// Return the total wei deposited by this submitter, including fees
+    /// that have been claimed by the aggregator, and a flag indicating if
     /// there is a pending withdrawal initiated.
     function getSubmitterTotal(
         address submitter

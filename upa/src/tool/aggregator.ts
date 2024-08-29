@@ -25,6 +25,13 @@ import {
   computeAggregatedProofParameters,
 } from "../sdk/aggregatedProofParams";
 import { deployDeposits } from "./deployDeposits";
+import {
+  getSignedRequestData,
+  OffChainSubmissionRequest,
+} from "../sdk/offChainClient";
+import { loadWallet } from "./config";
+import { Deposits__factory } from "../../typechain-types";
+import fs from "fs";
 
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",
@@ -330,6 +337,65 @@ const submitAggregatedProof = command({
   },
 });
 
+export const claimDepositFees = command({
+  name: "claim-deposit-fees",
+  args: {
+    endpoint: options.endpoint(),
+    keyfile: options.keyfile(),
+    password: options.password(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    wait: options.wait(),
+    depositContract: option({
+      type: string,
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposit contract",
+    }),
+    signedRequestFile: option({
+      type: string,
+      long: "signed-request",
+      description: "File containing a signed off-chain submission request.",
+    }),
+  },
+  description: "Claim fees from deposit contract (for off-chain submissions)",
+  handler: async function ({
+    endpoint,
+    keyfile,
+    password,
+    estimateGas,
+    dumpTx,
+    wait,
+    depositContract,
+    signedRequestFile,
+  }): Promise<void> {
+    const parsedJSON: object[] = JSON.parse(
+      fs.readFileSync(signedRequestFile, "ascii")
+    );
+    const signedRequest = OffChainSubmissionRequest.from_json(parsedJSON);
+    const signedRequestData = getSignedRequestData(signedRequest);
+
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const wallet = await loadWallet(
+      keyfile,
+      options.getPassword(password),
+      provider
+    );
+    const deposits = Deposits__factory.connect(depositContract);
+    const txReq = await deposits.claimFees.populateTransaction(
+      signedRequestData,
+      signedRequest.signature
+    );
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      deposits.interface
+    );
+  },
+});
+
 export const aggregator = subcommands({
   name: "aggregator",
   description: "Commands used by the aggregator",
@@ -339,5 +405,6 @@ export const aggregator = subcommands({
     "compute-final-digest": computeFinalDigest,
     "submit-aggregated-proof": submitAggregatedProof,
     "deploy-deposit-contract": deployDeposits,
+    "claim-deposit-fees": claimDepositFees,
   },
 });
