@@ -295,7 +295,7 @@ describe("UpaLib Tests", async () => {
       expect(evmResult).eql([expect_l, expect_h]);
     });
 
-    it("reverts decomposition", async () => {
+    it("checks fieldElementsAsDigest", async () => {
       const upaLib = await loadFixture(deployUpaLibTest);
       const digest =
         "0x227ba65a7f156e2a72f88325abe99b31b0c5bd09eec1499eb48617aaa2d33fb7";

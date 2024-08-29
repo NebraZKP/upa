@@ -25,7 +25,6 @@ use crate::{
     utils::commitment_point::{self, g1affine_into_limbs},
     EccPrimeField, SafeCircuit,
 };
-use core::iter;
 use halo2_base::{
     gates::builder::GateThreadBuilder,
     halo2_proofs::halo2curves::bn256::{Fq, Fr, G1Affine},
@@ -470,17 +469,7 @@ fn test_submission_id() {
         .flat_map(|bytes| bytes.map(|byte| Fr::from(byte as u64)).to_vec())
         .collect_vec();
     let assigned_proof_ids = ctx.assign_witnesses(proof_ids_fr);
-    let num_proof_ids = NUMBER_OF_PROOFS;
-    //let num_proof_ids = rng.gen_range(1..=NUMBER_OF_PROOFS);
-    let proof_ids_with_zero_padding = proof_ids
-        .iter()
-        .copied()
-        .take(num_proof_ids as usize)
-        .chain(
-            iter::repeat([0u8; 32])
-                .take((NUMBER_OF_PROOFS - num_proof_ids) as usize),
-        )
-        .collect_vec();
+    let num_proof_ids = rng.gen_range(1..=NUMBER_OF_PROOFS);
     let assigned_num_proof_ids = ctx.load_constant(Fr::from(num_proof_ids));
     let circuit_sid =
         KeccakCircuit::<_, G1Affine>::compute_submission_id_bytes(
@@ -491,7 +480,7 @@ fn test_submission_id() {
             assigned_num_proof_ids,
         )
         .map(|assigned_byte| assigned_byte.value().get_lower_32() as u8);
-    let native_sid = compute_submission_id(proof_ids_with_zero_padding);
+    let native_sid = compute_submission_id(proof_ids, num_proof_ids);
     assert_eq!(
         circuit_sid, native_sid,
         "Native and circuit submission id mismatch"

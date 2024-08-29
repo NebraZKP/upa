@@ -34,7 +34,7 @@ pushd _test_integration
     fi
 
     # Check native and Typescript submission ids match
-    [ -e upa_config.json ] || cp ../tests/upa_config_2_with_submission_id.json upa_config.json
+    cp ../tests/upa_config_2_with_submission_id.json upa_config.json
     # Check if the "output_submission_id" flag is present and set to true
     if ! grep -q '"output_submission_id": true' upa_config.json; then
       echo 'Error: "output_submission_id" flag is missing or not set to true in upa_config.json'
@@ -49,25 +49,29 @@ pushd _test_integration
     prover groth16 generate-fake-vk -i ${max_num_inputs} -v vk-1.unsafe.json
     prover groth16 generate-fake-vk -i $((${max_num_inputs} / 2)) -v vk-2.unsafe.json -c
 
-    UNSAFE_VK_LIST=$(for i in $(seq 0 $(($submission_size - 1))); do
-      if (( i % 2 == 0 )); then
-        echo -n "-v vk-1.unsafe.json "
-      else
-        echo -n "-v vk-2.unsafe.json "
-      fi;
-    done)
-
     # Create `submission_size` proofs
     prover groth16 generate-proofs \
         -n ${submission_size} \
-        ${UNSAFE_VK_LIST} \
+        -v vk-1.unsafe.json \
+        -v vk-2.unsafe.json \
         -b submission.json
     
-    sid_evm=`upa compute submission-id --proofs-file submission.json`
+    sid_evm=`upa compute submission-id submission.json`
     sid_native=`prover universal-batch-verifier compute-submission-id -b submission.json`
     if ! [ "${sid_evm}" == "${sid_native}" ] ; then
         echo "sid_evm: ${sid_evm}"
         echo "sid_native: ${sid_native}"
+        exit 1
+    fi
+
+    # Same check for an incomplete submission
+    jq '.[0:-1]' submission.json > incomplete_submission.json
+    
+    sid_evm_2=`upa compute submission-id incomplete_submission.json`
+    sid_native_2=`prover universal-batch-verifier compute-submission-id -b incomplete_submission.json`
+    if ! [ "${sid_evm_2}" == "${sid_native_2}" ] ; then
+        echo "sid_evm_2: ${sid_evm_2}"
+        echo "sid_native_2: ${sid_native_2}"
         exit 1
     fi
 

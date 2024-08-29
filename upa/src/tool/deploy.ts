@@ -64,7 +64,7 @@ type DeployArgs = {
   endpoint: string;
   keyfile: string;
   password: string;
-  verifier_bin: string;
+  verifier_bin?: string;
   instance: string;
   upaConfigFile: string;
   useTestConfig: boolean;
@@ -138,13 +138,14 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     : loadUpaConfig(upaConfigFile).max_num_app_public_inputs;
 
   // Load binary contract
-  const contract_hex = "0x" + fs.readFileSync(verifier_bin, "utf-8").trim();
+  const contract_hex = verifier_bin
+    ? "0x" + fs.readFileSync(verifier_bin, "utf-8").trim()
+    : undefined;
   const sid_contract_hex = sid_verifier_bin
     ? "0x" + fs.readFileSync(sid_verifier_bin, "utf-8").trim()
     : undefined;
   const upaInstance = await deployUpa(
     wallet,
-    contract_hex,
     maxNumInputs,
     maxRetries,
     prepare,
@@ -155,6 +156,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     fixedFeePerProof,
     collateral,
     fixedReimbursement,
+    contract_hex,
     sid_contract_hex
   );
   if (!prepare) {
@@ -196,9 +198,14 @@ export const deploy = command({
       description: "Use a default UPA config for testing",
     }),
     verifier_bin: option({
-      type: string,
+      type: optional(string),
       long: "verifier",
       description: "On-chain verifier binary",
+    }),
+    sid_verifier_bin: option({
+      type: optional(string),
+      long: "verifier",
+      description: "Submission-id on-chain verifier binary",
     }),
     owner: option({
       type: optional(string),
@@ -257,16 +264,23 @@ const DEFAULT_FIXED_REIMBURSEMENT = 0n;
 
 export async function deployUpaDependencies(
   signer: ethers.Signer,
-  outerVerifierHex: string,
   nonce: number,
-  groth16Verifier?: IGroth16Verifier
+  groth16Verifier?: IGroth16Verifier,
+  outerVerifierHex?: string,
+  sidVerifierHex?: string
 ) {
-  // Deploy the Aggregated proof Verifier from binary
-  const binVerifierAddr = await utils.deployBinaryContract(
-    signer,
-    outerVerifierHex,
-    nonce++
+  assert(
+    outerVerifierHex || sidVerifierHex,
+    "At least one outer verifier must be provided"
   );
+  // Deploy the Aggregated proof Verifier from binary
+  const binVerifierAddr = outerVerifierHex
+    ? await utils.deployBinaryContract(signer, outerVerifierHex, nonce++)
+    : undefined;
+
+  const sidVerifierAddr = sidVerifierHex
+    ? await utils.deployBinaryContract(signer, sidVerifierHex, nonce++)
+    : undefined;
 
   // Determine groth16Verifier
   const groth16VerifierAddr = await (async () => {
@@ -283,7 +297,12 @@ export async function deployUpaDependencies(
     return universalGroth16Verifier.getAddress();
   })();
 
-  return { binVerifierAddr, groth16VerifierAddr, newNonce: nonce };
+  return {
+    binVerifierAddr,
+    sidVerifierAddr,
+    groth16VerifierAddr,
+    newNonce: nonce,
+  };
 }
 
 /// Deploys the UPA contract, with all dependencies.  `verifier_bin_file`
@@ -292,7 +311,6 @@ export async function deployUpaDependencies(
 /// `worker` if they are not given.
 export async function deployUpa(
   signer: ethers.Signer,
-  outerVerifierHex: string,
   maxNumInputs: number,
   maxRetries: number,
   prepare: boolean,
@@ -303,7 +321,8 @@ export async function deployUpa(
   feeInGas?: bigint,
   aggregatorCollateral?: bigint,
   fixedReimbursement?: bigint,
-  sid_verifier_hex?: string,
+  outerVerifierHex?: string,
+  sidVerifierHex?: string,
   versionString?: string,
   noOpenZeppelin?: boolean
 ): Promise<UpaInstanceDescriptor | DeployPrepareData> {
@@ -334,20 +353,15 @@ export async function deployUpa(
   worker = ethers.getAddress(worker);
   feeRecipient = ethers.getAddress(feeRecipient);
 
-  const { binVerifierAddr, groth16VerifierAddr, newNonce } =
+  const { binVerifierAddr, sidVerifierAddr, groth16VerifierAddr, newNonce } =
     await deployUpaDependencies(
       signer,
-      outerVerifierHex,
       nonce,
-      groth16Verifier
+      groth16Verifier,
+      outerVerifierHex,
+      sidVerifierHex
     );
   nonce = newNonce;
-
-  // Deploy the sid verifier from the binary, if provided.
-  // Otherwise it defaults to `binVerifierAddr`.
-  const sidVerifierAddr = sid_verifier_hex
-    ? await utils.deployBinaryContract(signer, sid_verifier_hex, nonce++)
-    : binVerifierAddr;
 
   // Deploy the UPA implementation contract.
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
@@ -355,13 +369,13 @@ export async function deployUpa(
     owner,
     worker,
     feeRecipient,
-    binVerifierAddr,
+    binVerifierAddr || ethers.ZeroAddress,
     groth16VerifierAddr,
     fixedReimbursement,
     feeInGas,
     aggregatorCollateral,
     maxNumInputs,
-    sidVerifierAddr,
+    sidVerifierAddr || ethers.ZeroAddress,
     versionNum,
   ];
   const deployImplNonce = nonce;

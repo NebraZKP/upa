@@ -12,7 +12,7 @@ use crate::{
     },
     EccPrimeField, SafeCircuit,
 };
-use core::borrow::Borrow;
+use core::{borrow::Borrow, iter};
 use halo2_base::{
     gates::{
         builder::MultiPhaseThreadBreakPoints, GateInstructions, RangeChip,
@@ -430,11 +430,20 @@ fn hash_row(row: Vec<[u8; 32]>) -> Vec<[u8; 32]> {
 /// Computes the submission id corresponding to `proof_ids`.
 pub fn compute_submission_id(
     proof_ids: impl IntoIterator<Item = impl Borrow<[u8; 32]>>,
+    num_proof_ids: u64,
 ) -> [u8; 32] {
-    let mut current_row = proof_ids
+    let num_proof_ids = num_proof_ids as usize;
+    let proof_ids = proof_ids
         .into_iter()
-        .map(|proof_id| compute_leaf(proof_id))
+        .map(|proof_id| *proof_id.borrow())
         .collect_vec();
+    let num_leaves = proof_ids.len();
+    let proof_ids = proof_ids
+        .into_iter()
+        .take(num_proof_ids)
+        .chain(iter::repeat([0u8; 32]).take(num_leaves - num_proof_ids))
+        .collect_vec();
+    let mut current_row = proof_ids.into_iter().map(compute_leaf).collect_vec();
     let num_leaves = current_row.len();
     assert_eq!(
         (num_leaves & (num_leaves - 1)),
