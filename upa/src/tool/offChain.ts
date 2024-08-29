@@ -1,4 +1,4 @@
-import { subcommands, command, string, option, optional } from "cmd-ts";
+import { subcommands, command, string, option, optional, number } from "cmd-ts";
 import * as log from "./log";
 import {
   loadWallet,
@@ -20,11 +20,16 @@ import {
   JSONstringify,
 } from "../sdk/utils";
 import {
+  getSignedResponseData,
   OffChainClient,
+  OffChainSubmissionResponse,
   signOffChainSubmissionRequest,
   UnsignedOffChainSubmissionRequest,
 } from "../sdk/offChainClient";
-import { ethers } from "ethers";
+import { ethers, WeiPerEther } from "ethers";
+import { Deposits__factory } from "../../typechain-types";
+import fs from "fs";
+import { config, options } from ".";
 
 export const submit = command({
   name: "submit",
@@ -132,6 +137,197 @@ export const submit = command({
   },
 });
 
+export const deposit = command({
+  name: "deposit",
+  args: {
+    endpoint: endpoint(),
+    keyfile: keyfile(),
+    password: password(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    wait: options.wait(),
+    depositContract: option({
+      type: string,
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposits contract",
+    }),
+    amountEth: option({
+      type: number,
+      long: "amount-eth",
+      description: "Amount to deposit, in ETH",
+    }),
+  },
+  description: "Deposit ETH into an aggregator's deposits contract",
+  handler: async function ({
+    endpoint,
+    keyfile,
+    password,
+    estimateGas,
+    dumpTx,
+    wait,
+    depositContract,
+    amountEth,
+  }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const wallet = await loadWallet(keyfile, getPassword(password), provider);
+    const deposits = Deposits__factory.connect(depositContract);
+    const amountWei = amountEth * Number(WeiPerEther);
+    const txReq = await deposits.deposit.populateTransaction({
+      value: amountWei,
+    });
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      deposits.interface
+    );
+  },
+});
+
+export const refundFee = command({
+  name: "refund-fee",
+  args: {
+    endpoint: endpoint(),
+    keyfile: keyfile(),
+    password: password(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    wait: options.wait(),
+    depositContract: option({
+      type: string,
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposit contract",
+    }),
+    signedResponseFile: option({
+      type: string,
+      long: "signed-response",
+      description: "File containing a signed aggregator response.",
+    }),
+  },
+  description: "Refund a submission not aggregated within agreed expiry time",
+  handler: async function ({
+    endpoint,
+    keyfile,
+    password,
+    estimateGas,
+    dumpTx,
+    wait,
+    depositContract,
+    signedResponseFile,
+  }): Promise<void> {
+    const parsedJSON: object[] = JSON.parse(
+      fs.readFileSync(signedResponseFile, "ascii")
+    );
+    const signedResponse = OffChainSubmissionResponse.from_json(parsedJSON);
+    const aggregationAgreement = getSignedResponseData(signedResponse);
+
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const wallet = await loadWallet(keyfile, getPassword(password), provider);
+    const deposits = Deposits__factory.connect(depositContract);
+    const txReq = await deposits.refundFees.populateTransaction(
+      aggregationAgreement,
+      signedResponse.signature
+    );
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      deposits.interface
+    );
+  },
+});
+
+export const initiateWithdrawal = command({
+  name: "init-withdrawal",
+  args: {
+    endpoint: endpoint(),
+    keyfile: keyfile(),
+    password: password(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    wait: options.wait(),
+    depositContract: option({
+      type: string,
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposit contract",
+    }),
+  },
+  description: "Initiate a withdrawal",
+  handler: async function ({
+    endpoint,
+    keyfile,
+    password,
+    estimateGas,
+    dumpTx,
+    wait,
+    depositContract,
+  }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const wallet = await loadWallet(keyfile, getPassword(password), provider);
+    const deposits = Deposits__factory.connect(depositContract);
+    const txReq = await deposits.initiateWithdrawal.populateTransaction();
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      deposits.interface
+    );
+  },
+});
+
+export const withdraw = command({
+  name: "withdraw",
+  args: {
+    endpoint: endpoint(),
+    keyfile: keyfile(),
+    password: password(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    wait: options.wait(),
+    depositContract: option({
+      type: string,
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposit contract",
+    }),
+    amountEth: option({
+      type: number,
+      long: "amount-eth",
+      description: "Amount to withdraw, in ETH",
+    }),
+  },
+  description: "Withdraw deposit. Must `init-withdrawal` before notice period",
+  handler: async function ({
+    endpoint,
+    keyfile,
+    password,
+    estimateGas,
+    dumpTx,
+    wait,
+    depositContract,
+    amountEth,
+  }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const wallet = await loadWallet(keyfile, getPassword(password), provider);
+    const deposits = Deposits__factory.connect(depositContract);
+    const amountWei = amountEth * Number(WeiPerEther);
+    const txReq = await deposits.withdraw.populateTransaction(amountWei);
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      deposits.interface
+    );
+  },
+});
+
 export const getParameters = command({
   name: "get-parameters",
   args: {
@@ -161,11 +357,80 @@ export const getState = command({
   },
 });
 
+export const viewBalance = command({
+  name: "balance",
+  args: {
+    endpoint: endpoint(),
+    address: option({
+      type: string,
+      long: "address",
+      description: "Address whose balance we are viewing",
+    }),
+    depositContract: option({
+      type: string,
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposit contract",
+    }),
+  },
+  description: "View the balance of an address",
+  handler: async function ({
+    endpoint,
+    address,
+    depositContract,
+  }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const deposits =
+      Deposits__factory.connect(depositContract).connect(provider);
+    const balance = await deposits.viewBalance(address);
+
+    // Print this to stdout, NOT the log, so it can be consumed by scripts.
+    console.log(balance);
+  },
+});
+
+export const viewPendingWithdrawalInitializedAtBlock = command({
+  name: "withdraw-init-block",
+  args: {
+    endpoint: endpoint(),
+    address: option({
+      type: string,
+      long: "address",
+      description: "Address whose withdraw init block we are viewing",
+    }),
+    depositContract: option({
+      type: string,
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposit contract",
+    }),
+  },
+  description: "View the block at which a withdrawal was initiated",
+  handler: async function ({
+    endpoint,
+    address,
+    depositContract,
+  }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const deposits =
+      Deposits__factory.connect(depositContract).connect(provider);
+    const withdrawalInitBlock =
+      await deposits.viewPendingWithdrawalInitializedAtBlock(address);
+
+    // Print this to stdout, NOT the log, so it can be consumed by scripts.
+    console.log(withdrawalInitBlock);
+  },
+});
+
 export const offChain = subcommands({
   name: "off-chain",
   description: "Utilities for off-chain submission",
   cmds: {
     submit,
+    deposit,
+    "init-withdrawal": initiateWithdrawal,
+    withdraw,
+    balance: viewBalance,
+    "withdraw-init-block": viewPendingWithdrawalInitializedAtBlock,
+    refundFee,
     "get-state": getState,
     "get-parameters": getParameters,
   },
