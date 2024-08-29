@@ -377,6 +377,30 @@ contract UpaVerifier is
         verifiedSubmissionHeight = submissionBlockNumber;
     }
 
+    function verifyAggregatedSubmissionProof(
+        bytes calldata proof
+    ) external onlyWorker {
+        // Extract submission Id
+        uint256 proofL;
+        uint256 proofH;
+        assembly {
+            proofL := calldataload(add(proof.offset, /* 12 * 0x20 */ 0x180))
+            proofH := calldataload(add(proof.offset, /* 13 * 0x20 */ 0x1a0))
+        }
+        bytes32 submissionId = UpaLib.digestFromFieldElements(proofL, proofH);
+
+        // Verify proof
+        (bool success, ) = _getVerifierStorage().outerVerifier.call(proof);
+        require(success, InvalidProof());
+
+        // Mark the submission as verified
+        VerifierStorage storage verifierStorage = _getVerifierStorage();
+        if (verifierStorage.verifiedAtBlock[submissionId] == 0) {
+            verifierStorage.verifiedAtBlock[submissionId] = block.number;
+            emit SubmissionVerified(submissionId);
+        }
+    }
+
     /// Verify an aggregated proof.
     ///
     /// `proof` - An aggregated proof for the validity of this batch.

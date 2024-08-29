@@ -133,6 +133,14 @@ library UpaLib {
         return (uint128(digestUint), digestUint >> 128);
     }
 
+    function digestFromFieldElements(
+        uint256 l, uint256 r
+    ) internal pure returns (bytes32) {
+        require(l >> 128 == 0);
+        require(r >> 128 == 0);
+        return bytes32(l | (r << 128));
+    }
+
     // The stored proofDigestRoot is actually the keccak of the Merkle root
     // and the submitter address.
     function proofDataDigest(
