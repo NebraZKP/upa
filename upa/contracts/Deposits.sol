@@ -97,6 +97,16 @@ contract Deposits is EIP712 {
         UPA_VERIFIER = IUpaVerifier(_upaVerifierAddress);
     }
 
+    /// Return the total fees for this submitter, and a flag indicating if
+    /// there is a pending withdrawal initiated.
+    function getSubmitterTotal(
+        address submitter
+    ) external view returns (uint256 total, uint256 withdrawalInitBlock) {
+        SubmitterAccount storage account = accounts[submitter];
+        total = account.balance + account.totalClaimed;
+        withdrawalInitBlock = account.pendingWithdrawalInitializedAtBlock;
+    }
+
     function viewBalance(address account) external view returns (uint256) {
         return accounts[account].balance;
     }
