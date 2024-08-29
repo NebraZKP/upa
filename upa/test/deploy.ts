@@ -35,7 +35,6 @@ export async function deployUpaWithVerifier(
 
   const upaDesc = (await deployUpa(
     deployer,
-    contract_hex,
     maxNumPublicInputs,
     3 /*maxRetries*/,
     false /*prepare*/,
@@ -46,6 +45,7 @@ export async function deployUpaWithVerifier(
     undefined /* feeInGas */,
     undefined /* aggregatorCollateral */,
     undefined /* fixedReimbursement */,
+    contract_hex,
     undefined /* sid verifier hex */,
     version,
     noOpenZeppelin
