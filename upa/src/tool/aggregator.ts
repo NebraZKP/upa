@@ -24,6 +24,7 @@ import {
   packOffChainSubmissionMarkers,
   computeAggregatedProofParameters,
 } from "../sdk/aggregatedProofParams";
+import { deployDeposits } from "./deployDeposits";
 
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",
@@ -337,5 +338,6 @@ export const aggregator = subcommands({
     "claim-aggregator-fee": claimAggregatorFee,
     "compute-final-digest": computeFinalDigest,
     "submit-aggregated-proof": submitAggregatedProof,
+    "deploy-deposit-contract": deployDeposits,
   },
 });
