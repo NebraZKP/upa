@@ -134,7 +134,8 @@ library UpaLib {
     }
 
     function digestFromFieldElements(
-        uint256 l, uint256 r
+        uint256 l,
+        uint256 r
     ) internal pure returns (bytes32) {
         require(l >> 128 == 0);
         require(r >> 128 == 0);
