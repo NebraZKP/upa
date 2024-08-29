@@ -1,0 +1,20 @@
+# Ignore everything...
+
+.*
+*
+
+# except...
+
+!Cargo.lock
+!Cargo.toml
+!circuits
+!examples
+!LICENSE
+!package.json
+!.rustfmt.toml
+!rust-toolchain
+!scripts
+!upa
+!.yarn
+!yarn.lock
+!.yarnrc.yml
