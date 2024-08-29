@@ -76,22 +76,14 @@ export const submit = command({
 
     // Create the submission client and load the wallet
     const client = await OffChainClient.init(submissionEndpoint);
-    const wallet = await loadWallet(keyfile, getPassword(password));
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const wallet = await loadWallet(keyfile, getPassword(password), provider);
 
     // Load submitter state. (A custom client can keep track of nonce, etc and
     // potentially avoid querying at each submission.)
     const address = await wallet.getAddress();
     const submitterState = await client.getSubmitterState(address);
     const submissionParameters = await client.getSubmissionParameters();
-
-    // On-chain provider (for current block number)
-    let provider: undefined | ethers.Provider;
-    const getProvider = () => {
-      if (!provider) {
-        provider = new ethers.JsonRpcProvider(endpoint);
-      }
-      return provider;
-    };
 
     // Use submitter state to fill in nonce, fee, expirationBlock if not given
     const nonce = nonceString
@@ -102,7 +94,7 @@ export const submit = command({
     // block number + expected latency.
     const expirationBlock = expirationBlockString
       ? Number(expirationBlockString)
-      : (await getProvider().getBlockNumber()) +
+      : (await provider.getBlockNumber()) +
         submissionParameters.expectedLatency;
 
     // If not given explicitly, set a fee of 'minFeePerProof * numProofs'.
