@@ -34,10 +34,10 @@ export const submit = command({
     keyfile: keyfile(),
     password: password(),
     proofsFile: vkProofInputsBatchFilePositional(),
-    depositsContract: option({
+    depositContract: option({
       type: string,
-      long: "deposits-contract",
-      description: "Address of the aggregator's deposits contract",
+      long: "deposit-contract",
+      description: "Address of the aggregator's deposit contract",
     }),
     nonceString: option({
       type: optional(string),
@@ -62,7 +62,7 @@ export const submit = command({
     keyfile,
     password,
     proofsFile,
-    depositsContract,
+    depositContract,
     nonceString,
     feeGweiString,
     expirationBlockString,
@@ -130,7 +130,7 @@ export const submit = command({
     const submission = await signOffChainSubmissionRequest(
       unsignedSubmission,
       wallet,
-      depositsContract
+      depositContract
     );
     log.debug(`submission: ${JSONstringify(submission)}`);
     const response = await client.submit(submission);

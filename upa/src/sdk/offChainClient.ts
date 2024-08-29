@@ -30,7 +30,8 @@ export class SubmitterState {
 export class SubmissionParameters {
   constructor(
     public readonly expectedLatency: number,
-    public readonly minFeePerProof: bigint
+    public readonly minFeePerProof: bigint,
+    public readonly depositContract: string
   ) {
     assert(typeof expectedLatency === "number");
     assert(typeof minFeePerProof === "bigint");
@@ -40,7 +41,8 @@ export class SubmissionParameters {
     const json = obj as SubmissionParameters;
     return new SubmissionParameters(
       json.expectedLatency,
-      BigInt(json.minFeePerProof)
+      BigInt(json.minFeePerProof),
+      json.depositContract
     );
   }
 }
@@ -230,19 +232,25 @@ export class OffChainSubmissionResponse extends UnsignedOffChainSubmissionRespon
 
 export class OffChainClient {
   private constructor(
-    private readonly baseUrl: string // private readonly contractAddress: string
+    private readonly baseUrl: string,
+    private readonly depositContract: string
   ) {
-    // assert(typeof contractAddress === "string");
-    if (!baseUrl.endsWith("/")) {
-      this.baseUrl += "/";
-    }
+    assert(typeof depositContract === "string");
+    assert(baseUrl.endsWith("/"));
   }
 
   public static async init(baseUrl: string): Promise<OffChainClient> {
-    // const contractAddress = await jsonGetRequest("contract", {});
-    return new OffChainClient(
-      baseUrl /*, contractAddress as unknown as string */
+    if (!baseUrl.endsWith("/")) {
+      baseUrl += "/";
+    }
+    const { depositContract } = SubmissionParameters.from_json(
+      await getRequest(baseUrl + "parameters")
     );
+    return new OffChainClient(baseUrl, depositContract);
+  }
+
+  public getDepositContract(): string {
+    return this.depositContract;
   }
 
   /// Returns the current expected latency in blocks, the expected fee per
@@ -327,6 +335,7 @@ export async function getEIP712Domain(
   depositsContract: string
 ): Promise<TypedDataDomain> {
   assert(typeof depositsContract === "string");
+  // TODO: do we need the signer here?
   const deposits = Deposits__factory.connect(depositsContract).connect(wallet);
   const { chainId, name, version, verifyingContract } =
     await deposits.eip712Domain();
