@@ -15,7 +15,6 @@ use crate::{
     EccPrimeField, SafeCircuit,
 };
 use ark_std::{end_timer, start_timer};
-use core::iter;
 use ethers_core::utils::keccak256;
 use halo2_base::{
     halo2_proofs::{
@@ -247,7 +246,11 @@ impl KeccakCircuit {
         // of the proof Ids.
         let last_expected_bytes = match config.output_submission_id {
             true => {
-                let proof_ids_chunks = last_input_bytes.into_iter().chunks(32);
+                let proof_ids = last_input_bytes.into_iter().chunks(32).into_iter().map(|chunk| {
+                    <[u8; 32]>::try_from(chunk.collect_vec()).expect(
+                        "Conversion from vector into array is not allowed to fail",
+                    )
+                }).collect_vec();
                 let num_proof_ids = self
                     .public_inputs
                     .num_proof_ids
@@ -255,20 +258,8 @@ impl KeccakCircuit {
                         "num_proof_ids must exist when the circuit outputs submission id",
                     )
                     .value()
-                    .get_lower_32() as usize;
-                let proof_ids = proof_ids_chunks
-                    .into_iter()
-                    .map(|chunk| {
-                        <[u8; 32]>::try_from(chunk.collect_vec()).expect(
-                            "Conversion from vector into array is not allowed to fail",
-                        )
-                    })
-                    .take(num_proof_ids)
-                    .chain(
-                        iter::repeat([0u8; 32])
-                            .take(last_index as usize + 1 - num_proof_ids),
-                    );
-                compute_submission_id(proof_ids)
+                    .get_lower_32() as u64;
+                compute_submission_id(proof_ids, num_proof_ids)
             }
             false => keccak256(last_input_bytes),
         };
