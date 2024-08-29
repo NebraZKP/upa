@@ -297,7 +297,8 @@ export async function deployUpa(
   feeInGas?: bigint,
   aggregatorCollateral?: bigint,
   fixedReimbursement?: bigint,
-  versionString?: string
+  versionString?: string,
+  noOpenZeppelin?: boolean
 ): Promise<UpaInstanceDescriptor | DeployPrepareData> {
   // Decode version string
   if (!versionString) {
@@ -351,12 +352,18 @@ export async function deployUpa(
   ];
   const deployImplNonce = nonce;
 
-  const deployImpl = async () =>
-    upgrades.deployImplementation(UpaVerifierFactory, deployArgs, {
-      kind: "uups",
-      unsafeAllowLinkedLibraries: true,
-      nonce: deployImplNonce,
-    });
+  const deployImpl = async () => {
+    if (noOpenZeppelin) {
+      const verifier = await UpaVerifierFactory.deploy();
+      return verifier.getAddress();
+    } else {
+      return upgrades.deployImplementation(UpaVerifierFactory, deployArgs, {
+        kind: "uups",
+        unsafeAllowLinkedLibraries: true,
+        nonce: deployImplNonce,
+      });
+    }
+  };
 
   const implAddress: string = await utils.requestWithRetry(
     deployImpl,

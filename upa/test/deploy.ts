@@ -22,7 +22,8 @@ export type DeployResult = {
 export async function deployUpaWithVerifier(
   verifier?: string,
   maxNumPublicInputs?: number,
-  version?: string
+  version?: string,
+  noOpenZeppelin?: boolean
 ): Promise<DeployResult> {
   const [deployer, owner, worker, feeRecipient, user1, user2] =
     await ethers.getSigners();
@@ -45,7 +46,8 @@ export async function deployUpaWithVerifier(
     undefined /* feeInGas */,
     undefined /* aggregatorCollateral */,
     undefined /* fixedReimbursement */,
-    version
+    version,
+    noOpenZeppelin
   )) as UpaInstanceDescriptor;
   assert(upaDesc);
   const upa = await upaInstanceFromDescriptor(upaDesc, owner);
