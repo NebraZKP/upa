@@ -23,7 +23,7 @@ export async function deployUpaWithVerifier(
   verifier?: string,
   maxNumPublicInputs?: number,
   version?: string,
-  noOpenZeppelin?: boolean
+  noOpenZeppelin: boolean = true
 ): Promise<DeployResult> {
   const [deployer, owner, worker, feeRecipient, user1, user2] =
     await ethers.getSigners();
@@ -60,5 +60,5 @@ export async function deployUpaDummyVerifier(version?: string) {
 }
 
 export async function deployAndUpgradeUpa() {
-  return deployUpaWithVerifier();
+  return deployUpaWithVerifier(undefined, undefined, undefined, false);
 }
