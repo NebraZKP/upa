@@ -244,7 +244,10 @@ impl KeccakCircuit {
             .collect_vec();
         // The last bytes will be either the submission Id or the keccak
         // of the proof Ids.
-        let last_expected_bytes = match config.output_submission_id {
+        let num_keccak_output_bytes = self.keccak_output_bytes().len();
+        let (last_expected_bytes, location_last_output_bytes) = match config
+            .output_submission_id
+        {
             true => {
                 let proof_ids = last_input_bytes.into_iter().chunks(32).into_iter().map(|chunk| {
                     <[u8; 32]>::try_from(chunk.collect_vec()).expect(
@@ -259,14 +262,19 @@ impl KeccakCircuit {
                     )
                     .value()
                     .get_lower_32() as u64;
-                compute_submission_id(proof_ids, num_proof_ids)
+                let depth_diff = (last_index + 1).ilog2()
+                    - num_proof_ids.next_power_of_two().ilog2();
+                let location = num_keccak_output_bytes
+                    - 32 * (2usize.pow(depth_diff + 1) - 1);
+                (compute_submission_id(proof_ids, num_proof_ids), location)
             }
-            false => keccak256(last_input_bytes),
+            false => {
+                (keccak256(last_input_bytes), num_keccak_output_bytes - 32)
+            }
         };
         // The last 32 keccak output bytes must match `last_expected_bytes`.
-        let num_keccak_output_bytes = self.keccak_output_bytes().len();
         let last_output_bytes = self.keccak_output_bytes()
-            [num_keccak_output_bytes - 32..]
+            [location_last_output_bytes..location_last_output_bytes + 32]
             .iter()
             .map(|v| v.value().to_bytes_le()[0])
             .collect_vec();

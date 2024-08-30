@@ -1049,10 +1049,6 @@ where
             0,
             "The number of (padded) proof ids must be a power of two in submission id mode"
         );
-        assert!(
-            total_num_proof_ids > 1,
-            "Only circuits with more than 1 proof id supported"
-        );
 
         let zero = ctx.load_constant(F::zero());
         let bitmask = first_i_bits_bitmask(
@@ -1114,8 +1110,11 @@ where
             subtree_roots.push(current_row[0].clone());
         }
 
+        // This is just a matrix transposition
         (0..32)
             .map(|i| subtree_roots.iter().map(|inner| inner[i]).collect_vec())
+            // For each column, we select the byte determined by the next power
+            // of two
             .map(|inner| {
                 range
                     .gate
@@ -1182,7 +1181,7 @@ where
             "Config incompatible with inputs"
         );
         let num_proof_ids =
-            inputs.num_proof_ids.map(|npi| ctx.load_constant(npi));
+            inputs.num_proof_ids.map(|npi| ctx.load_witness(npi));
         if config.output_submission_id {
             range.check_less_than_safe(
                 ctx,

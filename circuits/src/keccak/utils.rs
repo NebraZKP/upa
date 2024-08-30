@@ -451,10 +451,6 @@ pub fn compute_submission_id(
         0,
         "The number of leaves must be a power of two in submission id mode"
     );
-    assert!(
-        num_leaves > 1,
-        "Only circuits with more than 1 proof id supported"
-    );
 
     while current_row.len() > 1 {
         current_row = hash_row(current_row);
@@ -624,12 +620,12 @@ where
 }
 
 /// Returns the little endian bit decomposition of the next power of two
-/// of `n` with `num_bits`.
+/// of `n` with `n_max_num_bits`.
 pub fn compute_next_power_of_two_bit_decomposition<F: EccPrimeField>(
     ctx: &mut Context<F>,
     range: &RangeChip<F>,
     n: AssignedValue<F>,
-    num_bits: usize,
+    n_max_num_bits: usize,
 ) -> Vec<AssignedValue<F>> {
     // First: compute and assign the witness
     let next_power_of_two_witness =
@@ -638,22 +634,35 @@ pub fn compute_next_power_of_two_bit_decomposition<F: EccPrimeField>(
         ctx.load_witness(F::from(next_power_of_two_witness as u64));
 
     // Constrain the witness so `num_proof_ids <= next_power_of_two`
-    // and `next_power_of_two/2 < num_proof_ids`
-    range.range_check(ctx, n, num_bits);
-    range.range_check(ctx, next_power_of_two, num_bits);
+    range.range_check(ctx, n, n_max_num_bits);
+    range.range_check(ctx, next_power_of_two, n_max_num_bits);
     let one = ctx.load_constant(F::one());
     let next_power_of_two_plus_one =
         range.gate.add(ctx, next_power_of_two, one);
-    range.range_check(ctx, next_power_of_two_plus_one, num_bits + 1);
-    range.check_less_than(ctx, n, next_power_of_two, num_bits + 1);
+    range.range_check(ctx, next_power_of_two_plus_one, n_max_num_bits + 1);
+    range.check_less_than(
+        ctx,
+        n,
+        next_power_of_two_plus_one,
+        n_max_num_bits + 1,
+    );
+
+    // Constrain the witness so `previous_power_of_two < num_proof_ids`.
+    // When `next_power_of_two = 1`, we take `previous_power_of_two = 0`
     let two = ctx.load_constant(F::from(2));
     let half_next_power_of_two =
         range.gate.div_unsafe(ctx, next_power_of_two, two);
-    range.check_less_than(ctx, half_next_power_of_two, n, num_bits);
+    let is_one = range.gate.is_equal(ctx, next_power_of_two, one);
+    let zero = ctx.load_constant(F::zero());
+    let previous_power_of_two =
+        range.gate.select(ctx, zero, half_next_power_of_two, is_one);
+    range.check_less_than(ctx, previous_power_of_two, n, n_max_num_bits);
 
     // We decompose `next_power_of_two` into little-endian bits
     let bit_decomposition =
-        range.gate.num_to_bits(ctx, next_power_of_two, num_bits);
+        range
+            .gate
+            .num_to_bits(ctx, next_power_of_two, n_max_num_bits);
     // We make sure it is a power of two, i.e., that exactly one of the entries
     // is 1 and the rest are zero.
     let sum = bit_decomposition
