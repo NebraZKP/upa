@@ -433,6 +433,7 @@ pub fn compute_submission_id(
     num_proof_ids: u64,
 ) -> [u8; 32] {
     let num_proof_ids = num_proof_ids as usize;
+    let next_power_of_two = num_proof_ids.next_power_of_two();
     let proof_ids = proof_ids
         .into_iter()
         .map(|proof_id| *proof_id.borrow())
@@ -441,10 +442,10 @@ pub fn compute_submission_id(
     let proof_ids = proof_ids
         .into_iter()
         .take(num_proof_ids)
-        .chain(iter::repeat([0u8; 32]).take(num_leaves - num_proof_ids))
+        .chain(iter::repeat([0u8; 32]).take(num_leaves - next_power_of_two))
         .collect_vec();
     let mut current_row = proof_ids.into_iter().map(compute_leaf).collect_vec();
-    let num_leaves = current_row.len();
+    assert!(num_leaves >= next_power_of_two, "not enough leaves");
     assert_eq!(
         (num_leaves & (num_leaves - 1)),
         0,

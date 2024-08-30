@@ -204,7 +204,7 @@ export const deploy = command({
     }),
     sid_verifier_bin: option({
       type: optional(string),
-      long: "verifier",
+      long: "sid-verifier",
       description: "Submission-id on-chain verifier binary",
     }),
     owner: option({
