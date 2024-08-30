@@ -106,11 +106,11 @@ contract Deposits is EIP712 {
         withdrawalInitBlock = account.pendingWithdrawalInitializedAtBlock;
     }
 
-    function viewBalance(address account) external view returns (uint256) {
+    function balance(address account) external view returns (uint256) {
         return accounts[account].balance;
     }
 
-    function viewPendingWithdrawalInitializedAtBlock(
+    function pendingWithdrawalInitializedAtBlock(
         address account
     ) external view returns (uint256) {
         return accounts[account].pendingWithdrawalInitializedAtBlock;
