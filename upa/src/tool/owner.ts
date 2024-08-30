@@ -6,6 +6,7 @@ import { unpause } from "./unpause";
 import { pause } from "./pause";
 import { deployBinary } from "./deployBinary";
 import { setAggregatedProofVerifier } from "./aggregatedProofVerifier";
+import { setWorker } from "./setWorker";
 
 export const owner = subcommands({
   name: "owner",
@@ -13,6 +14,7 @@ export const owner = subcommands({
   cmds: {
     deploy,
     "set-fee": setFee,
+    "set-worker": setWorker,
     upgrade,
     pause,
     unpause,
