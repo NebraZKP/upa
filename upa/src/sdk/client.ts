@@ -4,7 +4,7 @@ import {
   UpaInstanceDescriptor,
   upaInstanceFromDescriptor,
   submitProofs,
-  waitForSubmissionVerified,
+  waitForSubmissionVerifiedFromTx,
   updateFeeOptions,
 } from "./upa";
 import { Groth16VerifyingKey } from "./application";
@@ -94,7 +94,7 @@ export class UpaClient {
     }
 
     // Throws if submission contains rejected proofs.
-    await waitForSubmissionVerified(this.upaInstance, txReceipt);
+    await waitForSubmissionVerifiedFromTx(this.upaInstance, txReceipt);
 
     return txReceipt;
   }
