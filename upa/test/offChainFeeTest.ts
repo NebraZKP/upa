@@ -189,7 +189,7 @@ describe("Off-chain submission fees", async () => {
     const depositsAddress = await deposits.getAddress();
     const initialDeposit = WeiPerEther; // 1 ETH
     await deposits.connect(user).deposit({ value: initialDeposit });
-    expect(await deposits.viewBalance(user.getAddress())).eql(initialDeposit);
+    expect(await deposits.balance(user.getAddress())).eql(initialDeposit);
     const provider = worker.provider!;
     const currentBlockNumber = await provider.getBlockNumber();
 
@@ -247,7 +247,7 @@ describe("Off-chain submission fees", async () => {
     await deposits
       .connect(worker)
       .claimFees(signedRequestData, signedRequest.signature);
-    expect(await deposits.viewBalance(user.getAddress())).eql(
+    expect(await deposits.balance(user.getAddress())).eql(
       initialDeposit - feeAmount
     );
     const workerBalanceAfter = await provider.getBalance(
@@ -274,7 +274,7 @@ describe("Off-chain submission fees", async () => {
     const depositsAddress = await deposits.getAddress();
     const initialDeposit = WeiPerEther; // 1 ETH
     await deposits.connect(user).deposit({ value: initialDeposit });
-    expect(await deposits.viewBalance(user.getAddress())).eql(initialDeposit);
+    expect(await deposits.balance(user.getAddress())).eql(initialDeposit);
     const provider = worker.provider!;
     const currentBlockNumber = await provider.getBlockNumber();
 
@@ -326,12 +326,12 @@ describe("Off-chain submission fees", async () => {
         .refundFees(signedResponseData, badSignedResponse.signature)
     ).to.be.revertedWithCustomError(deposits, "BadSignature");
 
-    const depositsBefore = await deposits.viewBalance(user.getAddress());
+    const depositsBefore = await deposits.balance(user.getAddress());
     // Claim refund using the correctly signed request
     await deposits
       .connect(worker)
       .refundFees(signedResponseData, signedResponse.signature);
-    const depositsAfter = await deposits.viewBalance(user.getAddress());
+    const depositsAfter = await deposits.balance(user.getAddress());
 
     // The balance should have increased by a bit more than the fee (as gas is
     // also refunded)
@@ -350,7 +350,7 @@ describe("Off-chain submission fees", async () => {
     const { worker, deposits, user } = deployResult;
     const initialDeposit = WeiPerEther; // 1 ETH
     await deposits.connect(user).deposit({ value: initialDeposit });
-    expect(await deposits.viewBalance(user.getAddress())).eql(initialDeposit);
+    expect(await deposits.balance(user.getAddress())).eql(initialDeposit);
     const provider = worker.provider!;
 
     // Attempt to withdraw before initiating a withdrawal
@@ -363,7 +363,7 @@ describe("Off-chain submission fees", async () => {
 
     // View which block initiated the withdrawal
     const withdrawInitBlock =
-      await deposits.viewPendingWithdrawalInitializedAtBlock(user.getAddress());
+      await deposits.pendingWithdrawalInitializedAtBlock(user.getAddress());
 
     expect(withdrawInitBlock > 0).is.true;
 
