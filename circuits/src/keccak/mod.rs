@@ -64,12 +64,13 @@ use halo2_base::{
         SerdeFormat,
     },
     utils::ScalarField,
-    AssignedValue, Context, SKIP_FIRST_PASS,
+    AssignedValue, Context, QuantumCell, SKIP_FIRST_PASS,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use snark_verifier_sdk::CircuitExt;
 use std::env::{set_var, var};
+use utils::compute_next_power_of_two_bit_decomposition;
 use zkevm_keccak::{util::eth_types::Field, KeccakConfig as KeccakBaseConfig};
 
 pub mod chip;
@@ -1096,14 +1097,31 @@ where
     ) -> [AssignedValue<F>; 32] {
         let mut current_row =
             Self::compute_leaves(ctx, range, keccak, proof_ids, num_proof_ids);
+        let num_leaves = current_row.len();
+        let depth = (num_leaves.ilog2() + 1) as usize;
+        let next_power_of_two = compute_next_power_of_two_bit_decomposition(
+            ctx,
+            range,
+            num_proof_ids,
+            depth,
+        )
+        .into_iter()
+        .map(QuantumCell::from);
 
+        let mut subtree_roots = vec![current_row[0].clone()];
         while current_row.len() > 1 {
             current_row = Self::hash_row(ctx, range, keccak, current_row);
+            subtree_roots.push(current_row[0].clone());
         }
-        current_row
-            .into_iter()
-            .next()
-            .expect("Retrieving the root bytes is not allowed to fail")
+
+        (0..32)
+            .map(|i| subtree_roots.iter().map(|inner| inner[i]).collect_vec())
+            .map(|inner| {
+                range
+                    .gate
+                    .inner_product(ctx, inner, next_power_of_two.clone())
+            })
+            .collect_vec()
             .try_into()
             .expect("Conversion from vector to array is not allowed to fail")
     }
