@@ -16,11 +16,10 @@ import {
 } from "@nebrazkp/upa/sdk";
 import { options, config } from "@nebrazkp/upa/tool";
 const { keyfile, endpoint, password, submissionEndpoint } = options;
-const { loadWallet, loadInstance } = config;
+const { loadWallet, upaFromInstanceFile } = config;
 import * as ethers from "ethers";
 import { command, number, option, optional, string } from "cmd-ts";
 import { DemoApp__factory } from "../typechain-types";
-import { upaFromInstanceFile } from "../../../../upa/dist/src/tool/config";
 const {
   OffChainClient,
   UnsignedOffChainSubmissionRequest,
@@ -28,7 +27,7 @@ const {
 } = offchain;
 const { waitForSubmissionVerified } = upa;
 
-export const submit = command({
+export const submitOffchain = command({
   name: "submit-offchain",
   args: {
     endpoint: endpoint(),
@@ -43,7 +42,7 @@ export const submit = command({
       long: "num",
       short: "n",
       defaultValue: () => 1,
-      description: "The number of proofs to send. If 0, send unlimited proofs.",
+      description: "The number of proofs to send.",
     }),
     depositContract: option({
       type: string,

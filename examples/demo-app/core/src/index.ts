@@ -11,6 +11,7 @@ import { submitInvalid } from "./submitInvalid";
 import { generateProofs } from "./generateProofs";
 import { submitProofsFromFile } from "./submitProofsFromFile";
 import { submitSolutionsFromFile } from "./submitSolutionsFromFile";
+import { submitOffchain } from "./submitOffchain";
 
 const root = subcommands({
   name: "demo-app",
@@ -23,6 +24,7 @@ const root = subcommands({
     "submit-invalid": submitInvalid,
     "multi-submit": multiSubmit,
     "submit-direct": submitDirect,
+    "submit-offchain": submitOffchain,
     "get-state": getstate,
     "batch-filler": batchFiller,
   },
