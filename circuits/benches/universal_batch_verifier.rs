@@ -15,7 +15,6 @@ use halo2_base::{
         },
         transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
     },
-    utils::fs::gen_srs,
 };
 use rand_core::OsRng;
 use snark_verifier_sdk::CircuitExt;
@@ -25,7 +24,7 @@ use upa_circuits::{
         UniversalBatchVerifyCircuit,
     },
     utils::{
-        benchmarks::{keygen, UBV_CONFIG_FILE},
+        benchmarks::UBV_CONFIG_FILE,
         file::{load_json, open_file_for_read, ubv_file_root},
         upa_config::UpaConfig,
     },
@@ -56,7 +55,8 @@ pub fn bench(c: &mut Criterion) {
             // println!("Current dir: {:?}", std::env::current_dir());
             // keygen::<UniversalBatchVerifyCircuit>(&bv_config, &(), &bv_srs)
 
-            let srs_file = format!("./benches/_srs/deg_{}.srs", config.degree_bits);
+            let srs_file =
+                format!("./benches/_srs/deg_{}.srs", config.degree_bits);
             let mut buf = open_file_for_read(&srs_file);
             let srs = ParamsKZG::<Bn256>::read(&mut buf)
                 .unwrap_or_else(|e| panic!("failed to read srs: {e}"));

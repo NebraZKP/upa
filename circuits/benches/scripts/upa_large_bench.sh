@@ -62,6 +62,8 @@ jq -c '.[]' "$CONFIGS_FILE" | while IFS= read -r config; do
 
     # UBV: determined by num_pi, deg_bits, inner_batch_size
     BV_IDENTIFIER="ubv_pi_${NUM_PI}_deg_${BV_CIRCUIT_DEGREE}_inner_${INNER_BATCH_SIZE}"
+    # Keccak: determined by num_pi, deg_bits, inner_batch_size, outer_batch_size
+    KECCAK_IDENTIFIER="keccak_pi_${NUM_PI}_deg_${KECCAK_CIRCUIT_DEGREE}_inner_${INNER_BATCH_SIZE}_outer_${OUTER_BATCH_SIZE}"
     # Outer: determined by num_pi, deg_bits, inner_batch_size, outer_batch_size, ubv_degree, keccak_degree
     OUTER_IDENTIFIER="outer_pi_${NUM_PI}_deg_${OUTER_CIRCUIT_DEGREE}_inner_${INNER_BATCH_SIZE}_outer_${OUTER_BATCH_SIZE}_ubv_deg_${BV_CIRCUIT_DEGREE}_keccak_deg_${KECCAK_CIRCUIT_DEGREE}"
 
@@ -84,6 +86,17 @@ jq -c '.[]' "$CONFIGS_FILE" | while IFS= read -r config; do
                 --gate-config "${BV_IDENTIFIER}.gate_config" \
                 $DRY_RUN_FLAG 2>&1 | tee "${LOGS_DIR}/${BV_IDENTIFIER}_keygen.log"
     fi
+    if [ ! -f "${KECCAK_IDENTIFIER}.gate_config" ]; then
+        /usr/bin/time -f "Keygen time: %E, max memory usage: %M KB" \
+            $PROVER keccak keygen \
+                --config $CONFIG_FILE \
+                --srs $KECCAK_SRS \
+                --proving-key "${KECCAK_IDENTIFIER}.pk" \
+                --verification-key "${KECCAK_IDENTIFIER}.vk" \
+                --protocol "${KECCAK_IDENTIFIER}.protocol" \
+                --gate-config "${KECCAK_IDENTIFIER}.gate_config" \
+                $DRY_RUN_FLAG 2>&1 | tee "${LOGS_DIR}/${KECCAK_IDENTIFIER}_keygen.log"
+    fi
     if [ ! -f "${OUTER_IDENTIFIER}.gate_config" ]; then
         /usr/bin/time -f "Keygen time: %E, max memory usage: %M KB" \
             $PROVER universal-outer keygen \
@@ -97,6 +110,13 @@ jq -c '.[]' "$CONFIGS_FILE" | while IFS= read -r config; do
                 --gate-config "${OUTER_IDENTIFIER}.gate_config" \
                 --num-instance "${OUTER_IDENTIFIER}.num_instance" \
                 $DRY_RUN_FLAG 2>&1 | tee "${LOGS_DIR}/${OUTER_IDENTIFIER}_keygen.log"
+
+        $PROVER universal-outer generate-verifier \
+                --outer-srs $OUTER_SRS \
+                --gate-config "${OUTER_IDENTIFIER}.gate_config" \
+                --verification-key "${OUTER_IDENTIFIER}.vk" \
+                --num-instance "${OUTER_IDENTIFIER}.num_instance" \
+                --yul "${OUTER_IDENTIFIER}.yul"
     fi
     popd
 done

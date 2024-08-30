@@ -15,7 +15,6 @@ use halo2_base::{
         },
         transcript::TranscriptWriterBuffer,
     },
-    utils::fs::gen_srs,
 };
 use rand_core::OsRng;
 use snark_verifier::{
@@ -44,16 +43,14 @@ use upa_circuits::{
         KeccakCircuit, KeccakConfig,
     },
     outer::{
-        self, universal, utils::gen_outer_evm_verifier, OuterCircuitInputs,
+        universal, utils::gen_outer_evm_verifier, OuterCircuitInputs,
         OuterCircuitWrapper, OuterKeygenInputs,
     },
     utils::{
-        benchmarks::{
-            keygen, CONTRACT_BYTE_LIMIT, UNIVERSAL_OUTER_CONFIG_FILE,
-        },
+        benchmarks::{CONTRACT_BYTE_LIMIT, UNIVERSAL_OUTER_CONFIG_FILE},
         file::{
-            load_json, open_file_for_read, outer_file_root, outer_identifier,
-            ubv_file_root,
+            keccak_file_root, keccak_identifier, load_json, open_file_for_read,
+            outer_file_root, outer_identifier, ubv_file_root, ubv_identifier,
         },
         upa_config::UpaConfig,
     },
@@ -159,6 +156,15 @@ pub fn bench(c: &mut Criterion) {
             iter::repeat(bv_instance_single.clone())
                 .take(config.outer_batch_size as usize)
                 .collect();
+        let bv_identifier = ubv_identifier(config);
+        save_proof(
+            &format!("./benches/_test_data/{}.proof", bv_identifier),
+            &bv_proof,
+        );
+        save_instance(
+            &format!("./benches/_test_data/{}.instance", bv_identifier),
+            &bv_instance_single[0],
+        );
 
         // Compute Keccak proof, report
         let keccak_config: KeccakConfig = config.into();
@@ -170,9 +176,33 @@ pub fn bench(c: &mut Criterion) {
                 config.inner_batch_size as usize,
             )
             .into();
-        let keccak_srs = gen_srs(keccak_config.degree_bits);
-        let (keccak_pk, keccak_gate_config, keccak_break_points) =
-            keygen::<KeccakCircuit>(&keccak_config, &(), &keccak_srs);
+        // let keccak_srs = gen_srs(keccak_config.degree_bits);
+        // let (keccak_pk, keccak_gate_config, keccak_break_points) =
+        //     keygen::<KeccakCircuit>(&keccak_config, &(), &keccak_srs);
+        let (keccak_srs, keccak_pk, keccak_gate_config, keccak_break_points) = {
+            let srs_file = format!(
+                "./benches/_srs/deg_{}.srs",
+                config.keccak_config.degree_bits
+            );
+            let mut buf = open_file_for_read(&srs_file);
+            let srs = ParamsKZG::<Bn256>::read(&mut buf)
+                .unwrap_or_else(|e| panic!("failed to read srs: {e}"));
+            // Rather than generating, load from file located at `benches/_keys`
+            let keccak_file_root = keccak_file_root(config);
+            let gate_config =
+                load_json(&format!("{}.gate_config", keccak_file_root));
+            let break_points: MultiPhaseThreadBreakPoints =
+                load_json(&format!("{}.pk.bps", keccak_file_root));
+            let mut buf =
+                open_file_for_read(&format!("{}.pk", keccak_file_root));
+            let pk = KeccakCircuit::<Fr, G1Affine>::read_proving_key(
+                &keccak_config,
+                &gate_config,
+                &mut buf,
+            )
+            .unwrap_or_else(|e| panic!("error reading pk: {e}"));
+            (srs, pk, gate_config, break_points)
+        };
         println!("Keccak gate config {keccak_gate_config:?}");
         let (keccak_proof, keccak_instances) = {
             let keccak_timer = Instant::now();
@@ -215,6 +245,17 @@ pub fn bench(c: &mut Criterion) {
             );
             (proof, instances)
         };
+
+        // Save Keccak proof
+        let keccak_identifier = keccak_identifier(config);
+        save_proof(
+            &format!("./benches/_test_data/{}.proof", keccak_identifier),
+            &keccak_proof,
+        );
+        save_instance(
+            &format!("./benches/_test_data/{}.instance", keccak_identifier),
+            &keccak_instances[0],
+        );
 
         // Assemble snarks
         let bv_protocol = compile(
@@ -334,9 +375,14 @@ pub fn bench(c: &mut Criterion) {
 
         // Save outer proof
         println!("Size of outer_proof: {} bytes", outer_proof.len());
+        let outer_identifier = outer_identifier(config);
         save_proof(
-            &format!("./benches/_test_data/{}", outer_identifier(config)),
+            &format!("./benches/_test_data/{}.proof", outer_identifier),
             &outer_proof,
+        );
+        save_instance(
+            &format!("./benches/_test_data/{}.instance", outer_identifier),
+            &outer_instances,
         );
 
         // EVM check, report gas
@@ -365,19 +411,41 @@ pub fn bench(c: &mut Criterion) {
 criterion_group!(benches, bench);
 criterion_main!(benches);
 
-/// Create a new file. Panic if the file already exists.
-pub fn create_file_no_overwrite(path: &str) -> File {
+/// Create a new file.
+pub fn create_file(path: &str) -> File {
     return OpenOptions::new()
         .write(true)
-        .create_new(true)
+        .create(true)
         .open(path)
         .unwrap_or_else(|e| panic!("failed to create file {path}: {e}"));
 }
 
 pub fn save_proof(path: &str, proof: &[u8]) {
-    let mut f = create_file_no_overwrite(path);
+    let mut f = create_file(path);
     f.write_all(proof)
         .unwrap_or_else(|e| panic!("failed writing proof: {e}"));
+}
+
+/// Convenience wrapper that prints an error on failure.
+pub fn save_json_file<T: Serialize>(path: &str, v: &T, desc: &str) {
+    let buf = create_file(path);
+    serde_json::to_writer(buf, v)
+        .unwrap_or_else(|e| panic!("failed writing {desc}: {e}"))
+}
+
+use serde::Serialize;
+use upa_circuits::{utils::field_elements_hex, EccPrimeField};
+pub fn save_instance<F: EccPrimeField<Repr = [u8; 32]>>(
+    path: &str,
+    instance: &[F],
+) {
+    #[derive(Debug, Serialize)]
+    struct InstanceSerializeHelper<'a, F: EccPrimeField<Repr = [u8; 32]>> {
+        #[serde(with = "field_elements_hex")]
+        pub(crate) instance: &'a [F],
+    }
+
+    save_json_file(path, &InstanceSerializeHelper { instance }, "instance");
 }
 
 /// Verifies `proof` against `instances` on an EVM.

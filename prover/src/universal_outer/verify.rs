@@ -85,7 +85,7 @@ pub fn verify(params: VerifyParams) {
     };
 
     // Check that the calldata on file matches the proof/PIs
-    {
+    if params.calldata.is_some() {
         let calldata_file = calldata_file(params.calldata, &params.proof);
         let loaded_calldata = load_calldata(&calldata_file);
         assert_eq!(

@@ -34,6 +34,20 @@ pub fn ubv_file_root(config: &UpaConfig) -> String {
     format!("./benches/_keys/{}", ubv_identifier(config))
 }
 
+pub fn keccak_identifier(config: &UpaConfig) -> String {
+    format!(
+        "keccak_pi_{}_deg_{}_inner_{}_outer_{}",
+        config.max_num_app_public_inputs,
+        config.keccak_config.degree_bits,
+        config.inner_batch_size,
+        config.outer_batch_size
+    )
+}
+
+pub fn keccak_file_root(config: &UpaConfig) -> String {
+    format!("./benches/_keys/{}", keccak_identifier(config))
+}
+
 pub fn outer_identifier(config: &UpaConfig) -> String {
     format!(
         "outer_pi_{}_deg_{}_inner_{}_outer_{}_ubv_deg_{}_keccak_deg_{}",
