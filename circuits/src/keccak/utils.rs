@@ -442,7 +442,7 @@ pub fn compute_submission_id(
     let proof_ids = proof_ids
         .into_iter()
         .take(num_proof_ids)
-        .chain(iter::repeat([0u8; 32]).take(num_leaves - next_power_of_two))
+        .chain(iter::repeat([0u8; 32]).take(next_power_of_two - num_proof_ids))
         .collect_vec();
     let mut current_row = proof_ids.into_iter().map(compute_leaf).collect_vec();
     assert!(num_leaves >= next_power_of_two, "not enough leaves");
@@ -621,6 +621,48 @@ where
         }
     }
     result
+}
+
+/// Returns the little endian bit decomposition of the next power of two
+/// of `n` with `num_bits`.
+pub fn compute_next_power_of_two_bit_decomposition<F: EccPrimeField>(
+    ctx: &mut Context<F>,
+    range: &RangeChip<F>,
+    n: AssignedValue<F>,
+    num_bits: usize,
+) -> Vec<AssignedValue<F>> {
+    // First: compute and assign the witness
+    let next_power_of_two_witness =
+        n.value().get_lower_32().next_power_of_two();
+    let next_power_of_two =
+        ctx.load_witness(F::from(next_power_of_two_witness as u64));
+
+    // Constrain the witness so `num_proof_ids <= next_power_of_two`
+    // and `next_power_of_two/2 < num_proof_ids`
+    range.range_check(ctx, n, num_bits);
+    range.range_check(ctx, next_power_of_two, num_bits);
+    let one = ctx.load_constant(F::one());
+    let next_power_of_two_plus_one =
+        range.gate.add(ctx, next_power_of_two, one);
+    range.range_check(ctx, next_power_of_two_plus_one, num_bits + 1);
+    range.check_less_than(ctx, n, next_power_of_two, num_bits + 1);
+    let two = ctx.load_constant(F::from(2));
+    let half_next_power_of_two =
+        range.gate.div_unsafe(ctx, next_power_of_two, two);
+    range.check_less_than(ctx, half_next_power_of_two, n, num_bits);
+
+    // We decompose `next_power_of_two` into little-endian bits
+    let bit_decomposition =
+        range.gate.num_to_bits(ctx, next_power_of_two, num_bits);
+    // We make sure it is a power of two, i.e., that exactly one of the entries
+    // is 1 and the rest are zero.
+    let sum = bit_decomposition
+        .iter()
+        .copied()
+        .reduce(|a, b| range.gate.add(ctx, a, b))
+        .expect("bit decomposition must have at least one element");
+    ctx.constrain_equal(&sum, &one);
+    bit_decomposition
 }
 
 /// The number of public inputs each application proof
