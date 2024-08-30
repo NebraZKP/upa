@@ -1,4 +1,4 @@
-import { subcommands, command, string, option, optional, number } from "cmd-ts";
+import { subcommands, command, string, option, optional } from "cmd-ts";
 import * as log from "./log";
 import {
   loadWallet,
@@ -26,10 +26,20 @@ import {
   signOffChainSubmissionRequest,
   UnsignedOffChainSubmissionRequest,
 } from "../sdk/offChainClient";
-import { ethers, WeiPerEther } from "ethers";
+import { ethers } from "ethers";
 import { Deposits__factory } from "../../typechain-types";
 import fs from "fs";
 import { config, options } from ".";
+
+function depositContract() {
+  return option({
+    type: string,
+    long: "deposit-contract",
+    description:
+      "Aggregator's deposit contract (DEPOSIT_CONTRACT or query server)",
+    defaultValue: () => process.env.DEPOSIT_CONTRACT || "",
+  });
+}
 
 export const submit = command({
   name: "submit",
@@ -39,11 +49,7 @@ export const submit = command({
     keyfile: keyfile(),
     password: password(),
     proofsFile: vkProofInputsBatchFilePositional(),
-    depositContract: option({
-      type: string,
-      long: "deposit-contract",
-      description: "Address of the aggregator's deposit contract",
-    }),
+    depositContract: depositContract(),
     nonceString: option({
       type: optional(string),
       long: "nonce",
@@ -83,6 +89,10 @@ export const submit = command({
     const client = await OffChainClient.init(submissionEndpoint);
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
+
+    // TODO: reconsider this behaviour:
+    // If deposit contract not given, trust the aggregator.
+    depositContract = depositContract || client.getDepositContract();
 
     // Load submitter state. (A custom client can keep track of nonce, etc and
     // potentially avoid querying at each submission.)
@@ -146,13 +156,9 @@ export const deposit = command({
     estimateGas: options.estimateGas(),
     dumpTx: options.dumpTx(),
     wait: options.wait(),
-    depositContract: option({
-      type: string,
-      long: "deposit-contract",
-      description: "Address of the aggregator's deposits contract",
-    }),
+    depositContract: depositContract(),
     amountEth: option({
-      type: number,
+      type: string,
       long: "amount-eth",
       description: "Amount to deposit, in ETH",
     }),
@@ -171,7 +177,7 @@ export const deposit = command({
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const deposits = Deposits__factory.connect(depositContract);
-    const amountWei = amountEth * Number(WeiPerEther);
+    const amountWei = ethers.parseEther(amountEth);
     const txReq = await deposits.deposit.populateTransaction({
       value: amountWei,
     });
@@ -250,11 +256,7 @@ export const initiateWithdrawal = command({
     estimateGas: options.estimateGas(),
     dumpTx: options.dumpTx(),
     wait: options.wait(),
-    depositContract: option({
-      type: string,
-      long: "deposit-contract",
-      description: "Address of the aggregator's deposit contract",
-    }),
+    depositContract: depositContract(),
   },
   description: "Initiate a withdrawal",
   handler: async function ({
@@ -290,13 +292,9 @@ export const withdraw = command({
     estimateGas: options.estimateGas(),
     dumpTx: options.dumpTx(),
     wait: options.wait(),
-    depositContract: option({
-      type: string,
-      long: "deposit-contract",
-      description: "Address of the aggregator's deposit contract",
-    }),
+    depositContract: depositContract(),
     amountEth: option({
-      type: number,
+      type: string,
       long: "amount-eth",
       description: "Amount to withdraw, in ETH",
     }),
@@ -315,7 +313,7 @@ export const withdraw = command({
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const deposits = Deposits__factory.connect(depositContract);
-    const amountWei = amountEth * Number(WeiPerEther);
+    const amountWei = ethers.parseEther(amountEth);
     const txReq = await deposits.withdraw.populateTransaction(amountWei);
     await config.handleTxRequest(
       wallet,
@@ -366,11 +364,7 @@ export const viewBalance = command({
       long: "address",
       description: "Address whose balance we are viewing",
     }),
-    depositContract: option({
-      type: string,
-      long: "deposit-contract",
-      description: "Address of the aggregator's deposit contract",
-    }),
+    depositContract: depositContract(),
   },
   description: "View the balance of an address",
   handler: async function ({
@@ -397,11 +391,7 @@ export const viewPendingWithdrawalInitializedAtBlock = command({
       long: "address",
       description: "Address whose withdraw init block we are viewing",
     }),
-    depositContract: option({
-      type: string,
-      long: "deposit-contract",
-      description: "Address of the aggregator's deposit contract",
-    }),
+    depositContract: depositContract(),
   },
   description: "View the block at which a withdrawal was initiated",
   handler: async function ({
@@ -430,7 +420,7 @@ export const offChain = subcommands({
     withdraw,
     balance: viewBalance,
     "withdraw-init-block": viewPendingWithdrawalInitializedAtBlock,
-    refundFee,
+    "refund-fee": refundFee,
     "get-state": getState,
     "get-parameters": getParameters,
   },
