@@ -395,7 +395,7 @@ export const balance = command({
     const provider = new ethers.JsonRpcProvider(endpoint);
     const deposits =
       Deposits__factory.connect(depositContract).connect(provider);
-    const balance = await deposits.viewBalance(address);
+    const balance = await deposits.balance(address);
 
     // Print this to stdout, NOT the log, so it can be consumed by scripts.
     console.log(balance);
@@ -423,7 +423,7 @@ export const pendingWithdrawalInitializedAtBlock = command({
     const deposits =
       Deposits__factory.connect(depositContract).connect(provider);
     const withdrawalInitBlock =
-      await deposits.viewPendingWithdrawalInitializedAtBlock(address);
+      await deposits.pendingWithdrawalInitializedAtBlock(address);
 
     // Print this to stdout, NOT the log, so it can be consumed by scripts.
     console.log(withdrawalInitBlock);
