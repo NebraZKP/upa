@@ -369,10 +369,9 @@ export async function waitForSubmissionVerified(
   return new Promise<void>((resolve, reject) => {
     const intervalId = setInterval(async () => {
       try {
-        const isVerified =
-          await upaInstance.verifier["isSubmissionVerified(bytes32)"](
-            submissionId
-          );
+        const isVerified = await upaInstance.verifier[
+          "isSubmissionVerified(bytes32)"
+        ](submissionId);
 
         if (isVerified) {
           clearInterval(intervalId);
