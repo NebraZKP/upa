@@ -973,8 +973,12 @@ contract UpaVerifier is
         _getVerifierStorage().outerVerifier = _outerVerifier;
     }
 
-    function setSidOuterVerifier(address _sidOuterVerifier) public onlyOwner {
+    function setSidOuterVerifier(
+        address _sidOuterVerifier,
+        uint8 _maxNumPublicInputs
+    ) public onlyOwner {
         emit UpgradeSidOuterVerifier(_sidOuterVerifier);
+        setMaxNumPublicInputs(_maxNumPublicInputs);
         _getVerifierStorage().sidOuterVerifier = _sidOuterVerifier;
     }
 

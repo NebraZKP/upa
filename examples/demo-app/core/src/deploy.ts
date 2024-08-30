@@ -47,6 +47,7 @@ export const deploy = command({
     const instanceData: DemoAppInstance = {
       demoApp: await demoApp.getAddress(),
       circuitId: circuitId.toString(),
+      vk,
     };
     fs.writeFileSync(demoAppInstanceFile, JSON.stringify(instanceData));
 
