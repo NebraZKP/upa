@@ -1049,10 +1049,6 @@ where
             0,
             "The number of (padded) proof ids must be a power of two in submission id mode"
         );
-        assert!(
-            total_num_proof_ids > 1,
-            "Only circuits with more than 1 proof id supported"
-        );
 
         let zero = ctx.load_constant(F::zero());
         let bitmask = first_i_bits_bitmask(

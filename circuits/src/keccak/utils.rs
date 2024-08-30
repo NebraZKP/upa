@@ -451,10 +451,6 @@ pub fn compute_submission_id(
         0,
         "The number of leaves must be a power of two in submission id mode"
     );
-    assert!(
-        num_leaves > 1,
-        "Only circuits with more than 1 proof id supported"
-    );
 
     while current_row.len() > 1 {
         current_row = hash_row(current_row);
@@ -645,7 +641,7 @@ pub fn compute_next_power_of_two_bit_decomposition<F: EccPrimeField>(
     let next_power_of_two_plus_one =
         range.gate.add(ctx, next_power_of_two, one);
     range.range_check(ctx, next_power_of_two_plus_one, num_bits + 1);
-    range.check_less_than(ctx, n, next_power_of_two, num_bits + 1);
+    range.check_less_than(ctx, n, next_power_of_two_plus_one, num_bits + 1);
     let two = ctx.load_constant(F::from(2));
     let half_next_power_of_two =
         range.gate.div_unsafe(ctx, next_power_of_two, two);
