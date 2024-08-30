@@ -65,6 +65,21 @@ export function readAddressFromKeyfile(keyfile: string): string {
   return ethers.getAddress(keystoreObj.address);
 }
 
+export function addressFromParamOrKeyfile(
+  address: string | undefined,
+  keyfile: string | undefined
+): string {
+  if (address) {
+    return ethers.getAddress(address);
+  }
+
+  if (!keyfile) {
+    throw "no address or keyfile given";
+  }
+
+  return readAddressFromKeyfile(keyfile);
+}
+
 /// Result of handling a transaction according to standard flags.
 type HandleTxRequestResult = {
   // The populated Tx

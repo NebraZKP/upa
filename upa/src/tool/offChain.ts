@@ -1,4 +1,11 @@
-import { subcommands, command, string, option, optional } from "cmd-ts";
+import {
+  subcommands,
+  command,
+  string,
+  option,
+  optional,
+  positional,
+} from "cmd-ts";
 import * as log from "./log";
 import {
   loadWallet,
@@ -37,7 +44,14 @@ function depositContract() {
     long: "deposit-contract",
     description:
       "Aggregator's deposit contract (DEPOSIT_CONTRACT or query server)",
-    defaultValue: () => process.env.DEPOSIT_CONTRACT || "",
+    defaultValue: () => {
+      const val = process.env.DEPOSIT_CONTRACT;
+      if (val) {
+        return val;
+      }
+
+      throw "deposit contract not specified";
+    },
   });
 }
 
@@ -90,9 +104,12 @@ export const submit = command({
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
 
-    // TODO: reconsider this behaviour:
-    // If deposit contract not given, trust the aggregator.
-    depositContract = depositContract || client.getDepositContract();
+    // Check that the deposit contract is as expected.  Don't just trust the
+    // aggregator.
+    const aggDepositContract = client.getDepositContract();
+    if (depositContract !== aggDepositContract) {
+      throw `aggregator claims deposit contract ${aggDepositContract}`;
+    }
 
     // Load submitter state. (A custom client can keep track of nonce, etc and
     // potentially avoid querying at each submission.)
@@ -355,23 +372,26 @@ export const getState = command({
   },
 });
 
-export const viewBalance = command({
+export const balance = command({
   name: "balance",
   args: {
     endpoint: endpoint(),
-    address: option({
-      type: string,
-      long: "address",
-      description: "Address whose balance we are viewing",
-    }),
     depositContract: depositContract(),
+    keyfile: keyfile(undefined, false),
+    address: positional({
+      type: optional(string),
+      description: "Address to query (DEFAULT: address from keyfile)",
+    }),
   },
   description: "View the balance of an address",
   handler: async function ({
     endpoint,
     address,
+    keyfile,
     depositContract,
   }): Promise<void> {
+    address = config.addressFromParamOrKeyfile(address, keyfile);
+
     const provider = new ethers.JsonRpcProvider(endpoint);
     const deposits =
       Deposits__factory.connect(depositContract).connect(provider);
@@ -382,7 +402,7 @@ export const viewBalance = command({
   },
 });
 
-export const viewPendingWithdrawalInitializedAtBlock = command({
+export const pendingWithdrawalInitializedAtBlock = command({
   name: "withdraw-init-block",
   args: {
     endpoint: endpoint(),
@@ -418,8 +438,8 @@ export const offChain = subcommands({
     deposit,
     "init-withdrawal": initiateWithdrawal,
     withdraw,
-    balance: viewBalance,
-    "withdraw-init-block": viewPendingWithdrawalInitializedAtBlock,
+    balance,
+    "withdraw-init-block": pendingWithdrawalInitializedAtBlock,
     "refund-fee": refundFee,
     "get-state": getState,
     "get-parameters": getParameters,
