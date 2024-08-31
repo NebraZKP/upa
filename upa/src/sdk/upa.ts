@@ -364,13 +364,15 @@ export async function waitForSubmissionVerifiedFromTx(
 
 export async function waitForSubmissionVerified(
   upaInstance: UpaInstance,
-  submissionId: string,
-): Promise<void> {  
+  submissionId: string
+): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const intervalId = setInterval(async () => {
       try {
         const isVerified =
-          await upaInstance.verifier["isSubmissionVerified(bytes32)"](submissionId);
+          await upaInstance.verifier["isSubmissionVerified(bytes32)"](
+            submissionId
+          );
 
         if (isVerified) {
           clearInterval(intervalId);

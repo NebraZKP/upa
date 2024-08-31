@@ -5,7 +5,10 @@ import { upgrade } from "./upgrade";
 import { unpause } from "./unpause";
 import { pause } from "./pause";
 import { deployBinary } from "./deployBinary";
-import { setAggregatedProofVerifier, setSidAggregatedProofVerifier } from "./aggregatedProofVerifier";
+import {
+  setAggregatedProofVerifier,
+  setSidAggregatedProofVerifier,
+} from "./aggregatedProofVerifier";
 import { setWorker } from "./setWorker";
 
 export const owner = subcommands({
@@ -20,6 +23,6 @@ export const owner = subcommands({
     unpause,
     "deploy-binary": deployBinary,
     "set-aggregated-proof-verifier": setAggregatedProofVerifier,
-    "set-sid-aggregated-proof-verifier": setSidAggregatedProofVerifier
+    "set-sid-aggregated-proof-verifier": setSidAggregatedProofVerifier,
   },
 });
