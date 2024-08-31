@@ -3,7 +3,7 @@ import { DemoApp, DemoApp__factory } from "../typechain-types";
 import * as fs from "fs";
 import * as path from "path";
 import { string, option } from "cmd-ts";
-import { snarkjs, Groth16Proof } from "@nebrazkp/upa/sdk";
+import { snarkjs, Groth16Proof, Groth16VerifyingKey } from "@nebrazkp/upa/sdk";
 
 export type Option = ReturnType<typeof option>;
 
@@ -71,6 +71,7 @@ export type DemoAppInstance = {
   /// Address of the demo-app contract
   demoApp: string;
   circuitId: string;
+  vk: Groth16VerifyingKey;
 };
 
 export function loadDemoAppInstance(instance_file: string): DemoAppInstance {

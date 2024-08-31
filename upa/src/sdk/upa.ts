@@ -281,7 +281,7 @@ export async function submitProofs(
 }
 
 /// Throws if the submission was malformed
-export async function waitForSubmissionVerified(
+export async function waitForSubmissionVerifiedFromTx(
   upaInstance: UpaInstance,
   txReceipt: ethers.TransactionReceipt,
   progress?: (v: number) => void
@@ -360,6 +360,29 @@ export async function waitForSubmissionVerified(
       throw new Error(`Submission was rejected. SubmissionId: ${submissionId}`);
     }
   }
+}
+
+export async function waitForSubmissionVerified(
+  upaInstance: UpaInstance,
+  submissionId: string
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const intervalId = setInterval(async () => {
+      try {
+        const isVerified = await upaInstance.verifier[
+          "isSubmissionVerified(bytes32)"
+        ](submissionId);
+
+        if (isVerified) {
+          clearInterval(intervalId);
+          resolve();
+        }
+      } catch (error) {
+        clearInterval(intervalId);
+        reject(error);
+      }
+    }, 10000);
+  });
 }
 
 /// Returns the last proofIdx that was aggregated by `verifyAggregatedProof`.
