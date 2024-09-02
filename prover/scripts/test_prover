@@ -18,7 +18,7 @@ mkdir -p _test_prover
 pushd _test_prover
 
     # Get a default config if one is not present.
-    if [ "${COMPUTE_SUBMISSION_ID}" == "1" ]; then
+    if [ "${OUTPUT_SUBMISSION_ID}" == "1" ]; then
       cp ../tests/upa_config_2_with_submission_id.json upa_config.json
     else
       cp ../tests/upa_config_2.json upa_config.json
@@ -29,7 +29,7 @@ pushd _test_prover
     max_num_inputs=`jq -r .max_num_app_public_inputs upa_config.json`
     outer_batch_size=`jq -r .outer_batch_size upa_config.json`
 
-    if [ "${COMPUTE_SUBMISSION_ID}" == "1" ]; then
+    if [ "${OUTPUT_SUBMISSION_ID}" == "1" ]; then
       submission_size=$((inner_batch_size * outer_batch_size))
       NUM_PROOF_IDS="--num-proof-ids ${submission_size}"
     fi
