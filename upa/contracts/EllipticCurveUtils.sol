@@ -20,6 +20,8 @@ YMMMUP^
 
 pragma solidity ^0.8.20;
 
+error InvalidFieldElement();
+
 // Based on:
 //   solhint-disable-next-line
 //   https://github.com/tornadocash/tornado-core/blob/1ef6a263ac6a0e476d063fcb269a9df65a1bd56a/contracts/Verifier.sol
@@ -62,8 +64,10 @@ library EllipticCurveUtils {
         return addmod(x, y, PRIME_Q);
     }
 
-    /// Subtracts two Fq elements.
+    /// Subtracts two Fq elements.  Note, this assumes that y is well formed
+    /// (< field modulus, e.g. with checkFq).
     function fqSub(uint256 x, uint256 y) internal pure returns (uint256) {
+        require(y < PRIME_Q, InvalidFieldElement());
         uint256 yComplement = PRIME_Q - y;
         return addmod(x, yComplement, PRIME_Q);
     }
