@@ -59,6 +59,10 @@ struct Groth16VK {
 
 /// Interface to a universal Groth16 verifier contract.
 interface IGroth16Verifier {
+    /// Must fully check that the incoming proof is well-formed, namely that
+    /// points are on the curve and that field element representations are
+    /// canonical (less than field modulus).
+    ///
     /// Note that the Fq2 elements of VK are passed in "natural", not "EVM",
     /// order.
     function verifyProof(

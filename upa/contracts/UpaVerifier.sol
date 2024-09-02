@@ -809,6 +809,8 @@ contract UpaVerifier is
         // challenges
         uint256 startGas = gasleft();
 
+        // Well-formedness of the uncompressed proof is not enforced by this
+        // call.  It is checked later by the IGroth16Verifier.
         Groth16CompressedProof memory compressedProof = UpaInternalLib
             .compressProof(proof);
 
