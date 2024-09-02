@@ -89,8 +89,18 @@ contract Groth16Verifier is IGroth16Verifier {
         uint256[] memory newPublicInputs = new uint256[](
             publicInputsLength + numCommitments
         );
-        for (uint256 i = 0; i < publicInputsLength; i++) {
-            newPublicInputs[i] = publicInputs[i];
+
+        // Copy publicInputs into the start of newPublicInputs.  Equivalent to:
+        //
+        //   for (uint256 i = 0; i < publicInputsLength; i++) {
+        //       newPublicInputs[i] = publicInputs[i]);
+        //   }
+        assembly {
+            calldatacopy(
+                add(newPublicInputs, 0x20),
+                publicInputs.offset,
+                mul(publicInputsLength, 0x20)
+            )
         }
 
         G1Point[] memory m = new G1Point[](numCommitments);
