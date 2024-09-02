@@ -104,6 +104,7 @@ abstract contract UpaFeeBase is
     ) internal returns (uint256 refundWei) {
         uint256 feeWei = this.estimateFee(numProofs);
         require(msg.value >= feeWei, InsufficientFee());
+        // For now, keep any over-payment.
         return 0;
     }
 
