@@ -716,7 +716,7 @@ contract UpaVerifier is
     ///
     /// Note this function is called as part of `challenge`, which
     /// performs the groth16 verification internally.
-    function checkSubmission(
+    function checkAndMarkSubmission(
         bytes32 proofId,
         bytes32 proofDigest,
         bytes32 submissionId,
@@ -819,7 +819,7 @@ contract UpaVerifier is
         bytes32 proofId = UpaLib.computeProofId(circuitId, publicInputs);
         require(proofId != DUMMY_PROOF_ID, DummyProofIdInChallenge());
 
-        bool isLastProof = checkSubmission(
+        bool isLastProof = checkAndMarkSubmission(
             proofId,
             UpaInternalLib.computeProofDigest(compressedProof),
             submissionId,
