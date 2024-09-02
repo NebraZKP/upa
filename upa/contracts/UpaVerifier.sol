@@ -928,20 +928,12 @@ contract UpaVerifier is
         _;
     }
 
-    /// MUST NOT make any state changes!
-    ///
     /// This function is public in order that it can be tested and clients
-    /// (aggregators) can check their calldata against the verifier.  However,
-    /// since it calls outerVerifier, we cannot make it a view function.  If
-    /// future changes modify this function to perform state changes,
-    /// malicious aggregators could send transactions calling this function
-    /// directly.
-    ///
-    /// TODO: make this function view or internal.
+    /// (aggregators) can check their calldata against the verifier.
     function verifyProofForIDs(
         bytes32[] calldata proofIDs,
         bytes calldata proof
-    ) public {
+    ) public view {
         // Check that the call data contains the expected final digest at the
         // correct location.
         bytes32 finalDigest = UpaLib.computeFinalDigest(proofIDs);
@@ -958,7 +950,9 @@ contract UpaVerifier is
         require(proofH == expectH, FinalDigestHDoesNotMatch());
 
         // Call the verifier to check the proof
-        (bool success, ) = _getVerifierStorage().outerVerifier.call(proof);
+        (bool success, ) = _getVerifierStorage().outerVerifier.staticcall(
+            proof
+        );
         require(success, InvalidProof());
     }
 
