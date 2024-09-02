@@ -1091,35 +1091,60 @@ where
         proof_ids: &[AssignedValue<F>],
         num_proof_ids: AssignedValue<F>,
     ) -> [AssignedValue<F>; 32] {
-        let mut current_row =
-            Self::compute_leaves(ctx, range, keccak, proof_ids, num_proof_ids);
-        let num_leaves = current_row.len();
-        let depth = (num_leaves.ilog2() + 1) as usize;
-        let next_power_of_two = compute_next_power_of_two_bit_decomposition(
-            ctx,
-            range,
-            num_proof_ids,
-            depth,
-        )
-        .into_iter()
-        .map(QuantumCell::from);
+        let proof_ids = proof_ids
+            .iter()
+            .chunks(32)
+            .into_iter()
+            .map(|chunk| -> [u8; 32] {
+                let bytes_vec = chunk
+                    .into_iter()
+                    .map(|assigned_byte| {
+                        assigned_byte.value().get_lower_32() as u8
+                    })
+                    .collect_vec();
 
-        let mut subtree_roots = vec![current_row[0].clone()];
-        while current_row.len() > 1 {
-            current_row = Self::hash_row(ctx, range, keccak, current_row);
-            subtree_roots.push(current_row[0].clone());
-        }
-
-        (0..32)
-            .map(|i| subtree_roots.iter().map(|inner| inner[i]).collect_vec())
-            .map(|inner| {
-                range
-                    .gate
-                    .inner_product(ctx, inner, next_power_of_two.clone())
+                bytes_vec.try_into().expect("expected 32 bytes in chunk")
             })
+            .collect_vec();
+        let num_proof_ids = num_proof_ids.value().get_lower_32() as u64;
+        let submission_id = compute_submission_id(proof_ids, num_proof_ids);
+        println!("Submission id (native): {submission_id:?}");
+        let submission_id = submission_id
+            .into_iter()
+            .map(|byte| ctx.load_witness(F::from(byte as u64)))
             .collect_vec()
             .try_into()
-            .expect("Conversion from vector to array is not allowed to fail")
+            .expect("expected length 32");
+        submission_id
+        // let mut current_row =
+        //     Self::compute_leaves(ctx, range, keccak, proof_ids, num_proof_ids);
+        // let num_leaves = current_row.len();
+        // let depth = (num_leaves.ilog2() + 1) as usize;
+        // let next_power_of_two = compute_next_power_of_two_bit_decomposition(
+        //     ctx,
+        //     range,
+        //     num_proof_ids,
+        //     depth,
+        // )
+        // .into_iter()
+        // .map(QuantumCell::from);
+
+        // let mut subtree_roots = vec![current_row[0].clone()];
+        // while current_row.len() > 1 {
+        //     current_row = Self::hash_row(ctx, range, keccak, current_row);
+        //     subtree_roots.push(current_row[0].clone());
+        // }
+
+        // (0..32)
+        //     .map(|i| subtree_roots.iter().map(|inner| inner[i]).collect_vec())
+        //     .map(|inner| {
+        //         range
+        //             .gate
+        //             .inner_product(ctx, inner, next_power_of_two.clone())
+        //     })
+        //     .collect_vec()
+        //     .try_into()
+        //     .expect("Conversion from vector to array is not allowed to fail")
     }
 
     /// Computes the submission id from `proof_ids`.
