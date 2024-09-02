@@ -120,7 +120,7 @@ jobs:
       
       - name: Run test_prover (dry run, compute submission id)
         run: |
-            DRY_RUN=1 COMPUTE_SUBMISSION_ID=1 ./scripts/test_prover
+            DRY_RUN=1 OUTPUT_SUBMISSION_ID=1 ./scripts/test_prover
 
       - name: Run aggregation benchmark
         run: |
