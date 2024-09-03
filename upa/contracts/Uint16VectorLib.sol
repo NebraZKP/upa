@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 library Uint16VectorLib {
     /// A vector of uint16's supporting auto-resizing / 0-padding when
@@ -38,9 +38,12 @@ library Uint16VectorLib {
             // cheap in terms of SSTORE cost, but involves an unknown number
             // of iterations), we set the array length explicitly.
 
+            // Explicitly convert to zero out any higher order bits.
+            uint256 idx256 = uint256(idx);
+
             // Equivalent to: vector.entries.length = idx + 1;
             assembly {
-                sstore(vector.slot, add(idx, 1))
+                sstore(vector.slot, add(idx256, 1))
             }
 
             // For debugging:

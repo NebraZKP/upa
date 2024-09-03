@@ -18,7 +18,7 @@ YMMMUP^
  ^^
 */
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 // Commented but left for debugging purposes
 // import "hardhat/console.sol";
@@ -391,6 +391,8 @@ library Merkle {
             value = next;
             --depth;
         }
+
+        require(location == 0, InvalidOffset());
 
         return value;
     }

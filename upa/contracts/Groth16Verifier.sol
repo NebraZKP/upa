@@ -85,12 +85,21 @@ contract Groth16Verifier is IGroth16Verifier {
         require(vk.h1.length == numCommitments, "Invalid vk.h1 length");
         require(vk.h2.length == numCommitments, "Invalid vk.h2 length");
 
-        // TODO Can we avoid the memory copy when commitment is absent?
         uint256[] memory newPublicInputs = new uint256[](
             publicInputsLength + numCommitments
         );
-        for (uint256 i = 0; i < publicInputsLength; i++) {
-            newPublicInputs[i] = publicInputs[i];
+
+        // Copy publicInputs into the start of newPublicInputs.  Equivalent to:
+        //
+        //   for (uint256 i = 0; i < publicInputsLength; i++) {
+        //       newPublicInputs[i] = publicInputs[i]);
+        //   }
+        assembly {
+            calldatacopy(
+                add(newPublicInputs, 0x20),
+                publicInputs.offset,
+                mul(publicInputsLength, 0x20)
+            )
         }
 
         G1Point[] memory m = new G1Point[](numCommitments);
@@ -113,8 +122,6 @@ contract Groth16Verifier is IGroth16Verifier {
             h1[0] = EllipticCurveUtils.intoG2Point(vk.h1[0], true);
             h2[0] = EllipticCurveUtils.intoG2Point(vk.h2[0], true);
         }
-        // TODO: do we need to check these are valid points?
-        // Apparently the staticcalls do that for us.
         G1Point memory a1 = EllipticCurveUtils.negate(
             EllipticCurveUtils.intoG1Point(proofBytes.pA)
         );
@@ -130,7 +137,7 @@ contract Groth16Verifier is IGroth16Verifier {
         G2Point memory d2 = EllipticCurveUtils.intoG2Point(vk.delta, true);
 
         if (numCommitments > 0) {
-            bool pedersenPairingCheck = EllipticCurveUtils.pairing(
+            bool pedersenPairingCheck = EllipticCurveUtils.pairingCheck2(
                 m[0],
                 h1[0],
                 pok[0],
@@ -139,6 +146,6 @@ contract Groth16Verifier is IGroth16Verifier {
             require(pedersenPairingCheck, "Pedersen pairing check failed");
         }
 
-        return EllipticCurveUtils.pairing(a1, a2, b1, b2, c1, c2, d1, d2);
+        return EllipticCurveUtils.pairingCheck4(a1, a2, b1, b2, c1, c2, d1, d2);
     }
 }

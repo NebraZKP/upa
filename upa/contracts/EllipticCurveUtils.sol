@@ -18,7 +18,9 @@ YMMMUP^
  ^^
 */
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
+
+error InvalidFieldElement();
 
 // Based on:
 //   solhint-disable-next-line
@@ -62,8 +64,10 @@ library EllipticCurveUtils {
         return addmod(x, y, PRIME_Q);
     }
 
-    /// Subtracts two Fq elements.
+    /// Subtracts two Fq elements.  Note, this assumes that y is well formed
+    /// (< field modulus, e.g. with checkFq).
     function fqSub(uint256 x, uint256 y) internal pure returns (uint256) {
+        require(y < PRIME_Q, InvalidFieldElement());
         uint256 yComplement = PRIME_Q - y;
         return addmod(x, yComplement, PRIME_Q);
     }
@@ -251,7 +255,7 @@ library EllipticCurveUtils {
 
     /// Checks the following equality in `G_T`:
     /// `e(a1, a2)*e(b1, b2)*e(c1, c2)*e(d1, d2) == 1`
-    function pairing(
+    function pairingCheck4(
         G1Point memory a1,
         G2Point memory a2,
         G1Point memory b1,
@@ -310,7 +314,7 @@ library EllipticCurveUtils {
 
     /// Checks the following equality in `G_T`:
     /// `e(a1, a2)*e(b1, b2) == 1`
-    function pairing(
+    function pairingCheck2(
         G1Point memory a1,
         G2Point memory a2,
         G1Point memory b1,

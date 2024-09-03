@@ -402,7 +402,7 @@ contract UpaVerifier is
         // console.log("verifyAggregatedProof");
 
         // Expected to fit in a uint16 to match the proof counts.
-        require(proofIds.length < (1 << 16), TooManyProofIds());
+        require(proofIds.length <= type(uint16).max, TooManyProofIds());
 
         VerifierStorage storage verifierStorage = _getVerifierStorage();
 
@@ -716,7 +716,7 @@ contract UpaVerifier is
     ///
     /// Note this function is called as part of `challenge`, which
     /// performs the groth16 verification internally.
-    function checkSubmission(
+    function checkAndMarkSubmission(
         bytes32 proofId,
         bytes32 proofDigest,
         bytes32 submissionId,
@@ -809,6 +809,8 @@ contract UpaVerifier is
         // challenges
         uint256 startGas = gasleft();
 
+        // Well-formedness of the uncompressed proof is not enforced by this
+        // call.  It is checked later by the IGroth16Verifier.
         Groth16CompressedProof memory compressedProof = UpaInternalLib
             .compressProof(proof);
 
@@ -817,7 +819,7 @@ contract UpaVerifier is
         bytes32 proofId = UpaLib.computeProofId(circuitId, publicInputs);
         require(proofId != DUMMY_PROOF_ID, DummyProofIdInChallenge());
 
-        bool isLastProof = checkSubmission(
+        bool isLastProof = checkAndMarkSubmission(
             proofId,
             UpaInternalLib.computeProofDigest(compressedProof),
             submissionId,
@@ -928,20 +930,12 @@ contract UpaVerifier is
         _;
     }
 
-    /// MUST NOT make any state changes!
-    ///
     /// This function is public in order that it can be tested and clients
-    /// (aggregators) can check their calldata against the verifier.  However,
-    /// since it calls outerVerifier, we cannot make it a view function.  If
-    /// future changes modify this function to perform state changes,
-    /// malicious aggregators could send transactions calling this function
-    /// directly.
-    ///
-    /// TODO: make this function view or internal.
+    /// (aggregators) can check their calldata against the verifier.
     function verifyProofForIDs(
         bytes32[] calldata proofIDs,
         bytes calldata proof
-    ) public {
+    ) public view {
         // Check that the call data contains the expected final digest at the
         // correct location.
         bytes32 finalDigest = UpaLib.computeFinalDigest(proofIDs);
@@ -958,7 +952,9 @@ contract UpaVerifier is
         require(proofH == expectH, FinalDigestHDoesNotMatch());
 
         // Call the verifier to check the proof
-        (bool success, ) = _getVerifierStorage().outerVerifier.call(proof);
+        (bool success, ) = _getVerifierStorage().outerVerifier.staticcall(
+            proof
+        );
         require(success, InvalidProof());
     }
 
