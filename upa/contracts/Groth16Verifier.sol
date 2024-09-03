@@ -85,7 +85,6 @@ contract Groth16Verifier is IGroth16Verifier {
         require(vk.h1.length == numCommitments, "Invalid vk.h1 length");
         require(vk.h2.length == numCommitments, "Invalid vk.h2 length");
 
-        // TODO Can we avoid the memory copy when commitment is absent?
         uint256[] memory newPublicInputs = new uint256[](
             publicInputsLength + numCommitments
         );
