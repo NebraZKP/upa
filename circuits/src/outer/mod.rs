@@ -197,6 +197,7 @@ impl<O: OuterCircuit> OuterInstanceInputs<O> {
     ) -> Self {
         let bv_config = O::bv_config(config);
         let mut keccak_config = O::keccak_config(config);
+        // Changed so the assertions in the functions below pass
         keccak_config.output_submission_id = false;
         // Compute the expected keccak instance given the bv instances, and
         // compare.
@@ -215,8 +216,8 @@ impl<O: OuterCircuit> OuterInstanceInputs<O> {
         // we don't compare those elements
         let keccak_instance_len = keccak_instance.len();
         assert_eq!(
-            expected_keccak_instance[keccak_instance_len - 2..],
-            keccak_instance[keccak_instance_len - 2..]
+            expected_keccak_instance[..keccak_instance_len - 2],
+            keccak_instance[..keccak_instance_len - 2]
         );
 
         Self {
