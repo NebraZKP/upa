@@ -392,6 +392,8 @@ library Merkle {
             --depth;
         }
 
+        require(location == 0, InvalidOffset());
+
         return value;
     }
 
