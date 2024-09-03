@@ -1,7 +1,8 @@
 //! Common functionality for Fixed/Universal Outer Circuits.
 use crate::{
     keccak::{
-        inputs::KeccakCircuitInputs, utils::gen_keccak_snark, KeccakConfig,
+        inputs::KeccakCircuitInputs, utils::gen_keccak_snark, KeccakCircuit,
+        KeccakConfig,
     },
     utils::upa_config::UpaConfig,
     SafeCircuit,
@@ -194,7 +195,29 @@ impl<O: OuterCircuit> OuterInstanceInputs<O> {
         bv_instances: Vec<Vec<Fr>>,
         keccak_instance: Vec<Fr>,
     ) -> Self {
-        let _ = config;
+        let bv_config = O::bv_config(config);
+        let mut keccak_config = O::keccak_config(config);
+        keccak_config.output_submission_id = false;
+        // Compute the expected keccak instance given the bv instances, and
+        // compare.
+        let expected_circuit_inputs = O::keccak_inputs_from_bv_instances(
+            &bv_config,
+            bv_instances.iter().map(|i| i.as_slice()),
+            None,
+        );
+        let expected_keccak_instance =
+            <KeccakCircuit<Fr, G1Affine> as SafeCircuit<_,_>>::compute_instance(
+                &keccak_config,
+                &expected_circuit_inputs,
+            );
+
+        // We cannot compute the submissionId from the bv instances, so
+        // we don't compare those elements
+        let keccak_instance_len = keccak_instance.len();
+        assert_eq!(
+            expected_keccak_instance[keccak_instance_len - 2..],
+            keccak_instance[keccak_instance_len - 2..]
+        );
 
         Self {
             bv_instances,
