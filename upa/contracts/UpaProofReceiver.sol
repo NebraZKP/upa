@@ -260,6 +260,7 @@ contract UpaProofReceiver is
         Groth16CompressedProof[] calldata proofs,
         uint256[][] calldata publicInputs
     ) public payable override whenNotPaused returns (bytes32 submissionId) {
+        require(circuitIds.length <= type(uint16).max, TooManyProofs());
         uint16 numProofs = uint16(circuitIds.length);
         require(
             proofs.length == numProofs,

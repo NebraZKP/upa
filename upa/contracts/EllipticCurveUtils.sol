@@ -18,7 +18,7 @@ YMMMUP^
  ^^
 */
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 error InvalidFieldElement();
 
@@ -255,7 +255,7 @@ library EllipticCurveUtils {
 
     /// Checks the following equality in `G_T`:
     /// `e(a1, a2)*e(b1, b2)*e(c1, c2)*e(d1, d2) == 1`
-    function pairing(
+    function pairingCheck4(
         G1Point memory a1,
         G2Point memory a2,
         G1Point memory b1,
@@ -314,7 +314,7 @@ library EllipticCurveUtils {
 
     /// Checks the following equality in `G_T`:
     /// `e(a1, a2)*e(b1, b2) == 1`
-    function pairing(
+    function pairingCheck2(
         G1Point memory a1,
         G2Point memory a2,
         G1Point memory b1,

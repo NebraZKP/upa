@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -118,20 +118,16 @@ abstract contract UpaFeeBase is
         );
         address thisContract = address(this);
 
+        uint256 collateral = aggregatorCollateral();
         // Aggregators are not able to claim their fees until there's enough
         // funds to cover potential censorship claims
-        require(
-            thisContract.balance >= aggregatorCollateral(),
-            NotEnoughCollateral()
-        );
+        require(thisContract.balance >= collateral, NotEnoughCollateral());
 
         // All current fees (minus collateral) will be claimable when the
         // lastest submission has been verified.
         feeBaseStorage
             .verifiedSubmissionIdxForAllocatedFee = lastSubmittedSubmissionIdx;
-        feeBaseStorage.totalFeeDueInWei =
-            thisContract.balance -
-            aggregatorCollateral();
+        feeBaseStorage.totalFeeDueInWei = thisContract.balance - collateral;
     }
 
     function claimAggregatorFee(

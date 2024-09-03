@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 library Uint16VectorLib {
     /// A vector of uint16's supporting auto-resizing / 0-padding when

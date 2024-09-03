@@ -236,9 +236,7 @@ contract UpaVerifier is
 
     /// Only the owner is authorized to upgrade this contract. Required to
     /// inherit from UUPSUpgradeable.
-    function _authorizeUpgrade(address) internal view override onlyOwner {
-        return;
-    }
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 
     /// For a single proof submission with `submissionIdx`, performs the
     /// necessary checks and marks it as verified. Returns the next
@@ -402,7 +400,7 @@ contract UpaVerifier is
         // console.log("verifyAggregatedProof");
 
         // Expected to fit in a uint16 to match the proof counts.
-        require(proofIds.length < (1 << 16), TooManyProofIds());
+        require(proofIds.length <= type(uint16).max, TooManyProofIds());
 
         VerifierStorage storage verifierStorage = _getVerifierStorage();
 

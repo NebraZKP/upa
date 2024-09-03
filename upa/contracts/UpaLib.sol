@@ -18,7 +18,7 @@ YMMMUP^
  ^^
 */
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 import "./Merkle.sol";
 
@@ -130,7 +130,7 @@ library UpaLib {
         bytes32 digest
     ) internal pure returns (uint256, uint256) {
         uint256 digestUint = uint256(digest);
-        return (digestUint & ((1 << 128) - 1), digestUint >> 128);
+        return (uint128(digestUint), digestUint >> 128);
     }
 
     // The stored proofDigestRoot is actually the keccak of the Merkle root
