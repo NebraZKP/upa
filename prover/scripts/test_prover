@@ -31,7 +31,8 @@ pushd _test_prover
 
     if [ "${OUTPUT_SUBMISSION_ID}" == "1" ]; then
       submission_size=$((inner_batch_size * outer_batch_size))
-      NUM_PROOF_IDS="--num-proof-ids ${submission_size}"
+      num_proof_ids=$((submission_size / 2))
+      NUM_PROOF_IDS="--num-proof-ids ${num_proof_ids}"
     fi
 
     # Create `inner_batch_size` (unsafe) keys.
