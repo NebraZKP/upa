@@ -64,7 +64,7 @@ type DeployArgs = {
   endpoint: string;
   keyfile: string;
   password: string;
-  verifier_bin?: string;
+  verifierBin?: string;
   instance: string;
   upaConfigFile: string;
   useTestConfig: boolean;
@@ -77,7 +77,7 @@ type DeployArgs = {
   aggregatorCollateralInWei?: string;
   groth16VerifierAddress?: string;
   fixedReimbursementInWei?: string;
-  sid_verifier_bin?: string;
+  sidVerifierBin?: string;
 };
 
 const deployHandler = async function (args: DeployArgs): Promise<void> {
@@ -98,7 +98,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     endpoint,
     keyfile,
     password,
-    verifier_bin,
+    verifierBin,
     instance,
     upaConfigFile,
     useTestConfig,
@@ -109,7 +109,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     aggregatorCollateralInWei,
     groth16VerifierAddress,
     fixedReimbursementInWei,
-    sid_verifier_bin,
+    sidVerifierBin,
     maxRetries,
     prepare,
   } = args;
@@ -138,11 +138,11 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     : loadUpaConfig(upaConfigFile).max_num_app_public_inputs;
 
   // Load binary contract
-  const contract_hex = verifier_bin
-    ? "0x" + fs.readFileSync(verifier_bin, "utf-8").trim()
+  const contract_hex = verifierBin
+    ? "0x" + fs.readFileSync(verifierBin, "utf-8").trim()
     : undefined;
-  const sid_contract_hex = sid_verifier_bin
-    ? "0x" + fs.readFileSync(sid_verifier_bin, "utf-8").trim()
+  const sid_contract_hex = sidVerifierBin
+    ? "0x" + fs.readFileSync(sidVerifierBin, "utf-8").trim()
     : undefined;
   const upaInstance = await deployUpa(
     wallet,
@@ -197,12 +197,12 @@ export const deploy = command({
       long: "use-test-config",
       description: "Use a default UPA config for testing",
     }),
-    verifier_bin: option({
+    verifierBin: option({
       type: optional(string),
       long: "verifier",
       description: "On-chain verifier binary",
     }),
-    sid_verifier_bin: option({
+    sidVerifierBin: option({
       type: optional(string),
       long: "sid-verifier",
       description: "Submission-id on-chain verifier binary",
@@ -305,7 +305,7 @@ export async function deployUpaDependencies(
   };
 }
 
-/// Deploys the UPA contract, with all dependencies.  `verifier_bin_file`
+/// Deploys the UPA contract, with all dependencies.  `verifierBinFile`
 /// points to the hex representation of the verifier byte code (as output by
 /// solidity). The address of `signer` is used by default for `owner` and
 /// `worker` if they are not given.
