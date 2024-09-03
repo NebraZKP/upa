@@ -236,7 +236,9 @@ contract UpaVerifier is
 
     /// Only the owner is authorized to upgrade this contract. Required to
     /// inherit from UUPSUpgradeable.
-    function _authorizeUpgrade(address) internal view override onlyOwner {}
+    function _authorizeUpgrade(address) internal view override onlyOwner {
+        return;
+    }
 
     /// For a single proof submission with `submissionIdx`, performs the
     /// necessary checks and marks it as verified. Returns the next
