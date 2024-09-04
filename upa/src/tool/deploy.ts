@@ -402,8 +402,7 @@ export async function deployUpa(
   );
 
   await UpaVerifierFactory.attach(implAddress).waitForDeployment();
-
-  // console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
+  console.log(`UpaVerifier impl deployed to ${implAddress}`);
 
   // The nonce won't have incremented if the impl already existed. Re-query it.
   nonce = await signer.getNonce();
