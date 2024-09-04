@@ -1,7 +1,8 @@
 //! Some `KeccakCircuit`-related utility functions.
 
 use super::{
-    KeccakCircuitInputs, KeccakVarLenInput, LIMB_BITS, NUM_BYTES_FQ, NUM_LIMBS,
+    KeccakCircuitInputs, KeccakVarLenInput, KECCAK_OUTPUT_BYTES, LIMB_BITS,
+    NUM_BYTES_FQ, NUM_LIMBS,
 };
 use crate::{
     keccak::{
@@ -368,9 +369,9 @@ where
 /// Compute the proofId of an application proof.  Must match the method
 /// `computeProofId` in the UPA contract.
 pub fn compute_proof_id<'a, F: EccPrimeField>(
-    circuit_id: &[u8; 32],
+    circuit_id: &[u8; KECCAK_OUTPUT_BYTES],
     app_public_inputs: impl IntoIterator<Item = &'a F>,
-) -> [u8; 32] {
+) -> [u8; KECCAK_OUTPUT_BYTES] {
     let mut hasher = KeccakHasher::new();
     hasher.absorb_bytes(circuit_id);
     for pi in app_public_inputs {
@@ -383,9 +384,9 @@ pub fn compute_proof_id<'a, F: EccPrimeField>(
 /// Intended usage is for `digests` to be the proof IDs of all application
 /// circuits contained in a given `OuterCircuit`.
 pub fn compute_final_digest(
-    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; 32]>>,
-) -> [u8; 32] {
-    let mut output = [0u8; 32];
+    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; KECCAK_OUTPUT_BYTES]>>,
+) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let mut output = [0u8; KECCAK_OUTPUT_BYTES];
     let mut hasher = Keccak::v256();
 
     for pf_id in proof_ids {
@@ -397,8 +398,10 @@ pub fn compute_final_digest(
 }
 
 /// Computes the Merkle leaf corresponding to `proof_id`.
-fn compute_leaf(proof_id: impl Borrow<[u8; 32]>) -> [u8; 32] {
-    let mut leaf = [0u8; 32];
+fn compute_leaf(
+    proof_id: impl Borrow<[u8; KECCAK_OUTPUT_BYTES]>,
+) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let mut leaf = [0u8; KECCAK_OUTPUT_BYTES];
     let mut hasher = Keccak::v256();
     hasher.update(proof_id.borrow());
     hasher.finalize(&mut leaf);
@@ -406,8 +409,11 @@ fn compute_leaf(proof_id: impl Borrow<[u8; 32]>) -> [u8; 32] {
 }
 
 /// Computes the keccak hash of `left` and `right`.
-fn hash_pair(left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
-    let mut output = [0u8; 32];
+fn hash_pair(
+    left: &[u8; KECCAK_OUTPUT_BYTES],
+    right: &[u8; KECCAK_OUTPUT_BYTES],
+) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let mut output = [0u8; KECCAK_OUTPUT_BYTES];
     let mut hasher = Keccak::v256();
 
     hasher.update(left);
@@ -418,7 +424,9 @@ fn hash_pair(left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
 }
 
 /// Hashes the elements of `row` by pairs.
-fn hash_row(row: Vec<[u8; 32]>) -> Vec<[u8; 32]> {
+fn hash_row(
+    row: Vec<[u8; KECCAK_OUTPUT_BYTES]>,
+) -> Vec<[u8; KECCAK_OUTPUT_BYTES]> {
     let mut next_row = Vec::new();
     let row_len = row.len();
     for i in (0..row_len).step_by(2) {
@@ -429,9 +437,9 @@ fn hash_row(row: Vec<[u8; 32]>) -> Vec<[u8; 32]> {
 
 /// Computes the submission id corresponding to `proof_ids`.
 pub fn compute_submission_id(
-    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; 32]>>,
+    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; KECCAK_OUTPUT_BYTES]>>,
     num_proof_ids: u64,
-) -> [u8; 32] {
+) -> [u8; KECCAK_OUTPUT_BYTES] {
     let num_proof_ids = num_proof_ids as usize;
     let next_power_of_two = num_proof_ids.next_power_of_two();
     let proof_ids = proof_ids
@@ -442,7 +450,10 @@ pub fn compute_submission_id(
     let proof_ids = proof_ids
         .into_iter()
         .take(num_proof_ids)
-        .chain(iter::repeat([0u8; 32]).take(next_power_of_two - num_proof_ids))
+        .chain(
+            iter::repeat([0u8; KECCAK_OUTPUT_BYTES])
+                .take(next_power_of_two - num_proof_ids),
+        )
         .collect_vec();
     let mut current_row = proof_ids.into_iter().map(compute_leaf).collect_vec();
     assert!(num_leaves >= next_power_of_two, "not enough leaves");
@@ -468,7 +479,7 @@ pub fn compute_submission_id(
 ///
 /// NOTE: This is currently tied to bn256::Fr since `from_bytes`, `from_raw` etc
 /// are just part of the impl, not part of any trait.
-pub fn digest_as_field_elements(digest: &[u8; 32]) -> [Fr; 2] {
+pub fn digest_as_field_elements(digest: &[u8; KECCAK_OUTPUT_BYTES]) -> [Fr; 2] {
     let mut digest = *digest;
     digest.reverse();
 
@@ -487,7 +498,7 @@ pub fn digest_as_field_elements(digest: &[u8; 32]) -> [Fr; 2] {
 pub fn compose_into_field_element<F: EccPrimeField>(
     ctx: &mut Context<F>,
     chip: &RangeChip<F>,
-    bytes: &[AssignedValue<F>; 32],
+    bytes: &[AssignedValue<F>; KECCAK_OUTPUT_BYTES],
 ) -> AssignedValue<F> {
     let byte_decomposition_powers = byte_decomposition_powers()
         .into_iter()

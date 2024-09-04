@@ -8,7 +8,7 @@ extern crate alloc;
 use crate::{
     keccak::{
         multivar::KeccakMultiVarHasher, utils::bytes_to_keccak_padded_words,
-        variable,
+        variable, KECCAK_OUTPUT_BYTES,
     },
     utils::bitmask::ith_bit_bitmask,
     EccPrimeField,
@@ -435,8 +435,8 @@ impl<F: Field> KeccakChip<F> {
             max_number_of_chunks as u64,
         );
         // Select the right one
-        let mut output_assigned = Vec::with_capacity(32);
-        for byte_idx in 0..32 {
+        let mut output_assigned = Vec::with_capacity(KECCAK_OUTPUT_BYTES);
+        for byte_idx in 0..KECCAK_OUTPUT_BYTES {
             let bytes = keccak_outputs_assigned
                 .iter()
                 .map(|output_assigned| output_assigned[byte_idx].into());
@@ -854,8 +854,8 @@ pub(crate) fn rows_per_round(max_rows: usize, num_keccak_f: usize) -> u32 {
 }
 
 /// Computes the keccak hash of `bytes`, skipping the padding step.
-fn keccak256_no_padding(bytes: &[u8]) -> [u8; 32] {
-    let mut output = [0u8; 32];
+fn keccak256_no_padding(bytes: &[u8]) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let mut output = [0u8; KECCAK_OUTPUT_BYTES];
 
     let mut hasher = Keccak::v256();
     hasher.update(bytes);

@@ -82,6 +82,12 @@ pub mod variable;
 /// KECCAK Lookup bits
 pub const KECCAK_LOOKUP_BITS: usize = 8;
 
+/// Keccak output bytes
+///
+/// This is the number of bytes output by a single keccak
+/// query.
+pub const KECCAK_OUTPUT_BYTES: usize = 32;
+
 /// Default unusable rows
 pub const DEFAULT_UNUSABLE_ROWS: usize = 109;
 
@@ -823,7 +829,7 @@ where
             .into_iter()
             .map(|byte| ctx.load_constant(F::from(byte as u64)))
             .collect_vec();
-        let mut domain_tag = Vec::with_capacity(32);
+        let mut domain_tag = Vec::with_capacity(KECCAK_OUTPUT_BYTES);
         for (without_commitment, with_commitment) in domain_tag_groth16
             .into_iter()
             .zip_eq(domain_tag_groth16_with_commitment.into_iter())
@@ -979,7 +985,11 @@ where
         keccak: &mut KeccakChip<F>,
         proof_id: &[AssignedValue<F>],
     ) -> Vec<AssignedValue<F>> {
-        assert_eq!(proof_id.len(), 32, "Invalid number of bytes in proof id");
+        assert_eq!(
+            proof_id.len(),
+            KECCAK_OUTPUT_BYTES,
+            "Invalid number of bytes in proof id"
+        );
         keccak.keccak_fixed_len(ctx, range, proof_id.to_vec());
         keccak
             .fixed_len_queries()
@@ -1039,7 +1049,7 @@ where
     ) -> Vec<Vec<AssignedValue<F>>> {
         let mut proof_ids = proof_ids
             .iter()
-            .chunks(32)
+            .chunks(KECCAK_OUTPUT_BYTES)
             .into_iter()
             .map(|chunk| chunk.into_iter().copied().collect_vec())
             .collect_vec();
@@ -1090,7 +1100,7 @@ where
         keccak: &mut KeccakChip<F>,
         proof_ids: &[AssignedValue<F>],
         num_proof_ids: AssignedValue<F>,
-    ) -> [AssignedValue<F>; 32] {
+    ) -> [AssignedValue<F>; KECCAK_OUTPUT_BYTES] {
         let mut current_row =
             Self::compute_leaves(ctx, range, keccak, proof_ids, num_proof_ids);
         let num_leaves = current_row.len();
@@ -1110,12 +1120,14 @@ where
             subtree_roots.push(current_row[0].clone());
         }
 
+        assert_eq!(subtree_roots.len(), depth, "Inconsistent MT depth");
+
         // This is just a matrix transposition
-        (0..32)
+        (0..KECCAK_OUTPUT_BYTES)
             .map(|i| subtree_roots.iter().map(|inner| inner[i]).collect_vec())
-            // For each column, we select the byte determined by the next power
-            // of two
             .map(|inner| {
+                // The inner product with the `next_power_of_two` bit decomposition
+                // selects the ith byte from the `subtree_roots` ith bytes.
                 range
                     .gate
                     .inner_product(ctx, inner, next_power_of_two.clone())
@@ -1562,11 +1574,11 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
         inputs: &Self::InstanceInputs,
     ) -> Vec<Fr> {
         let (proof_ids, padded_inputs): (
-            Vec<[u8; 32]>,
+            Vec<[u8; KECCAK_OUTPUT_BYTES]>,
             Vec<KeccakPaddedCircuitInput<Fr>>,
         ) = {
             let input_slice = &inputs.inputs;
-            let proof_ids: Vec<[u8; 32]> = input_slice
+            let proof_ids: Vec<[u8; KECCAK_OUTPUT_BYTES]> = input_slice
                 .iter()
                 .map(|i| {
                     let circuit_id =
