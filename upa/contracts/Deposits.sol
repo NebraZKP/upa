@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./IUpaVerifier.sol";
+import "./IDeposits.sol";
 
 error NoPendingWithdrawal();
 error InsufficientNotice();
@@ -21,7 +22,7 @@ error AggregatorAddressIsZero();
 
 /// Contract that off-chain aggregators may use for handling fee deposits,
 /// payments, and claims.
-contract Deposits is EIP712 {
+contract Deposits is IDeposits, EIP712 {
     struct SubmitterAccount {
         /// Remaining balance held by the Submitter
         uint256 balance;
@@ -128,7 +129,8 @@ contract Deposits is EIP712 {
         accounts[msg.sender].pendingWithdrawalInitializedAtBlock = block.number;
     }
 
-    /// Perform a withdrawal.
+    /// Perform a withdrawal. You must first call `initiateWithdrawal` at least
+    /// `WITHDRAWAL_NOTICE_BLOCKS` in advance of withdrawing.
     function withdraw(uint256 amountWei) external {
         // There must be a pending withdrawal
         require(
@@ -279,5 +281,23 @@ contract Deposits is EIP712 {
             UnauthorizedAggregatorAccount()
         );
         _;
+    }
+
+    function eip712Domain()
+        public
+        view
+        virtual
+        override(EIP712, IDeposits)
+        returns (
+            bytes1 fields,
+            string memory name,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        )
+    {
+        return EIP712.eip712Domain();
     }
 }
