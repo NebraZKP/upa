@@ -15,7 +15,8 @@ import {
   upa,
 } from "@nebrazkp/upa/sdk";
 import { options, config } from "@nebrazkp/upa/tool";
-const { keyfile, endpoint, password, submissionEndpoint } = options;
+const { keyfile, endpoint, password, submissionEndpoint, depositContract } =
+  options;
 const { loadWallet, upaFromInstanceFile } = config;
 import * as ethers from "ethers";
 import { command, number, option, optional, string } from "cmd-ts";
@@ -44,11 +45,7 @@ export const submitOffchain = command({
       defaultValue: () => 1,
       description: "The number of proofs to send.",
     }),
-    depositContract: option({
-      type: string,
-      long: "deposit-contract",
-      description: "Address of the aggregator's deposit contract",
-    }),
+    depositContract: depositContract(),
     submissionEndpoint: submissionEndpoint(),
     nonceString: option({
       type: optional(string),

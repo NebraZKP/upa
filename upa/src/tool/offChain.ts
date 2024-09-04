@@ -18,6 +18,7 @@ import {
   keyfile,
   vkProofInputsBatchFilePositional,
   submissionEndpoint,
+  depositContract,
   endpoint,
 } from "./options";
 import {
@@ -37,23 +38,6 @@ import { ethers } from "ethers";
 import { Deposits__factory } from "../../typechain-types";
 import fs from "fs";
 import { config, options } from ".";
-
-function depositContract() {
-  return option({
-    type: string,
-    long: "deposit-contract",
-    description:
-      "Aggregator's deposit contract (DEPOSIT_CONTRACT or query server)",
-    defaultValue: () => {
-      const val = process.env.DEPOSIT_CONTRACT;
-      if (val) {
-        return val;
-      }
-
-      throw "deposit contract not specified";
-    },
-  });
-}
 
 export const submit = command({
   name: "submit",
