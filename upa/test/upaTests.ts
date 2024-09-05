@@ -9,7 +9,7 @@ import {
 } from "../src/sdk/utils";
 import { loadAppVK } from "../src/tool/config";
 import { readFileSync } from "fs";
-import { Signer, ContractTransactionResponse } from "ethers";
+import { ContractTransactionResponse } from "ethers";
 import {
   CircuitIdProofAndInputs,
   Groth16VerifyingKey,
@@ -21,8 +21,6 @@ import {
   isProofVerifiedSingle,
   isProofVerifiedMulti,
   submitProofs,
-  UpaInstanceDescriptor,
-  upaInstanceFromDescriptor,
   UpaInstance,
   isSubmissionVerified,
   isSubmissionVerifiedById,
@@ -37,7 +35,7 @@ import {
   evmLeafHashFn,
 } from "../src/sdk/merkleUtils";
 import {
-  OffChainSubmission,
+  SubmissionDescriptor,
   Submission,
   ZERO_BYTES32,
 } from "../src/sdk/submission";
@@ -47,9 +45,12 @@ import {
 } from "../src/sdk/aggregatedProofParams";
 import { UpaFixedGasFee__factory } from "../typechain-types";
 import { SubmissionProof } from "../src/sdk/submission";
-import * as fs from "fs";
-import { deployUpa } from "../src/tool/deploy";
-import assert from "assert";
+import {
+  deployUpaWithVerifier,
+  deployUpaDummyVerifier,
+  deployAndUpgradeUpa,
+  DeployResult,
+} from "./deploy";
 
 /// The type of objects passed to `parseLog`.
 type Log = { topics: Array<string>; data: string };
@@ -116,73 +117,10 @@ export const pf_comm = new CompressedGroth16Proof(
   ["13"]
 ).decompress()!;
 
-export type DeployResult = {
-  upa: UpaInstance;
-  upaDesc: UpaInstanceDescriptor;
-  owner: Signer;
-  worker: Signer;
-  feeRecipient: Signer;
-  user1: Signer;
-  user2: Signer;
-};
-
-// UPA tests
-
-export async function deployUpaWithVerifier(
-  verifier?: string,
-  maxNumPublicInputs?: number,
-  version?: string
-): Promise<DeployResult> {
-  const [deployer, owner, worker, feeRecipient, user1, user2] =
-    await ethers.getSigners();
-
-  verifier = verifier || "test/data/outer_2_2.verifier.bin";
-  maxNumPublicInputs = maxNumPublicInputs || 16;
-  const contract_hex = "0x" + fs.readFileSync(verifier, "utf-8").trim();
-
-  const upaDesc = await deployUpa(
-    deployer,
-    contract_hex,
-    maxNumPublicInputs,
-    3 /*maxRetries*/,
-    false /*prepare*/,
-    undefined /*groth16Verifier*/,
-    owner.address,
-    worker.address,
-    feeRecipient.address /* feeRecipient */,
-    undefined /* feeInGas */,
-    undefined /* aggregatorCollateral */,
-    undefined /* fixedReimbursement */,
-    version
-  );
-  assert(upaDesc);
-  const upa = await upaInstanceFromDescriptor(upaDesc, owner);
-
-  return { upa, upaDesc: upaDesc, owner, worker, feeRecipient, user1, user2 };
-}
-
-export async function deployUpaDummyVerifier(version?: string) {
-  return deployUpaWithVerifier("test/data/test.bin", undefined, version);
-}
-
-export async function deployAndUpgradeUpa() {
-  const { upa, upaDesc, owner, worker, user1, user2 } =
-    await deployUpaWithVerifier();
-
-  return {
-    upa,
-    upaDesc,
-    owner,
-    worker,
-    user1,
-    user2,
-  };
-}
-
 export type DeployAndSubmitResult = DeployResult & {
-  s1: OffChainSubmission;
-  s2: OffChainSubmission;
-  s3: OffChainSubmission;
+  s1: SubmissionDescriptor;
+  s2: SubmissionDescriptor;
+  s3: SubmissionDescriptor;
   s1_tx: ContractTransactionResponse;
   s2_tx: ContractTransactionResponse;
   s3_tx: ContractTransactionResponse;
@@ -196,7 +134,7 @@ export type DeployAndSubmitResult = DeployResult & {
 export async function makeSubmissions(
   upa: UpaInstance
 ): Promise<
-  [OffChainSubmission, OffChainSubmission, OffChainSubmission, string]
+  [SubmissionDescriptor, SubmissionDescriptor, SubmissionDescriptor, string]
 > {
   const { verifier } = upa;
   const vk = loadAppVK("../circuits/src/tests/data/vk.json");
@@ -1547,7 +1485,7 @@ describe("UPA", async () => {
         expect(numSubmissions * submissionSize).eql(AGG_BATCH_SIZE);
 
         let proofIdx = 0;
-        const submissions: OffChainSubmission[] = [];
+        const submissions: SubmissionDescriptor[] = [];
         for (
           let submissionIdx = 0;
           submissionIdx < numSubmissions;
@@ -1564,7 +1502,9 @@ describe("UPA", async () => {
           }
 
           const submission =
-            OffChainSubmission.fromCircuitIdsProofsAndInputs(submissionParams);
+            SubmissionDescriptor.fromCircuitIdsProofsAndInputs(
+              submissionParams
+            );
           {
             const submitTx = await submitProofs(
               verifier,

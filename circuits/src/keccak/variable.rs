@@ -1,8 +1,6 @@
 //! Variable base keccak utility functions
 
 use super::utils::bytes_to_keccak_padded_words;
-#[cfg(test)]
-use super::{utils::byte_decomposition_list, AssignedKeccakInput};
 use crate::utils::bitmask::{first_i_bits_bitmask, ith_bit_bitmask};
 use ark_std::log2;
 use halo2_base::{
@@ -14,6 +12,9 @@ use zkevm_keccak::util::{
     eth_types::Field, pack, unpack, NUM_BYTES_PER_WORD, NUM_WORDS_TO_ABSORB,
     RATE,
 };
+
+#[cfg(test)]
+use super::{utils::byte_decomposition_list, AssignedKeccakInput};
 
 /// Number of bytes per field element. Because we are working with fields which
 /// implement [`Field`], we can take this to be 32.

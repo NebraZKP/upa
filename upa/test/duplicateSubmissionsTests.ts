@@ -1,14 +1,11 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import {
-  DeployResult,
-  deployUpaDummyVerifier,
-  makeSubmissions,
-} from "./upaTests";
+import { makeSubmissions } from "./upaTests";
+import { DeployResult, deployUpaDummyVerifier } from "./deploy";
 import { Submission, UpaClient } from "../src/sdk";
 import { strict as assert } from "assert";
 import { dummyProofData, updateFeeOptions } from "../src/sdk/upa";
-import { OffChainSubmission } from "../src/sdk/submission";
+import { SubmissionDescriptor } from "../src/sdk/submission";
 import {
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
@@ -19,9 +16,9 @@ import {
 ///   2: [ pf_b, pf_c, pf_d ]  (Merkle depth 2, not full)
 ///   3: [ pf_e, pf_f ]        (Merkle depth 2, full)
 type DeployResultAndSubs = DeployResult & {
-  s1: OffChainSubmission;
-  s2: OffChainSubmission;
-  s3: OffChainSubmission;
+  s1: SubmissionDescriptor;
+  s2: SubmissionDescriptor;
+  s3: SubmissionDescriptor;
   cid_a: string;
 };
 

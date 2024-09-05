@@ -36,6 +36,8 @@ error OwnerAddressIsZero();
 error WorkerAddressIsZero();
 error FeeRecipientAddressIsZero();
 error OuterVerifierAddressIsZero();
+error SidOuterVerifierAddressIsZero();
+error BothOuterVerifierAddressesAreZero();
 error Groth16VerifierAddressIsZero();
 error UnauthorizedWorkerAccount();
 error UnauthorizedFeeRecipientAccount();
@@ -129,6 +131,8 @@ contract UpaVerifier is
         mapping(bytes32 => uint256) verifiedAtBlock;
         /// Contract version
         uint32 version;
+        /// Outer verifier for the circuit which outputs the submission id
+        address sidOuterVerifier;
     }
 
     /// Gas per transaction.
@@ -138,6 +142,8 @@ contract UpaVerifier is
     uint256 private constant MAX_FIXED_REIMBURSEMENT = (1 << 128);
 
     event UpgradeOuterVerifier(address);
+
+    event UpgradeSidOuterVerifier(address);
 
     // keccak256(abi.encode(uint256(keccak256("VerifierStorage")) - 1)) &
     // ~bytes32(uint256(0xff));
@@ -166,6 +172,10 @@ contract UpaVerifier is
         return _getVerifierStorage().outerVerifier;
     }
 
+    function sidOuterVerifier() public view returns (address) {
+        return _getVerifierStorage().sidOuterVerifier;
+    }
+
     function nextSubmissionIdxToVerify() public view returns (uint64) {
         return _getVerifierStorage().nextSubmissionIdxToVerify;
     }
@@ -191,12 +201,15 @@ contract UpaVerifier is
         uint256 _fixedFeePerProof,
         uint256 _aggregatorCollateral,
         uint8 _maxNumPublicInputs,
+        address _sidOuterVerifier,
         uint32 _version
     ) public initializer {
         require(_owner != address(0), OwnerAddressIsZero());
         require(_worker != address(0), WorkerAddressIsZero());
         require(_feeRecipient != address(0), FeeRecipientAddressIsZero());
-        require(_outerVerifier != address(0), OuterVerifierAddressIsZero());
+        if (_outerVerifier == address(0) && _sidOuterVerifier == address(0)) {
+            revert BothOuterVerifierAddressesAreZero();
+        }
         require(_groth16Verifier != address(0), Groth16VerifierAddressIsZero());
         require(_aggregatorCollateral > 0, NotEnoughCollateral());
         require(_maxNumPublicInputs >= 2, MaxNumPublicInputsTooLow());
@@ -216,6 +229,7 @@ contract UpaVerifier is
         verifierStorage.lastVerifiedSubmissionHeight = (uint64)(block.number);
         verifierStorage.fixedReimbursement = _fixedReimbursement;
         verifierStorage.version = _version;
+        verifierStorage.sidOuterVerifier = _sidOuterVerifier;
 
         __upaProofReceiver_init(
             _owner,
@@ -377,6 +391,39 @@ contract UpaVerifier is
         verifiedSubmissionHeight = submissionBlockNumber;
     }
 
+    /// Verify an aggregated proof with the `sidOuterVerifier`.
+    function verifyAggregatedProofSid(
+        bytes calldata proof
+    ) external onlyWorker {
+        // Compute submissionId from the calldata
+        uint256 proofL;
+        uint256 proofH;
+        assembly {
+            proofL := calldataload(add(proof.offset, /* 12 * 0x20 */ 0x180))
+            proofH := calldataload(add(proof.offset, /* 13 * 0x20 */ 0x1a0))
+        }
+        bytes32 submissionId = UpaLib.fieldElementsAsDigest(proofL, proofH);
+
+        VerifierStorage storage verifierStorage = _getVerifierStorage();
+
+        // require there is a sidOuterVerifier contract
+        require(
+            verifierStorage.sidOuterVerifier != address(0),
+            SidOuterVerifierAddressIsZero()
+        );
+
+        // Call the verifier to check the proof
+        (bool success, ) = verifierStorage.sidOuterVerifier.call(proof);
+        require(success, InvalidProof());
+
+        // Mark the submission Id as verified
+        if (verifierStorage.verifiedAtBlock[submissionId] == 0) {
+            verifierStorage.verifiedAtBlock[submissionId] = block.number;
+
+            emit SubmissionVerified(submissionId);
+        }
+    }
+
     /// Verify an aggregated proof.
     ///
     /// `proof` - An aggregated proof for the validity of this batch.
@@ -405,6 +452,12 @@ contract UpaVerifier is
         require(proofIds.length <= type(uint16).max, TooManyProofIds());
 
         VerifierStorage storage verifierStorage = _getVerifierStorage();
+
+        // require there is an outerVerifier contract
+        require(
+            verifierStorage.outerVerifier != address(0),
+            OuterVerifierAddressIsZero()
+        );
 
         // Proofs must appear in the order they were submitted, and (for
         // multi-proof submission) in the order they appear within submission,
@@ -709,6 +762,12 @@ contract UpaVerifier is
         return verifierStorage.verifiedAtBlock[submissionId] > 0;
     }
 
+    function offChainSubmissionVerifiedAtBlock(
+        bytes32 submissionId
+    ) external view returns (uint256) {
+        return _getVerifierStorage().verifiedAtBlock[submissionId];
+    }
+
     /// Checks that `proofId` and `proofDigest` correspond to the first
     /// unproven proof in the submission with `submissionId`.  If so, it
     /// updates the state to reflect that it is valid now.  Returns `true` if
@@ -907,14 +966,20 @@ contract UpaVerifier is
         address _outerVerifier,
         uint8 _maxNumPublicInputs
     ) public onlyOwner {
-        require(_outerVerifier != address(0), OuterVerifierAddressIsZero());
-
         emit UpgradeOuterVerifier(_outerVerifier);
-
         setMaxNumPublicInputs(_maxNumPublicInputs);
         // TODO (#563): Make sure the fee model here matches the proof
         // receiver's fee model.
         _getVerifierStorage().outerVerifier = _outerVerifier;
+    }
+
+    function setSidOuterVerifier(
+        address _sidOuterVerifier,
+        uint8 _maxNumPublicInputs
+    ) public onlyOwner {
+        emit UpgradeSidOuterVerifier(_sidOuterVerifier);
+        setMaxNumPublicInputs(_maxNumPublicInputs);
+        _getVerifierStorage().sidOuterVerifier = _sidOuterVerifier;
     }
 
     modifier onlyWorker() {

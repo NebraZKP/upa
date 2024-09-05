@@ -11,8 +11,8 @@ use crate::{
 };
 use circuits::{
     keccak::{
-        utils::keccak_inputs_from_ubv_instances, KeccakCircuit, KeccakConfig,
-        KeccakGateConfig,
+        inputs::KeccakCircuitInputs, utils::keccak_inputs_from_ubv_instances,
+        KeccakCircuit, KeccakConfig, KeccakGateConfig,
     },
     SafeCircuit,
 };
@@ -30,8 +30,8 @@ use std::time::Instant;
 
 #[derive(Parser, Debug)]
 pub struct ProveParams {
-    #[arg(short = 'c', long, value_name = "config-file", default_value = UPA_CONFIG)]
     /// Configuration file
+    #[arg(short = 'c', long, value_name = "config-file", default_value = UPA_CONFIG)]
     pub(crate) config: String,
 
     #[arg(short = 's', long, value_name = "srs-file", default_value = KECCAK_SRS)]
@@ -40,24 +40,33 @@ pub struct ProveParams {
     #[arg(short = 'p', long, value_name = "proving-key-file", default_value = KECCAK_PK)]
     pub(crate) proving_key: String,
 
-    #[arg(short = 'g', long, value_name = "gate-config-file", default_value = KECCAK_GATE_CONFIG)]
     /// Circuit specs file (KeccakGateConfig)
+    #[arg(short = 'g', long, value_name = "gate-config-file", default_value = KECCAK_GATE_CONFIG)]
     pub(crate) gate_config: String,
 
-    #[arg(short = 'i', long, value_name = "ubv-inputs-file")]
     /// Public input files for each BV circuit
+    #[arg(short = 'i', long, value_name = "ubv-inputs-file")]
     pub(crate) ubv_instances: Vec<String>,
 
-    #[arg(long, value_name = "proof-file", default_value = KECCAK_PROOF)]
+    /// Number of proof ids.
+    ///
+    /// # Note
+    ///
+    /// This number must be provided if and only if the circuit outputs the
+    /// submissionId, which is specified in the config.
+    #[arg(long, value_name = "num-proof-ids")]
+    pub(crate) num_proof_ids: Option<u64>,
+
     /// Output proof file
+    #[arg(long, value_name = "proof-file", default_value = KECCAK_PROOF)]
     pub(crate) proof: String,
 
-    #[arg(long, value_name = "instance-file")]
     /// Output instance file (defaults to <proof-file>.instance if not given)
+    #[arg(long, value_name = "instance-file")]
     pub(crate) instance: Option<String>,
 
-    #[arg(short = 'n', long)]
     /// Do nothing
+    #[arg(short = 'n', long)]
     pub(crate) dry_run: bool,
 }
 
@@ -71,6 +80,12 @@ pub fn prove(params: ProveParams) {
 
     let keccak_config: KeccakConfig =
         KeccakConfig::from_upa_config_file(&params.config);
+
+    assert_eq!(
+        keccak_config.output_submission_id,
+        params.num_proof_ids.is_some(),
+        "Config incompatible with inputs"
+    );
 
     let keccak_inputs = {
         // Outer Vec indexes BV proof, inner vec is inputs to given BV proof
@@ -91,7 +106,10 @@ pub fn prove(params: ProveParams) {
         info!("dry-run.  computing instance and exiting");
         let instance = KeccakCircuit::<_, G1Affine>::compute_instance(
             &keccak_config,
-            &keccak_inputs.into(),
+            &KeccakCircuitInputs {
+                inputs: keccak_inputs,
+                num_proof_ids: params.num_proof_ids,
+            },
         );
         save_instance(&instance_file, &instance);
         return;
@@ -124,7 +142,10 @@ pub fn prove(params: ProveParams) {
             &keccak_config,
             &gate_config,
             break_points,
-            &keccak_inputs.into(),
+            &KeccakCircuitInputs {
+                inputs: keccak_inputs,
+                num_proof_ids: params.num_proof_ids,
+            },
         );
 
         // TODO: better interface for instance.  Avoid copy when returning.

@@ -10,8 +10,9 @@ use self::{
     utils::{
         byte_decomposition, byte_decomposition_list,
         compose_into_field_element, compute_final_digest, compute_proof_id,
-        digest_as_field_elements, encode_digest_as_field_elements,
-        g1_point_limbs_to_bytes, g2_point_limbs_to_bytes,
+        compute_submission_id, digest_as_field_elements,
+        encode_digest_as_field_elements, g1_point_limbs_to_bytes,
+        g2_point_limbs_to_bytes,
     },
 };
 use crate::{
@@ -26,6 +27,7 @@ use crate::{
         },
     },
     utils::{
+        bitmask::first_i_bits_bitmask,
         commitment_point::{
             commitment_hash_from_commitment_point_limbs, g1affine_into_limbs,
             g2affine_into_limbs, limbs_into_g1affine, limbs_into_g2affine,
@@ -62,12 +64,13 @@ use halo2_base::{
         SerdeFormat,
     },
     utils::ScalarField,
-    AssignedValue, Context, SKIP_FIRST_PASS,
+    AssignedValue, Context, QuantumCell, SKIP_FIRST_PASS,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use snark_verifier_sdk::CircuitExt;
 use std::env::{set_var, var};
+use utils::compute_next_power_of_two_bit_decomposition;
 use zkevm_keccak::{util::eth_types::Field, KeccakConfig as KeccakBaseConfig};
 
 pub mod chip;
@@ -78,6 +81,12 @@ pub mod variable;
 
 /// KECCAK Lookup bits
 pub const KECCAK_LOOKUP_BITS: usize = 8;
+
+/// Keccak output bytes
+///
+/// This is the number of bytes output by a single keccak
+/// query.
+pub const KECCAK_OUTPUT_BYTES: usize = 32;
 
 /// Default unusable rows
 pub const DEFAULT_UNUSABLE_ROWS: usize = 109;
@@ -123,6 +132,10 @@ pub struct KeccakConfig {
     /// Log-2 of the number of rows allocated for lookup tables. Usually
     /// `degree_bits - 1`.
     pub lookup_bits: usize,
+    /// Output submission Id. If `true`, the circuit outputs the submissionId of
+    /// the proofIds it computes as the final digest. If `false`, it outputs the
+    /// keccak hash of all proofIds.
+    pub output_submission_id: bool,
 }
 
 impl KeccakConfig {
@@ -139,6 +152,7 @@ impl From<&UpaConfig> for KeccakConfig {
             inner_batch_size: config.inner_batch_size,
             outer_batch_size: config.outer_batch_size,
             lookup_bits: config.keccak_config.lookup_bits,
+            output_submission_id: config.output_submission_id,
         }
     }
 }
@@ -471,9 +485,12 @@ where
 /// proving key (namely, the vk_hash followed by all app public inputs). Note,
 /// this does NOT represent an instance of the circuit.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct KeccakPaddedCircuitInputs<F: EccPrimeField<Repr = [u8; 32]>>(
-    pub(crate) Vec<KeccakPaddedCircuitInput<F>>,
-);
+pub(crate) struct KeccakPaddedCircuitInputs<F: EccPrimeField<Repr = [u8; 32]>> {
+    pub(crate) inputs: Vec<KeccakPaddedCircuitInput<F>>,
+    /// Number of proof ids to take into account for the submission id
+    /// computation
+    pub(crate) num_proof_ids: Option<F>,
+}
 
 impl<F> KeccakPaddedCircuitInputs<F>
 where
@@ -482,8 +499,9 @@ where
     pub(crate) fn from_var_len_inputs(
         value: &[KeccakVarLenInput<F>],
         max_num_public_inputs: usize,
+        num_proof_ids: Option<u64>,
     ) -> Self {
-        let circuit_inputs: Vec<KeccakPaddedCircuitInput<F>> = value
+        let inputs: Vec<KeccakPaddedCircuitInput<F>> = value
             .iter()
             .map(|var_len_input| {
                 KeccakPaddedCircuitInput::from_var_len_input(
@@ -492,8 +510,12 @@ where
                 )
             })
             .collect();
+        let num_proof_ids = num_proof_ids.map(F::from);
 
-        KeccakPaddedCircuitInputs(circuit_inputs)
+        KeccakPaddedCircuitInputs {
+            inputs,
+            num_proof_ids,
+        }
     }
 
     pub(crate) fn from_keccak_circuit_inputs(
@@ -501,8 +523,9 @@ where
         max_num_public_inputs: usize,
     ) -> Self {
         KeccakPaddedCircuitInputs::from_var_len_inputs(
-            &value.0,
+            &value.inputs,
             max_num_public_inputs,
+            value.num_proof_ids,
         )
     }
 }
@@ -510,24 +533,32 @@ where
 impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakPaddedCircuitInputs<F> {
     /// Creates some dummy [`KeccakPaddedCircuitInputs`] for `config` with `input_type`.
     pub fn dummy(config: &KeccakConfig) -> Self {
-        Self(
-            (0..config.inner_batch_size * config.outer_batch_size)
+        let num_proof_ids = config.output_submission_id.then_some(F::from(
+            (config.inner_batch_size * config.outer_batch_size) as u64,
+        ));
+        Self {
+            inputs: (0..config.inner_batch_size * config.outer_batch_size)
                 .map(|_| KeccakPaddedCircuitInput::dummy(config))
                 .collect(),
-        )
+            num_proof_ids,
+        }
     }
 
     /// Checks if `self` consists of valid public inputs for `config`.
     pub fn is_well_constructed(&self, config: &KeccakConfig) -> bool {
         // Total number of inputs should match `inner_batch_size` * `outer_batch_size`
         if config.inner_batch_size * config.outer_batch_size
-            != self.0.len() as u32
+            != self.inputs.len() as u32
         {
             return false;
         }
 
+        if config.output_submission_id ^ self.num_proof_ids.is_some() {
+            return false;
+        }
+
         // Each individual input should be well-constructed.
-        self.0.iter().all(|input| {
+        self.inputs.iter().all(|input| {
             KeccakPaddedCircuitInput::is_well_constructed(input, config)
         })
     }
@@ -702,9 +733,16 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
 
 /// Assigned Keccak Inputs
 #[derive(Clone, Debug)]
-pub(crate) struct AssignedKeccakInputs<F: ScalarField>(
-    pub Vec<AssignedKeccakInput<F>>,
-);
+pub(crate) struct AssignedKeccakInputs<F: ScalarField> {
+    pub inputs: Vec<AssignedKeccakInput<F>>,
+    /// Number of proof ids for the submission id computation.
+    /// Note: this is a witness and not part of the instance
+    #[allow(dead_code)] // Kept for consistency with the other two
+    // keccak input structs. Also it is useful in case we want to make
+    // num_proof_ids a public input (instead of a witness) in the
+    // future
+    pub num_proof_ids: Option<AssignedValue<F>>,
+}
 
 impl<F> AssignedKeccakInputs<F>
 where
@@ -712,7 +750,7 @@ where
 {
     /// Flattens `self`.
     pub fn to_instance_values(&self) -> Vec<AssignedValue<F>> {
-        self.0
+        self.inputs
             .iter()
             .flat_map(AssignedKeccakInput::to_instance_values)
             .collect()
@@ -791,7 +829,7 @@ where
             .into_iter()
             .map(|byte| ctx.load_constant(F::from(byte as u64)))
             .collect_vec();
-        let mut domain_tag = Vec::with_capacity(32);
+        let mut domain_tag = Vec::with_capacity(KECCAK_OUTPUT_BYTES);
         for (without_commitment, with_commitment) in domain_tag_groth16
             .into_iter()
             .zip_eq(domain_tag_groth16_with_commitment.into_iter())
@@ -940,6 +978,203 @@ where
         ctx.constrain_equal(&commitment_hash, &assigned_input.commitment_hash);
     }
 
+    /// Computes the Merkle leaf corresponding to `proof_id`.
+    fn compute_leaf(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        proof_id: &[AssignedValue<F>],
+    ) -> Vec<AssignedValue<F>> {
+        assert_eq!(
+            proof_id.len(),
+            KECCAK_OUTPUT_BYTES,
+            "Invalid number of bytes in proof id"
+        );
+        keccak.keccak_fixed_len(ctx, range, proof_id.to_vec());
+        keccak
+            .fixed_len_queries()
+            .last()
+            .expect("Retrieving the last keccak query is not allowed to fail")
+            .output_bytes_assigned()
+            .to_vec()
+    }
+
+    /// Hashes `left_node` with `right_node`.
+    fn hash_pair(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        left_node: &[AssignedValue<F>],
+        right_node: &[AssignedValue<F>],
+    ) -> Vec<AssignedValue<F>> {
+        let mut input_bytes = left_node.to_vec();
+        input_bytes.extend_from_slice(right_node);
+        keccak.keccak_fixed_len(ctx, range, input_bytes);
+        keccak
+            .fixed_len_queries()
+            .last()
+            .expect("Retrieving the last keccak query is not allowed to fail")
+            .output_bytes_assigned()
+            .to_vec()
+    }
+
+    /// Pairwise hashes all elements of `row`.
+    fn hash_row(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        row: Vec<Vec<AssignedValue<F>>>,
+    ) -> Vec<Vec<AssignedValue<F>>> {
+        let number_of_nodes = row.len();
+        let mut next_row = Vec::with_capacity(number_of_nodes / 2);
+        for i in (0..number_of_nodes).step_by(2) {
+            next_row.push(Self::hash_pair(
+                ctx,
+                range,
+                keccak,
+                &row[i],
+                &row[i + 1],
+            ));
+        }
+        next_row
+    }
+
+    /// Groups `proof_ids` in groups of 32 bytes (each representing a proof id).
+    /// Keeps the first `num_proof_ids` groups and replaces the rest with zeroes.
+    fn pad_proof_ids(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
+    ) -> Vec<Vec<AssignedValue<F>>> {
+        let mut proof_ids = proof_ids
+            .iter()
+            .chunks(KECCAK_OUTPUT_BYTES)
+            .into_iter()
+            .map(|chunk| chunk.into_iter().copied().collect_vec())
+            .collect_vec();
+        let total_num_proof_ids = proof_ids.len();
+        assert_eq!(
+            (total_num_proof_ids & (total_num_proof_ids - 1)),
+            0,
+            "The number of (padded) proof ids must be a power of two in submission id mode"
+        );
+
+        let zero = ctx.load_constant(F::zero());
+        let bitmask = first_i_bits_bitmask(
+            ctx,
+            &range.gate,
+            num_proof_ids,
+            total_num_proof_ids as u64,
+        );
+
+        for (proof_id, bit) in proof_ids.iter_mut().zip(bitmask.iter()) {
+            for byte in proof_id.iter_mut() {
+                *byte = range.gate.select(ctx, *byte, zero, *bit)
+            }
+        }
+
+        proof_ids
+    }
+
+    /// Computes the leaves of the Merkle tree from `proof_ids`,
+    fn compute_leaves(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
+    ) -> Vec<Vec<AssignedValue<F>>> {
+        let proof_ids =
+            Self::pad_proof_ids(ctx, range, proof_ids, num_proof_ids);
+        proof_ids
+            .into_iter()
+            .map(|proof_id| Self::compute_leaf(ctx, range, keccak, &proof_id))
+            .collect_vec()
+    }
+
+    /// Computes the submission id from `proof_ids` as bytes.
+    pub(crate) fn compute_submission_id_bytes(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
+    ) -> [AssignedValue<F>; KECCAK_OUTPUT_BYTES] {
+        let mut current_row =
+            Self::compute_leaves(ctx, range, keccak, proof_ids, num_proof_ids);
+        let num_leaves = current_row.len();
+        let depth = (num_leaves.ilog2() + 1) as usize;
+        let next_power_of_two = compute_next_power_of_two_bit_decomposition(
+            ctx,
+            range,
+            num_proof_ids,
+            depth,
+        )
+        .into_iter()
+        .map(QuantumCell::from);
+
+        let mut subtree_roots = vec![current_row[0].clone()];
+        while current_row.len() > 1 {
+            current_row = Self::hash_row(ctx, range, keccak, current_row);
+            subtree_roots.push(current_row[0].clone());
+        }
+
+        assert_eq!(subtree_roots.len(), depth, "Inconsistent MT depth");
+
+        // This is just a matrix transposition
+        (0..KECCAK_OUTPUT_BYTES)
+            .map(|i| subtree_roots.iter().map(|inner| inner[i]).collect_vec())
+            .map(|inner| {
+                // The inner product with the `next_power_of_two` bit decomposition
+                // selects the ith byte from the `subtree_roots` ith bytes.
+                range
+                    .gate
+                    .inner_product(ctx, inner, next_power_of_two.clone())
+            })
+            .collect_vec()
+            .try_into()
+            .expect("Conversion from vector to array is not allowed to fail")
+    }
+
+    /// Computes the submission id from `proof_ids`.
+    fn compute_submission_id(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        proof_ids: &[AssignedValue<F>],
+        num_proof_ids: AssignedValue<F>,
+    ) -> [AssignedValue<F>; 2] {
+        let submission_id_bytes = Self::compute_submission_id_bytes(
+            ctx,
+            range,
+            keccak,
+            proof_ids,
+            num_proof_ids,
+        );
+        encode_digest_as_field_elements(ctx, range, &submission_id_bytes)
+    }
+
+    /// Computes the final digest as the keccak hash of all `proof_ids`.
+    fn compute_linear_final_digest(
+        ctx: &mut Context<F>,
+        range: &RangeChip<F>,
+        keccak: &mut KeccakChip<F>,
+        proof_ids: &[AssignedValue<F>],
+    ) -> [AssignedValue<F>; 2] {
+        keccak.keccak_fixed_len(ctx, range, proof_ids.to_vec());
+        let public_output_bytes = keccak
+            .fixed_len_queries()
+            .last()
+            .expect("Retrieving the last keccak query is not allowed to fail")
+            .output_bytes_assigned();
+        let public_output_bytes = public_output_bytes
+            .to_vec()
+            .try_into()
+            .expect("Conversion from vector to array is not allowed to fail");
+        encode_digest_as_field_elements(ctx, range, &public_output_bytes)
+    }
+
     /// Instantiates a new [`KeccakCircuit`] from `degree_bits`, `builder` and `inputs`.
     fn new(
         config: &KeccakConfig,
@@ -952,7 +1187,21 @@ where
         let range = RangeChip::default(lookup_bits);
         let mut keccak = KeccakChip::default();
         let mut public_inputs = Vec::new();
-        for input in inputs.0 {
+        // Assign and constrain `num_proof_ids`
+        assert!(
+            config.output_submission_id ^ inputs.num_proof_ids.is_none(),
+            "Config incompatible with inputs"
+        );
+        let num_proof_ids =
+            inputs.num_proof_ids.map(|npi| ctx.load_witness(npi));
+        if config.output_submission_id {
+            range.check_less_than_safe(
+                ctx,
+                num_proof_ids.expect("Num proof ids has been assigned before"),
+                (config.inner_batch_size * config.outer_batch_size + 1).into(),
+            );
+        }
+        for input in inputs.inputs {
             let assigned_input = AssignedKeccakInput::from_keccak_padded_input(
                 ctx, &range, input,
             );
@@ -984,25 +1233,28 @@ where
         // Here we select only the even var_len_queries because those
         // contain the proofIds. The odd ones contain the circuitIds
         // which are not hashes into the final digest.
-        let intermediate_outputs = keccak
+        let proof_ids = keccak
             .var_len_queries()
             .iter()
             .skip(1)
             .step_by(2) // we skip the circuitId computations
             .flat_map(|query| query.output_bytes_assigned().to_vec())
             .collect::<Vec<_>>();
-        keccak.keccak_fixed_len(ctx, &range, intermediate_outputs);
-        let public_output_bytes = keccak
-            .fixed_len_queries()
-            .last()
-            .expect("Retrieving the last keccak query is not allowed to fail")
-            .output_bytes_assigned();
-        let public_output_bytes = public_output_bytes
-            .to_vec()
-            .try_into()
-            .expect("Conversion from vector to array is not allowed to fail");
-        let public_output =
-            encode_digest_as_field_elements(ctx, &range, &public_output_bytes);
+        let public_output = match config.output_submission_id {
+            true => Self::compute_submission_id(
+                ctx,
+                &range,
+                &mut keccak,
+                &proof_ids,
+                num_proof_ids.expect("Num proof ids has been assigned before"),
+            ),
+            false => Self::compute_linear_final_digest(
+                ctx,
+                &range,
+                &mut keccak,
+                &proof_ids,
+            ),
+        };
         // Compute optimal parameters
         let config = if witness_gen_only {
             serde_json::from_str(
@@ -1022,7 +1274,10 @@ where
             builder: RefCell::new(builder),
             break_points: RefCell::new(Default::default()),
             keccak,
-            public_inputs: AssignedKeccakInputs(public_inputs),
+            public_inputs: AssignedKeccakInputs {
+                inputs: public_inputs,
+                num_proof_ids,
+            },
             public_output,
             config,
             _marker: PhantomData,
@@ -1319,11 +1574,11 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
         inputs: &Self::InstanceInputs,
     ) -> Vec<Fr> {
         let (proof_ids, padded_inputs): (
-            Vec<[u8; 32]>,
+            Vec<[u8; KECCAK_OUTPUT_BYTES]>,
             Vec<KeccakPaddedCircuitInput<Fr>>,
         ) = {
-            let input_slice = &inputs.0;
-            let proof_ids: Vec<[u8; 32]> = input_slice
+            let input_slice = &inputs.inputs;
+            let proof_ids: Vec<[u8; KECCAK_OUTPUT_BYTES]> = input_slice
                 .iter()
                 .map(|i| {
                     let circuit_id =
@@ -1352,7 +1607,16 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
             )
         };
 
-        let final_digest = compute_final_digest(proof_ids);
+        let final_digest = match config.output_submission_id {
+            true => {
+                let num_proof_ids = inputs.num_proof_ids.expect(
+                    "Num proof ids must be provided for the submission id computation",
+                );
+                compute_submission_id(proof_ids, num_proof_ids)
+            }
+            false => compute_final_digest(proof_ids),
+        };
+
         padded_inputs
             .iter()
             .flat_map(|i| i.to_instance_values())

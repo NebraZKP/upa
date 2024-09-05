@@ -3,7 +3,6 @@ import {
   mine,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import {
-  deployUpaDummyVerifier,
   pf_a,
   pf_b,
   pf_c,
@@ -17,6 +16,7 @@ import {
   pi_e,
   pi_f,
 } from "./upaTests";
+import { deployUpaDummyVerifier } from "./deploy";
 import { UpaClient, SubmissionHandle } from "../src/sdk/client";
 import { UpaInstance, dummyProofData, updateFeeOptions } from "../src/sdk/upa";
 import { loadAppVK } from "../src/tool/config";

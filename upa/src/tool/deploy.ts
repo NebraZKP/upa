@@ -53,11 +53,18 @@ if (process.env.HARDHAT_CONFIG) {
 }
 const upgrades = importUpgrades();
 
+type DeployPrepareData = {
+  implAddress: string;
+  deployProxyTxData: string;
+  createXDeploySalt: string;
+  aggregatorCollateral: bigint;
+};
+
 type DeployArgs = {
   endpoint: string;
   keyfile: string;
   password: string;
-  verifier_bin: string;
+  verifierBin?: string;
   instance: string;
   upaConfigFile: string;
   useTestConfig: boolean;
@@ -70,6 +77,7 @@ type DeployArgs = {
   aggregatorCollateralInWei?: string;
   groth16VerifierAddress?: string;
   fixedReimbursementInWei?: string;
+  sidVerifierBin?: string;
 };
 
 const deployHandler = async function (args: DeployArgs): Promise<void> {
@@ -90,7 +98,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     endpoint,
     keyfile,
     password,
-    verifier_bin,
+    verifierBin,
     instance,
     upaConfigFile,
     useTestConfig,
@@ -101,6 +109,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     aggregatorCollateralInWei,
     groth16VerifierAddress,
     fixedReimbursementInWei,
+    sidVerifierBin,
     maxRetries,
     prepare,
   } = args;
@@ -129,10 +138,14 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     : loadUpaConfig(upaConfigFile).max_num_app_public_inputs;
 
   // Load binary contract
-  const contract_hex = "0x" + fs.readFileSync(verifier_bin, "utf-8").trim();
+  const contract_hex = verifierBin
+    ? "0x" + fs.readFileSync(verifierBin, "utf-8").trim()
+    : undefined;
+  const sid_contract_hex = sidVerifierBin
+    ? "0x" + fs.readFileSync(sidVerifierBin, "utf-8").trim()
+    : undefined;
   const upaInstance = await deployUpa(
     wallet,
-    contract_hex,
     maxNumInputs,
     maxRetries,
     prepare,
@@ -142,10 +155,32 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     feeRecipient,
     fixedFeePerProof,
     collateral,
-    fixedReimbursement
+    fixedReimbursement,
+    contract_hex,
+    sid_contract_hex
   );
   if (!prepare) {
     fs.writeFileSync(instance, JSON.stringify(upaInstance));
+  } else {
+    const {
+      implAddress,
+      deployProxyTxData,
+      createXDeploySalt,
+      aggregatorCollateral,
+    } = upaInstance as DeployPrepareData;
+
+    console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
+
+    console.log(`deployProxyTx (pass this into CreateX initcode arg):`);
+    console.log(deployProxyTxData);
+
+    console.log("createXDeploySalt");
+    console.log(createXDeploySalt);
+
+    console.log(
+      `Verifier needs to be sent ${aggregatorCollateral} Wei as` +
+        ` aggregator collateral.`
+    );
   }
 };
 
@@ -162,10 +197,15 @@ export const deploy = command({
       long: "use-test-config",
       description: "Use a default UPA config for testing",
     }),
-    verifier_bin: option({
-      type: string,
+    verifierBin: option({
+      type: optional(string),
       long: "verifier",
       description: "On-chain verifier binary",
+    }),
+    sidVerifierBin: option({
+      type: optional(string),
+      long: "sid-verifier",
+      description: "Submission-id on-chain verifier binary",
     }),
     owner: option({
       type: optional(string),
@@ -222,13 +262,55 @@ const DEFAULT_AGGREGATOR_COLLATERAL = 10000000000000000n; // 0.01 eth
 /// Default fixed reimbursement for censorship claims
 const DEFAULT_FIXED_REIMBURSEMENT = 0n;
 
-/// Deploys the UPA contract, with all dependencies.  `verifier_bin_file`
+export async function deployUpaDependencies(
+  signer: ethers.Signer,
+  nonce: number,
+  groth16Verifier?: IGroth16Verifier,
+  outerVerifierHex?: string,
+  sidVerifierHex?: string
+) {
+  assert(
+    outerVerifierHex || sidVerifierHex,
+    "At least one outer verifier must be provided"
+  );
+  // Deploy the Aggregated proof Verifier from binary
+  const binVerifierAddr = outerVerifierHex
+    ? await utils.deployBinaryContract(signer, outerVerifierHex, nonce++)
+    : undefined;
+
+  const sidVerifierAddr = sidVerifierHex
+    ? await utils.deployBinaryContract(signer, sidVerifierHex, nonce++)
+    : undefined;
+
+  // Determine groth16Verifier
+  const groth16VerifierAddr = await (async () => {
+    if (groth16Verifier) {
+      return await groth16Verifier.getAddress();
+    }
+
+    const groth16Nonce = nonce++;
+    const groth16VerifierFactory = new Groth16Verifier__factory(signer);
+    const universalGroth16Verifier = await groth16VerifierFactory.deploy({
+      nonce: groth16Nonce,
+    });
+    await universalGroth16Verifier.waitForDeployment();
+    return universalGroth16Verifier.getAddress();
+  })();
+
+  return {
+    binVerifierAddr,
+    sidVerifierAddr,
+    groth16VerifierAddr,
+    newNonce: nonce,
+  };
+}
+
+/// Deploys the UPA contract, with all dependencies.  `verifierBinFile`
 /// points to the hex representation of the verifier byte code (as output by
 /// solidity). The address of `signer` is used by default for `owner` and
 /// `worker` if they are not given.
 export async function deployUpa(
   signer: ethers.Signer,
-  outer_verifier_hex: string,
   maxNumInputs: number,
   maxRetries: number,
   prepare: boolean,
@@ -239,8 +321,11 @@ export async function deployUpa(
   feeInGas?: bigint,
   aggregatorCollateral?: bigint,
   fixedReimbursement?: bigint,
-  versionString?: string
-): Promise<UpaInstanceDescriptor | undefined> {
+  outerVerifierHex?: string,
+  sidVerifierHex?: string,
+  versionString?: string,
+  noOpenZeppelin?: boolean
+): Promise<UpaInstanceDescriptor | DeployPrepareData> {
   // Decode version string
   if (!versionString) {
     versionString = pkg.version;
@@ -268,27 +353,15 @@ export async function deployUpa(
   worker = ethers.getAddress(worker);
   feeRecipient = ethers.getAddress(feeRecipient);
 
-  // Deploy the Aggregated proof Verifier from binary
-  const binVerifierAddr = await utils.deployBinaryContract(
-    signer,
-    outer_verifier_hex,
-    nonce++
-  );
-
-  // Determine groth16Verifier
-  const groth16VerifierAddr = await (async () => {
-    if (groth16Verifier) {
-      return await groth16Verifier.getAddress();
-    }
-
-    const groth16Nonce = nonce++;
-    const groth16VerifierFactory = new Groth16Verifier__factory(signer);
-    const universalGroth16Verifier = await groth16VerifierFactory.deploy({
-      nonce: groth16Nonce,
-    });
-    await universalGroth16Verifier.waitForDeployment();
-    return universalGroth16Verifier.getAddress();
-  })();
+  const { binVerifierAddr, sidVerifierAddr, groth16VerifierAddr, newNonce } =
+    await deployUpaDependencies(
+      signer,
+      nonce,
+      groth16Verifier,
+      outerVerifierHex,
+      sidVerifierHex
+    );
+  nonce = newNonce;
 
   // Deploy the UPA implementation contract.
   const UpaVerifierFactory = new UpaVerifier__factory(signer);
@@ -296,22 +369,29 @@ export async function deployUpa(
     owner,
     worker,
     feeRecipient,
-    binVerifierAddr,
+    binVerifierAddr || ethers.ZeroAddress,
     groth16VerifierAddr,
     fixedReimbursement,
     feeInGas,
     aggregatorCollateral,
     maxNumInputs,
+    sidVerifierAddr || ethers.ZeroAddress,
     versionNum,
   ];
   const deployImplNonce = nonce;
 
-  const deployImpl = async () =>
-    upgrades.deployImplementation(UpaVerifierFactory, deployArgs, {
-      kind: "uups",
-      unsafeAllowLinkedLibraries: true,
-      nonce: deployImplNonce,
-    });
+  const deployImpl = async () => {
+    if (noOpenZeppelin) {
+      const verifier = await UpaVerifierFactory.deploy();
+      return verifier.getAddress();
+    } else {
+      return upgrades.deployImplementation(UpaVerifierFactory, deployArgs, {
+        kind: "uups",
+        unsafeAllowLinkedLibraries: true,
+        nonce: deployImplNonce,
+      });
+    }
+  };
 
   const implAddress: string = await utils.requestWithRetry(
     deployImpl,
@@ -322,8 +402,7 @@ export async function deployUpa(
   );
 
   await UpaVerifierFactory.attach(implAddress).waitForDeployment();
-
-  console.log(`UpaVerifier impl has been deployed to ${implAddress}`);
+  console.log(`UpaVerifier impl deployed to ${implAddress}`);
 
   // The nonce won't have incremented if the impl already existed. Re-query it.
   nonce = await signer.getNonce();
@@ -332,9 +411,6 @@ export async function deployUpa(
     UpaVerifierFactory.interface,
     deployArgs
   );
-
-  console.log(`initializerData`);
-  console.log(initializerData);
 
   const ProxyFactory = new ethers.ContractFactory(
     ERC1967Proxy.abi,
@@ -352,20 +428,13 @@ export async function deployUpa(
 
   // Dump information needed to create the proxy contract.
   if (prepare) {
-    console.log(`deployProxyTx (pass this into CreateX initcode arg):`);
-    console.log(deployProxyTx.data);
-
     const createXDeploySalt = computeCreateXDeploySalt(UPA_DEPLOY_SALT);
-
-    console.log("createXDeploySalt");
-    console.log(createXDeploySalt);
-
-    console.log(
-      `Verifier needs to be sent ${aggregatorCollateral} Wei as` +
-        ` aggregator collateral.`
-    );
-
-    return;
+    return {
+      implAddress,
+      deployProxyTxData: deployProxyTx.data,
+      createXDeploySalt,
+      aggregatorCollateral,
+    };
   }
 
   // Deploy the proxy contract

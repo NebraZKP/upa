@@ -108,6 +108,11 @@ interface IUpaVerifier {
         bytes32 submissionId
     ) external view returns (bool);
 
+    /// Used by off-chain aggregator deposit contracts to enforce deadlines.
+    function offChainSubmissionVerifiedAtBlock(
+        bytes32 submissionId
+    ) external view returns (uint256);
+
     /// Make a censorship claim that `proof` for `circuitId` with public
     /// inputs `publicInputs` has been skipped by the aggregator.  If the
     /// claim is upheld by the contract (according to the protocol rules - see

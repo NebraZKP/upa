@@ -18,7 +18,7 @@ import {
   evmInnerHashFn,
   evmLeafHashFn,
 } from "./merkleUtils";
-import { utils } from ".";
+import { AppVkProofInputs, CircuitIdProofAndInputs } from "./application";
 
 // Domain tags for the circuit id calculations.
 // Reproduce the calculation with:
@@ -180,7 +180,7 @@ export async function requestWithRetry<T>(
         // eslint-disable-next-line
         const data = (error as any)?.data?.data || (error as any)?.data;
         if (data) {
-          throw utils.JSONstringify({
+          throw JSONstringify({
             error: error,
             msg: contractInterface.parseError(data),
           });
@@ -268,9 +268,7 @@ export function computeProofId(
 }
 
 /// Given an array of proofIds in a submission, compute the submissionId.
-export function computeSubmissionId(
-  proofIds: string[]
-): ethers.ethers.BytesLike {
+export function computeSubmissionId(proofIds: string[]): string {
   const depth = Math.ceil(Math.log2(proofIds.length));
   const paddedLength = 1 << depth;
   const paddedProofIds = proofIds.slice();
@@ -281,6 +279,33 @@ export function computeSubmissionId(
   proofIds.forEach((pid) => assert(typeof pid === "string"));
 
   return computeMerkleRoot(evmLeafHashFn, evmInnerHashFn, paddedProofIds);
+}
+
+/// Computes an array of proofIds corresponding to `vkProofAndInputs`.
+export function vkProofsInputsToProofIds(
+  vkProofAndInputs: AppVkProofInputs[]
+): string[] {
+  // Convert to CircuitIdProofsInputs[]
+  const cidProofInputs = vkProofAndInputs.map((vpi) => {
+    return CircuitIdProofAndInputs.from_json({
+      circuitId: computeCircuitId(vpi.vk),
+      proof: vpi.proof,
+      inputs: vpi.inputs,
+    });
+  });
+
+  // Compute array of proofIds
+  return cidProofInputs.map((cpi) => {
+    return computeProofId(cpi.circuitId, cpi.inputs);
+  });
+}
+
+/// Computes the submissionId for `vkProofAndInputs`.
+export function vkProofsInputsToSubmissionId(
+  vkProofAndInputs: AppVkProofInputs[]
+): string {
+  const proofIds = vkProofsInputsToProofIds(vkProofAndInputs);
+  return computeSubmissionId(proofIds);
 }
 
 export function computeFinalDigest(proofIds: BytesLike[]): string {

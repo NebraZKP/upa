@@ -16,6 +16,7 @@ interface BN254PairingEngine {
   G2: Curve<G2Point>;
   /// Performs the pairing check.
   pairingEq: (...args: (Curve<G1Point> | Curve<G2Point>)[]) => Promise<boolean>;
+  terminate: () => void;
 }
 
 // TODO: This can probably be imported from ffjavascript
@@ -32,6 +33,10 @@ export class Groth16Verifier {
   public static async initialize(): Promise<Groth16Verifier> {
     const bn254PairingEngine = await ffjavascript.buildBn128();
     return new Groth16Verifier(bn254PairingEngine);
+  }
+
+  public shutdown() {
+    this.bn254PairingEngine.terminate();
   }
 
   /// Performs a pairing check on the `pairs`.

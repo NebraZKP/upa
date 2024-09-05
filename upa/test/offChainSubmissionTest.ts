@@ -5,7 +5,7 @@ import {
   Groth16Proof,
 } from "../src/sdk/application";
 import {
-  OffChainSubmission,
+  SubmissionDescriptor,
   Submission,
   SubmissionProof,
 } from "../src/sdk/submission";
@@ -14,7 +14,7 @@ import {
   packOffChainSubmissionMarkers,
 } from "../src/sdk/aggregatedProofParams";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployUpaDummyVerifier, DeployResult } from "./upaTests";
+import { deployUpaDummyVerifier, DeployResult } from "./deploy";
 import {
   dummyProofData,
   isProofVerifiedMulti,
@@ -95,7 +95,7 @@ function generateCidProofsAndInputs(
 // Returns true iff all proofs are individually verified and the submission
 // is also verified.
 async function checkProofsAndSubmissionVerified(
-  submission: OffChainSubmission,
+  submission: SubmissionDescriptor,
   verifier: UpaVerifier
 ): Promise<boolean> {
   const isProofVerifiedMultiFn = verifier.getFunction(isProofVerifiedMulti);

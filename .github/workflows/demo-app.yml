@@ -146,14 +146,9 @@ jobs:
 
       - name: Test demo-app ui
         run: |
-          cd ../demo-app
-          mkdir -p frontend/public/instances
-          cp core/circuits/circuit_js/circuit.wasm frontend/public
-          cp core/circuits/circuit.zkey frontend/public
-          cp core/_test_demo_app/upa.instance frontend/public/instances/upa.instance.json
-          cp core/_test_demo_app/demo-app.instance frontend/public/instances/demo-app.instance.json
-          cd frontend
+          cd ../demo-app/frontend
           yarn
+          yarn dev:setup
           yarn next build
 
       - name: Run unit tests

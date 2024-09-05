@@ -28,6 +28,7 @@ use halo2_base::{
     },
     utils::fs::gen_srs,
 };
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use snark_verifier_sdk::{
     halo2::aggregation::{AggregationCircuit, Halo2KzgAccumulationScheme},
@@ -80,6 +81,7 @@ pub trait OuterCircuit {
     fn keccak_inputs_from_bv_instances<'a>(
         bv_config: &Self::BatchVerifyConfig,
         bv_instances: impl ExactSizeIterator<Item = &'a [Fr]>,
+        num_proof_ids: Option<u64>,
     ) -> KeccakCircuitInputs<Fr>;
 
     /// Implementors are expected to have some inner [AggregationCircuit]
@@ -196,19 +198,40 @@ impl<O: OuterCircuit> OuterInstanceInputs<O> {
     ) -> Self {
         let bv_config = O::bv_config(config);
         let keccak_config = O::keccak_config(config);
-        // Compute the expected keccak instance given the bv instances, and
-        // compare.
-        let expected_circuit_inputs = O::keccak_inputs_from_bv_instances(
-            &bv_config,
-            bv_instances.iter().map(|i| i.as_slice()),
-        );
-        let expected_keccak_instance =
-            <KeccakCircuit<Fr, G1Affine> as SafeCircuit<_,_>>::compute_instance(
+
+        let create_keccak_instance = |i: Option<u64>| {
+            let expected_circuit_inputs = O::keccak_inputs_from_bv_instances(
+                &bv_config,
+                bv_instances.iter().map(|i| i.as_slice()),
+                i,
+            );
+            <KeccakCircuit<Fr, G1Affine> as SafeCircuit<_, _>>::compute_instance(
                 &keccak_config,
                 &expected_circuit_inputs,
-            );
+            )
+        };
 
-        assert_eq!(expected_keccak_instance, keccak_instance);
+        // We can't compute the submissionId from the bv instances, but we can
+        // precompute all possible sids and check the one in `keccak_instance`
+        // is one of them
+        if keccak_config.output_submission_id {
+            let total_batch_size =
+                keccak_config.inner_batch_size * keccak_config.outer_batch_size;
+            let expected_instances = (1..=total_batch_size)
+                .into_iter()
+                .map(|i| create_keccak_instance(Some(i as u64)))
+                .collect_vec();
+            assert!(
+                expected_instances.contains(&keccak_instance),
+                "Unexpected keccak instance"
+            );
+        } else {
+            let expected_instance = create_keccak_instance(None);
+            assert_eq!(
+                expected_instance, keccak_instance,
+                "Unexpected keccak instance"
+            );
+        }
 
         Self {
             bv_instances,
@@ -292,13 +315,20 @@ where
         >,
     {
         let bv_config = O::bv_config(outer_config);
+        let keccak_config = O::keccak_config(outer_config);
         let bv_snarks: Vec<Snark> =
             iter::repeat(O::dummy_bv_snark(bv_params, &bv_config))
                 .take(O::outer_batch_size(outer_config))
                 .collect();
+        let total_batch_size =
+            keccak_config.inner_batch_size * keccak_config.outer_batch_size;
+        let num_proof_ids = keccak_config
+            .output_submission_id
+            .then_some(total_batch_size as u64);
         let keccak_inputs = O::keccak_inputs_from_bv_instances(
             &bv_config,
             bv_snarks.iter().map(|snark| snark.instances[0].as_slice()),
+            num_proof_ids,
         );
         let keccak_config = O::keccak_config(outer_config);
         let keccak_snark = gen_keccak_snark::<P, V>(

@@ -4,12 +4,12 @@ import {
   UpaInstanceDescriptor,
   upaInstanceFromDescriptor,
   submitProofs,
-  waitForSubmissionVerified,
+  waitForSubmissionVerifiedFromTx,
   updateFeeOptions,
 } from "./upa";
 import { Groth16VerifyingKey } from "./application";
 import { PayableOverrides } from "../../typechain-types/common";
-import { Submission, OffChainSubmission } from "./submission";
+import { Submission, SubmissionDescriptor } from "./submission";
 import { application } from ".";
 
 /**
@@ -18,7 +18,7 @@ import { application } from ".";
  * transaction that performed the submission.
  */
 export type SubmissionHandle = {
-  submission: OffChainSubmission;
+  submission: SubmissionDescriptor;
   txResponse: ethers.ContractTransactionResponse;
 };
 
@@ -44,7 +44,7 @@ export class UpaClient {
     circuitIdProofAndInputs: application.CircuitIdProofAndInputs[],
     options?: PayableOverrides
   ): Promise<SubmissionHandle> {
-    const submission = OffChainSubmission.fromCircuitIdsProofsAndInputs(
+    const submission = SubmissionDescriptor.fromCircuitIdsProofsAndInputs(
       circuitIdProofAndInputs
     );
 
@@ -94,7 +94,7 @@ export class UpaClient {
     }
 
     // Throws if submission contains rejected proofs.
-    await waitForSubmissionVerified(this.upaInstance, txReceipt);
+    await waitForSubmissionVerifiedFromTx(this.upaInstance, txReceipt);
 
     return txReceipt;
   }

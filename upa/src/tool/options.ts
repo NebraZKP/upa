@@ -1,4 +1,4 @@
-import { string, option, boolean, flag, optional } from "cmd-ts";
+import { string, option, boolean, flag, optional, positional } from "cmd-ts";
 import { ArgParser } from "cmd-ts/dist/cjs/argparser";
 import { Descriptive, ProvidesHelp } from "cmd-ts/dist/cjs/helpdoc";
 import "dotenv/config";
@@ -83,7 +83,34 @@ export function endpoint(): Option {
     long: "endpoint",
     short: "e",
     defaultValue: () => process.env.RPC_ENDPOINT || "http://127.0.0.1:8545/",
-    description: "RPC endpoint to connect to (defaults to ENDPOINT env var)",
+    description: "Node RPC endpoint (defaults to RPC_ENDPOINT env var)",
+  });
+}
+
+export function submissionEndpoint(): Option {
+  return option({
+    type: string,
+    long: "submission-endpoint",
+    defaultValue: () => process.env.SUBMISSION_ENDPOINT || "",
+    description:
+      "Submission endpoint (defaults to SUBMISSION_ENDPOINT env var)",
+  });
+}
+
+export function depositContract() {
+  return option({
+    type: string,
+    long: "deposit-contract",
+    description:
+      "Aggregator's deposit contract (DEPOSIT_CONTRACT or query server)",
+    defaultValue: () => {
+      const val = process.env.DEPOSIT_CONTRACT;
+      if (val) {
+        return val;
+      }
+
+      throw "deposit contract not specified";
+    },
   });
 }
 
@@ -101,7 +128,7 @@ export function upaConfigFile(): Option {
     type: string,
     long: "config",
     defaultValue: () => "upa_config.json",
-    description: "Location of UPA config json file",
+    description: "Location of UPA config json file (upa_config.json)",
   });
 }
 
@@ -129,6 +156,30 @@ export function vkProofInputsFile(): Option {
   });
 }
 
+/// A JSON file in the format:
+///  [ { vk, proof, inputs }, ... ]
+export function vkProofInputsBatchFile(): Option {
+  return option({
+    type: string,
+    long: "proofs-file",
+    description:
+      "VK, proof, inputs batch file: " +
+      '[{"vk": {..}, "proof": {..}, "inputs": [..]}, ..]',
+  });
+}
+
+/// A JSON file in the format:
+///  [ { vk, proof, inputs }, ... ]
+export function vkProofInputsBatchFilePositional(): Option {
+  return positional({
+    type: string,
+    displayName: "proofs-file",
+    description:
+      "VK, proof, inputs batch file: " +
+      '[{"vk": {..}, "proof": {..}, "inputs": [..]}, ..]',
+  });
+}
+
 /// A JSON file in one of the formats:
 /// - An array of { vk, proof, inputs }
 /// - An array of { circuitId, proof, inputs }
@@ -138,6 +189,19 @@ export function proofsFile(): Option {
   return option({
     type: string,
     long: "proofs-file",
+    description: "Proofs file (containing a list of proofs)",
+  });
+}
+
+/// A JSON file in one of the formats:
+/// - An array of { vk, proof, inputs }
+/// - An array of { circuitId, proof, inputs }
+/// - A single object { vk, proof, inputs }
+/// - A single object { circuitId, proof, inputs }
+export function proofsFilePositional(): Option {
+  return positional({
+    type: string,
+    displayName: "proofs-file",
     description: "Proofs file (containing a list of proofs)",
   });
 }

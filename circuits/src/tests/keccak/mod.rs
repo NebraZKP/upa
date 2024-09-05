@@ -3,9 +3,10 @@
 use crate::{
     batch_verify::universal::native::compute_circuit_id,
     keccak::{
-        self, inputs::KeccakCircuitInputs, AssignedKeccakInput,
-        AssignedVerifyingKeyLimbs, KeccakConfig, KeccakPaddedCircuitInput,
-        PaddedVerifyingKeyLimbs, KECCAK_LOOKUP_BITS, LIMB_BITS, NUM_LIMBS,
+        self, inputs::KeccakCircuitInputs, utils::compute_submission_id,
+        AssignedKeccakInput, AssignedVerifyingKeyLimbs, KeccakConfig,
+        KeccakPaddedCircuitInput, PaddedVerifyingKeyLimbs, KECCAK_LOOKUP_BITS,
+        LIMB_BITS, NUM_LIMBS,
     },
     tests::utils::check_instance,
     utils::commitment_point::{
@@ -81,9 +82,10 @@ pub enum KeccakCircuitInconsistency<F> {
     /// Public Output Mismatch Error.
     ///
     /// The field elements given as the public output don't decompose into
-    /// the keccak output bytes of the last keccak query. Returns the actual
+    /// the keccak output bytes of the last keccak query. Returns the actual value,
+    /// the value computed from the pair of field elements in the instance
     /// and the expected value, in order.
-    PublicOutput(Vec<u8>, Vec<u8>),
+    PublicOutput(Vec<u8>, Vec<u8>, Vec<u8>),
 
     /// Commitment Query Mismatch Error.
     ///
@@ -103,7 +105,7 @@ impl KeccakCircuit {
         &self,
         starting_index_commitment_queries: usize,
     ) -> Result<(), KeccakCircuitInconsistency<Fr>> {
-        for (i, input) in self.public_inputs.0.iter().enumerate() {
+        for (i, input) in self.public_inputs.inputs.iter().enumerate() {
             let expected_commitment_hash = input.commitment_hash.value();
             let commitment_query_index =
                 i + 2 * starting_index_commitment_queries;
@@ -161,7 +163,7 @@ impl KeccakCircuit {
         config: &KeccakConfig,
     ) -> Result<(), KeccakCircuitInconsistency<Fr>> {
         let mut last_index = 0;
-        for (i, input) in self.public_inputs.0.iter().enumerate() {
+        for (i, input) in self.public_inputs.inputs.iter().enumerate() {
             last_index = i as u32;
             let number_of_field_elements = input.num_field_elements();
             let has_commitment = input.has_commitment();
@@ -240,23 +242,42 @@ impl KeccakCircuit {
                 chunk.into_iter().map(|v| v.value().to_bytes_le()[0])
             })
             .collect_vec();
-        let last_expected_bytes = keccak256(last_input_bytes);
-        // Keccak output bytes contains `proof_id` and `commitment_hash`
-        // for each input, i.e. 2 * 32 bytes of output per input.
+        // The last bytes will be either the submission Id or the keccak
+        // of the proof Ids.
+        let num_keccak_output_bytes = self.keccak_output_bytes().len();
+        let (last_expected_bytes, location_last_output_bytes) = match config
+            .output_submission_id
+        {
+            true => {
+                let proof_ids = last_input_bytes.into_iter().chunks(32).into_iter().map(|chunk| {
+                    <[u8; 32]>::try_from(chunk.collect_vec()).expect(
+                        "Conversion from vector into array is not allowed to fail",
+                    )
+                }).collect_vec();
+                let num_proof_ids = self
+                    .public_inputs
+                    .num_proof_ids
+                    .expect(
+                        "num_proof_ids must exist when the circuit outputs submission id",
+                    )
+                    .value()
+                    .get_lower_32() as u64;
+                let depth_diff = (last_index + 1).ilog2()
+                    - num_proof_ids.next_power_of_two().ilog2();
+                let location = num_keccak_output_bytes
+                    - 32 * (2usize.pow(depth_diff + 1) - 1);
+                (compute_submission_id(proof_ids, num_proof_ids), location)
+            }
+            false => {
+                (keccak256(last_input_bytes), num_keccak_output_bytes - 32)
+            }
+        };
+        // The last 32 keccak output bytes must match `last_expected_bytes`.
         let last_output_bytes = self.keccak_output_bytes()
-            [3 * 32 * (last_index as usize + 1)..]
+            [location_last_output_bytes..location_last_output_bytes + 32]
             .iter()
             .map(|v| v.value().to_bytes_le()[0])
             .collect_vec();
-        (last_output_bytes == last_expected_bytes)
-            .then_some(())
-            .ok_or_else(|| {
-                KeccakCircuitInconsistency::KeccakProofId(
-                    last_index + 1,
-                    last_output_bytes.clone(),
-                    last_expected_bytes.to_vec(),
-                )
-            })?;
         let public_output = self.public_output.map(|field_element| {
             field_element
                 .value()
@@ -268,12 +289,16 @@ impl KeccakCircuit {
         });
         let mut output_bytes = public_output[1].clone();
         output_bytes.extend(public_output[0].iter());
-        (last_output_bytes == output_bytes).then_some(()).ok_or({
-            KeccakCircuitInconsistency::PublicOutput(
-                output_bytes,
-                last_output_bytes,
-            )
-        })?;
+        (last_output_bytes == output_bytes
+            && last_output_bytes == last_expected_bytes)
+            .then_some(())
+            .ok_or({
+                KeccakCircuitInconsistency::PublicOutput(
+                    last_output_bytes,
+                    output_bytes,
+                    last_expected_bytes.into(),
+                )
+            })?;
         self.are_commitment_point_queries_well_constructed(
             last_index as usize + 1,
         )?;
@@ -285,13 +310,8 @@ impl KeccakCircuit {
 ///
 /// # Note
 ///
-/// The test fails for KECCAK_DEGREE values below 13.
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock
-#[test]
-fn test_keccak_mock() {
+/// The test fails for KECCAK_DEGREE values below 17.
+fn test_keccak_mock(output_submission_id: bool) {
     let _ = env_logger::builder().is_test(true).try_init();
     let k: u32 = var("KECCAK_DEGREE")
         .unwrap_or_else(|_| "18".to_string())
@@ -303,6 +323,7 @@ fn test_keccak_mock() {
         inner_batch_size: INNER_BATCH_SIZE,
         outer_batch_size: OUTER_BATCH_SIZE,
         lookup_bits: KECCAK_LOOKUP_BITS,
+        output_submission_id,
     };
     let mut rng = OsRng;
     let inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
@@ -317,21 +338,31 @@ fn test_keccak_mock() {
         .assert_satisfied();
 }
 
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock_output_sid
+#[test]
+fn test_keccak_mock_output_sid() {
+    test_keccak_mock(true);
+}
+
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --nocapture test_keccak_mock_no_sid
+#[test]
+fn test_keccak_mock_no_sid() {
+    test_keccak_mock(false);
+}
+
 /// Instantiates a [`KeccakCircuitBuilder`] with random inputs and generates/verifies a proof.
 ///
 /// # Note
 ///
-/// The test fails for KECCAK_DEGREE values below 13.
-///
-/// # Command line
-///
-/// KECCAK_DEGREE=15 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover
-#[ignore = "takes too long"]
-#[test]
-fn test_keccak_prover() {
+/// The test fails for KECCAK_DEGREE values below 17.
+fn test_keccak_prover(output_submission_id: bool) {
     let _ = env_logger::builder().is_test(true).try_init();
     let k: u32 = var("KECCAK_DEGREE")
-        .unwrap_or_else(|_| "15".to_string())
+        .unwrap_or_else(|_| "18".to_string())
         .parse()
         .expect("Parsing error");
     let config = KeccakConfig {
@@ -340,6 +371,7 @@ fn test_keccak_prover() {
         inner_batch_size: INNER_BATCH_SIZE,
         outer_batch_size: OUTER_BATCH_SIZE,
         lookup_bits: KECCAK_LOOKUP_BITS,
+        output_submission_id,
     };
     let mut rng = OsRng;
     let inputs = KeccakCircuitInputs::sample(&config, &mut rng);
@@ -400,6 +432,24 @@ fn test_keccak_prover() {
     )
     .expect("verification failure");
     end_timer!(timer);
+}
+
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover_output_sid
+#[test]
+#[ignore = "takes too long"]
+fn test_keccak_prover_output_sid() {
+    test_keccak_prover(true);
+}
+
+/// # Command line
+///
+/// KECCAK_DEGREE=18 RUST_LOG=info cargo test --release -- --ignored --nocapture test_keccak_prover_no_sid
+#[test]
+#[ignore = "takes too long"]
+fn test_keccak_prover_no_sid() {
+    test_keccak_prover(false);
 }
 
 /// Unit test checking that [`KeccakPaddedCircuitInputs::to_instance_values`]

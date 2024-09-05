@@ -1,7 +1,8 @@
 // UPA tests
 import { UpaLibTest, UpaLibTest__factory } from "../typechain-types";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployUpaDummyVerifier, pf_a, pf_b } from "./upaTests";
+import { pf_a, pf_b } from "./upaTests";
+import { deployUpaDummyVerifier } from "./deploy";
 import { expect } from "chai";
 import {
   CircuitIdProofAndInputs,
@@ -292,6 +293,18 @@ describe("UpaLib Tests", async () => {
       const tsResult = digestAsFieldElements(digest);
       expect(evmResult).eql(tsResult);
       expect(evmResult).eql([expect_l, expect_h]);
+    });
+
+    it("checks fieldElementsAsDigest", async () => {
+      const upaLib = await loadFixture(deployUpaLibTest);
+      const digest =
+        "0x227ba65a7f156e2a72f88325abe99b31b0c5bd09eec1499eb48617aaa2d33fb7";
+      const decomposition = await upaLib.digestAsFieldElements(digest);
+      const recomposition = await upaLib.fieldElementsAsDigest(
+        decomposition[0],
+        decomposition[1]
+      );
+      expect(recomposition).eql(digest);
     });
   });
 

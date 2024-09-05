@@ -15,6 +15,7 @@ import {
   readAddressFromKeyfile,
   upaFromInstanceFile,
   handleTxRequest,
+  addressFromParamOrKeyfile,
 } from "./config";
 import { endpoint, keyfile, password, getPassword } from "./options";
 import * as log from "./log";
@@ -102,18 +103,7 @@ export const balance = command({
   description: "Get the balance for an address (or keyfile)",
   handler: async function ({ endpoint, keyfile, address }) {
     const provider = new ethers.JsonRpcProvider(endpoint);
-    const addr = (() => {
-      if (address) {
-        return ethers.getAddress(address);
-      }
-
-      if (!keyfile) {
-        console.error("no address or keyfile given");
-        process.exit(1);
-      }
-
-      return readAddressFromKeyfile(keyfile);
-    })();
+    const addr = addressFromParamOrKeyfile(address, keyfile);
 
     const balanceWei = await provider.getBalance(addr);
     const balanceEth = ethers.formatEther(balanceWei);

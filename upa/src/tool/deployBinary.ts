@@ -16,7 +16,7 @@ export const deployBinary = command({
     estimateGas: options.estimateGas(),
     dumpTx: options.dumpTx(),
     wait: options.wait(),
-    verifier_bin: positional({
+    verifierBin: positional({
       type: string,
       description: "On-chain verifier binary file",
     }),
@@ -29,13 +29,13 @@ export const deployBinary = command({
     estimateGas,
     dumpTx,
     wait,
-    verifier_bin,
+    verifierBin,
   }): Promise<void> {
     const provider = new ethers.JsonRpcProvider(endpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
 
     // Load binary contract
-    const contractHex = "0x" + fs.readFileSync(verifier_bin, "utf-8").trim();
+    const contractHex = "0x" + fs.readFileSync(verifierBin, "utf-8").trim();
 
     const txReq = await utils.populateDeployBinaryContract(wallet, contractHex);
 

@@ -62,4 +62,11 @@ contract UpaLibTest {
     ) public pure returns (uint256, uint256) {
         return UpaLib.digestAsFieldElements(digest);
     }
+
+    function fieldElementsAsDigest(
+        uint256 lower,
+        uint256 higher
+    ) public pure returns (bytes32) {
+        return UpaLib.fieldElementsAsDigest(lower, higher);
+    }
 }

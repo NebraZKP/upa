@@ -9,11 +9,12 @@ use crate::{
         utils::gen_ubv_snark,
     },
     keccak::{
+        inputs::KeccakCircuitInputs,
         utils::{
             compute_final_digest, compute_proof_id, digest_as_field_elements,
             gen_keccak_snark, keccak_inputs_from_ubv_instances,
         },
-        KECCAK_LOOKUP_BITS,
+        KeccakConfig, KECCAK_LOOKUP_BITS,
     },
     outer::{
         universal::UniversalOuterCircuit,
@@ -69,6 +70,7 @@ const EVM_OUTER_CONFIG: UniversalOuterConfig = UniversalOuterConfig {
         num_limbs: 3,
         limb_bits: 88,
     },
+    output_submission_id: false,
 };
 
 const TINY_INNER_BATCH_SIZE: u32 = 1;
@@ -114,6 +116,7 @@ const DEFAULT_OUTER_CONFIG: UniversalOuterConfig = UniversalOuterConfig {
         num_limbs: 3,
         limb_bits: 88,
     },
+    output_submission_id: false,
 };
 
 fn compute_proof_id_from_ubv_input(
@@ -139,6 +142,7 @@ where
     >,
 {
     let ubv_config: UniversalBatchVerifierConfig = outer_config.into();
+    let keccak_config: KeccakConfig = outer_config.into();
 
     // Generate UBV snarks
     let (ubv_snarks, proof_ids): (Vec<Snark>, Vec<[u8; 32]>) = {
@@ -174,7 +178,10 @@ where
         gen_keccak_snark::<P, V>(
             keygen_inputs.keccak_params(),
             &outer_config.into(),
-            &inputs.into(),
+            &KeccakCircuitInputs::from_inputs_and_config(
+                inputs,
+                &keccak_config,
+            ),
         )
     };
 

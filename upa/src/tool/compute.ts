@@ -80,6 +80,23 @@ const computeProofIds = command({
   },
 });
 
+const computeSubmissionId = command({
+  name: "submission-id",
+  args: {
+    batchFile: options.proofsFilePositional(),
+  },
+  description: "Locally compute the proofIds for a batch of proofs",
+  handler: async function ({ batchFile }) {
+    const circuitIdProofAndInputsArray =
+      loadProofFileAsCircuitIdProofAndInputsArray(batchFile);
+    const proofIds = circuitIdProofAndInputsArray.map((obj) =>
+      utils.computeProofId(obj.circuitId, obj.inputs)
+    );
+    const submissionId = utils.computeSubmissionId(proofIds);
+    console.log(submissionId);
+  },
+});
+
 const computeProofRef = command({
   name: "proof-ref",
   args: {
@@ -124,5 +141,6 @@ export const compute = subcommands({
     "proof-id": computeProofId,
     "proof-ids": computeProofIds,
     "proof-ref": computeProofRef,
+    "submission-id": computeSubmissionId,
   },
 });

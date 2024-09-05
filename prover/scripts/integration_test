@@ -18,6 +18,7 @@ shopt -s expand_aliases
 set -e
 set -x
 
+rm -rf _test_integration
 mkdir -p _test_integration
 pushd _test_integration
 
@@ -27,10 +28,53 @@ pushd _test_integration
     cid_evm=`upa compute circuit-id vk.json`
     cid_native=`prover universal-batch-verifier compute-circuit-id --app-vk=vk.json`
     if ! [ "${cid_evm}" == "${cid_native}" ] ; then
-        echo "cid_evm: ${cid_native}"
+        echo "cid_evm: ${cid_evm}"
         echo "cid_native: ${cid_native}"
         exit 1
     fi
+
+    # Check native and Typescript submission ids match
+    cp ../tests/upa_config_2_with_submission_id.json upa_config.json
+    # Check if the "output_submission_id" flag is present and set to true
+    if ! grep -q '"output_submission_id": true' upa_config.json; then
+      echo 'Error: "output_submission_id" flag is missing or not set to true in upa_config.json'
+      exit 1
+    fi
+    inner_batch_size=`jq -r .inner_batch_size upa_config.json`
+    max_num_inputs=`jq -r .max_num_app_public_inputs upa_config.json`
+    outer_batch_size=`jq -r .outer_batch_size upa_config.json`
+    submission_size=$((inner_batch_size * outer_batch_size))
+
+    # Create two (unsafe) vks
+    prover groth16 generate-fake-vk -i ${max_num_inputs} -v vk-1.unsafe.json
+    prover groth16 generate-fake-vk -i $((${max_num_inputs} / 2)) -v vk-2.unsafe.json -c
+
+    # Create `submission_size` proofs
+    prover groth16 generate-proofs \
+        -n ${submission_size} \
+        -v vk-1.unsafe.json \
+        -v vk-2.unsafe.json \
+        -b submission.json
+    
+    sid_evm=`upa compute submission-id submission.json`
+    sid_native=`prover universal-batch-verifier compute-submission-id -b submission.json`
+    if ! [ "${sid_evm}" == "${sid_native}" ] ; then
+        echo "sid_evm: ${sid_evm}"
+        echo "sid_native: ${sid_native}"
+        exit 1
+    fi
+
+    # Same check for an incomplete submission
+    jq '.[0:-1]' submission.json > incomplete_submission.json
+    
+    sid_evm_2=`upa compute submission-id incomplete_submission.json`
+    sid_native_2=`prover universal-batch-verifier compute-submission-id -b incomplete_submission.json`
+    if ! [ "${sid_evm_2}" == "${sid_native_2}" ] ; then
+        echo "sid_evm_2: ${sid_evm_2}"
+        echo "sid_native_2: ${sid_native_2}"
+        exit 1
+    fi
+
 
 popd # _test_prover
 

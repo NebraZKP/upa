@@ -1,7 +1,8 @@
 //! Some `KeccakCircuit`-related utility functions.
 
 use super::{
-    KeccakCircuitInputs, KeccakVarLenInput, LIMB_BITS, NUM_BYTES_FQ, NUM_LIMBS,
+    KeccakCircuitInputs, KeccakVarLenInput, KECCAK_OUTPUT_BYTES, LIMB_BITS,
+    NUM_BYTES_FQ, NUM_LIMBS,
 };
 use crate::{
     keccak::{
@@ -12,7 +13,7 @@ use crate::{
     },
     EccPrimeField, SafeCircuit,
 };
-use core::borrow::Borrow;
+use core::{borrow::Borrow, iter};
 use halo2_base::{
     gates::{
         builder::MultiPhaseThreadBreakPoints, GateInstructions, RangeChip,
@@ -368,9 +369,9 @@ where
 /// Compute the proofId of an application proof.  Must match the method
 /// `computeProofId` in the UPA contract.
 pub fn compute_proof_id<'a, F: EccPrimeField>(
-    circuit_id: &[u8; 32],
+    circuit_id: &[u8; KECCAK_OUTPUT_BYTES],
     app_public_inputs: impl IntoIterator<Item = &'a F>,
-) -> [u8; 32] {
+) -> [u8; KECCAK_OUTPUT_BYTES] {
     let mut hasher = KeccakHasher::new();
     hasher.absorb_bytes(circuit_id);
     for pi in app_public_inputs {
@@ -383,9 +384,9 @@ pub fn compute_proof_id<'a, F: EccPrimeField>(
 /// Intended usage is for `digests` to be the proof IDs of all application
 /// circuits contained in a given `OuterCircuit`.
 pub fn compute_final_digest(
-    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; 32]>>,
-) -> [u8; 32] {
-    let mut output = [0u8; 32];
+    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; KECCAK_OUTPUT_BYTES]>>,
+) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let mut output = [0u8; KECCAK_OUTPUT_BYTES];
     let mut hasher = Keccak::v256();
 
     for pf_id in proof_ids {
@@ -394,6 +395,79 @@ pub fn compute_final_digest(
 
     hasher.finalize(&mut output);
     output
+}
+
+/// Computes the Merkle leaf corresponding to `proof_id`.
+fn compute_leaf(
+    proof_id: impl Borrow<[u8; KECCAK_OUTPUT_BYTES]>,
+) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let mut leaf = [0u8; KECCAK_OUTPUT_BYTES];
+    let mut hasher = Keccak::v256();
+    hasher.update(proof_id.borrow());
+    hasher.finalize(&mut leaf);
+    leaf
+}
+
+/// Computes the keccak hash of `left` and `right`.
+fn hash_pair(
+    left: &[u8; KECCAK_OUTPUT_BYTES],
+    right: &[u8; KECCAK_OUTPUT_BYTES],
+) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let mut output = [0u8; KECCAK_OUTPUT_BYTES];
+    let mut hasher = Keccak::v256();
+
+    hasher.update(left);
+    hasher.update(right);
+
+    hasher.finalize(&mut output);
+    output
+}
+
+/// Hashes the elements of `row` by pairs.
+fn hash_row(
+    row: Vec<[u8; KECCAK_OUTPUT_BYTES]>,
+) -> Vec<[u8; KECCAK_OUTPUT_BYTES]> {
+    let mut next_row = Vec::new();
+    let row_len = row.len();
+    for i in (0..row_len).step_by(2) {
+        next_row.push(hash_pair(&row[i], &row[i + 1]));
+    }
+    next_row
+}
+
+/// Computes the submission id corresponding to `proof_ids`.
+pub fn compute_submission_id(
+    proof_ids: impl IntoIterator<Item = impl Borrow<[u8; KECCAK_OUTPUT_BYTES]>>,
+    num_proof_ids: u64,
+) -> [u8; KECCAK_OUTPUT_BYTES] {
+    let num_proof_ids = num_proof_ids as usize;
+    let next_power_of_two = num_proof_ids.next_power_of_two();
+    let proof_ids = proof_ids
+        .into_iter()
+        .map(|proof_id| *proof_id.borrow())
+        .collect_vec();
+    let num_leaves = proof_ids.len();
+    let proof_ids = proof_ids
+        .into_iter()
+        .take(num_proof_ids)
+        .chain(
+            iter::repeat([0u8; KECCAK_OUTPUT_BYTES])
+                .take(next_power_of_two - num_proof_ids),
+        )
+        .collect_vec();
+    let mut current_row = proof_ids.into_iter().map(compute_leaf).collect_vec();
+    assert!(num_leaves >= next_power_of_two, "not enough leaves");
+    assert_eq!(
+        (num_leaves & (num_leaves - 1)),
+        0,
+        "The number of leaves must be a power of two in submission id mode"
+    );
+
+    while current_row.len() > 1 {
+        current_row = hash_row(current_row);
+    }
+
+    current_row[0]
 }
 
 /// Compute the representation of a 32-byte Keccak digest as a pair of field
@@ -405,7 +479,7 @@ pub fn compute_final_digest(
 ///
 /// NOTE: This is currently tied to bn256::Fr since `from_bytes`, `from_raw` etc
 /// are just part of the impl, not part of any trait.
-pub fn digest_as_field_elements(digest: &[u8; 32]) -> [Fr; 2] {
+pub fn digest_as_field_elements(digest: &[u8; KECCAK_OUTPUT_BYTES]) -> [Fr; 2] {
     let mut digest = *digest;
     digest.reverse();
 
@@ -424,7 +498,7 @@ pub fn digest_as_field_elements(digest: &[u8; 32]) -> [Fr; 2] {
 pub fn compose_into_field_element<F: EccPrimeField>(
     ctx: &mut Context<F>,
     chip: &RangeChip<F>,
-    bytes: &[AssignedValue<F>; 32],
+    bytes: &[AssignedValue<F>; KECCAK_OUTPUT_BYTES],
 ) -> AssignedValue<F> {
     let byte_decomposition_powers = byte_decomposition_powers()
         .into_iter()
@@ -554,6 +628,61 @@ where
         }
     }
     result
+}
+
+/// Returns the little endian bit decomposition of the next power of two
+/// of `n` with `n_max_num_bits`.
+pub fn compute_next_power_of_two_bit_decomposition<F: EccPrimeField>(
+    ctx: &mut Context<F>,
+    range: &RangeChip<F>,
+    n: AssignedValue<F>,
+    n_max_num_bits: usize,
+) -> Vec<AssignedValue<F>> {
+    // First: compute and assign the witness
+    let next_power_of_two_witness =
+        n.value().get_lower_32().next_power_of_two();
+    let next_power_of_two =
+        ctx.load_witness(F::from(next_power_of_two_witness as u64));
+
+    // Constrain the witness so `num_proof_ids <= next_power_of_two`
+    range.range_check(ctx, n, n_max_num_bits);
+    range.range_check(ctx, next_power_of_two, n_max_num_bits);
+    let one = ctx.load_constant(F::one());
+    let next_power_of_two_plus_one =
+        range.gate.add(ctx, next_power_of_two, one);
+    range.range_check(ctx, next_power_of_two_plus_one, n_max_num_bits + 1);
+    range.check_less_than(
+        ctx,
+        n,
+        next_power_of_two_plus_one,
+        n_max_num_bits + 1,
+    );
+
+    // Constrain the witness so `previous_power_of_two < num_proof_ids`.
+    // When `next_power_of_two = 1`, we take `previous_power_of_two = 0`
+    let two = ctx.load_constant(F::from(2));
+    let half_next_power_of_two =
+        range.gate.div_unsafe(ctx, next_power_of_two, two);
+    let is_one = range.gate.is_equal(ctx, next_power_of_two, one);
+    let zero = ctx.load_constant(F::zero());
+    let previous_power_of_two =
+        range.gate.select(ctx, zero, half_next_power_of_two, is_one);
+    range.check_less_than(ctx, previous_power_of_two, n, n_max_num_bits);
+
+    // We decompose `next_power_of_two` into little-endian bits
+    let bit_decomposition =
+        range
+            .gate
+            .num_to_bits(ctx, next_power_of_two, n_max_num_bits);
+    // We make sure it is a power of two, i.e., that exactly one of the entries
+    // is 1 and the rest are zero.
+    let sum = bit_decomposition
+        .iter()
+        .copied()
+        .reduce(|a, b| range.gate.add(ctx, a, b))
+        .expect("bit decomposition must have at least one element");
+    ctx.constrain_equal(&sum, &one);
+    bit_decomposition
 }
 
 /// The number of public inputs each application proof

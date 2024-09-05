@@ -61,12 +61,16 @@ impl OuterCircuit for UniversalOuterCircuit {
     fn keccak_inputs_from_bv_instances<'a>(
         bv_config: &Self::BatchVerifyConfig,
         bv_instances: impl ExactSizeIterator<Item = &'a [Fr]>,
+        num_proof_ids: Option<u64>,
     ) -> KeccakCircuitInputs<Fr> {
-        KeccakCircuitInputs(keccak_inputs_from_ubv_instances(
-            bv_instances,
-            bv_config.max_num_public_inputs as usize,
-            bv_config.inner_batch_size as usize,
-        ))
+        KeccakCircuitInputs {
+            inputs: keccak_inputs_from_ubv_instances(
+                bv_instances,
+                bv_config.max_num_public_inputs as usize,
+                bv_config.inner_batch_size as usize,
+            ),
+            num_proof_ids,
+        }
     }
 
     fn inner(&self) -> &AggregationCircuit {

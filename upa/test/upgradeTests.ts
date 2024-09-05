@@ -8,13 +8,13 @@ import {
 } from "../typechain-types";
 import { testUpaInstanceFromDescriptor } from "../src/sdk/upa";
 import { assert } from "console";
-import { deployAndUpgradeUpa, deployUpaWithVerifier } from "./upaTests";
+import { deployAndUpgradeUpa } from "./deploy";
 import { versionUintToString } from "../src/sdk/utils";
 import * as pkg from "../package.json";
 
 describe("UPA Upgrade", async () => {
   it("Non-owners cannot upgrade", async function () {
-    const { upaDesc, worker } = await loadFixture(deployUpaWithVerifier);
+    const { upaDesc, worker } = await loadFixture(deployAndUpgradeUpa);
     const testUpaVerifierFactory = new TestUpgradedUpaVerifier__factory(worker);
 
     // TODO: Couldn't make `expect(...).to.be.rejected` fail in a simple
@@ -35,7 +35,7 @@ describe("UPA Upgrade", async () => {
   });
 
   it("New function and storage after upgrade", async function () {
-    const { upaDesc, owner } = await loadFixture(deployUpaWithVerifier);
+    const { upaDesc, owner } = await loadFixture(deployAndUpgradeUpa);
 
     // Upgrade the contract
     const testUpaVerifierFactory = new TestUpgradedUpaVerifier__factory(owner);

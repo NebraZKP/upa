@@ -10,6 +10,7 @@ type ConfigJSON = {
   worker: string;
   feeRecipient: string;
   outerVerifier: string;
+  sidOuterVerifier: string;
   maxNumPublicInputs: bigint;
   gasFee: bigint;
 };
@@ -30,6 +31,7 @@ export const getConfig = command({
       worker: await verifier.worker(),
       feeRecipient: await verifier.feeRecipient(),
       outerVerifier: await verifier.outerVerifier(),
+      sidOuterVerifier: await verifier.sidOuterVerifier(),
       maxNumPublicInputs: await verifier.maxNumPublicInputs(),
       gasFee: await verifier.fixedGasFeePerProof(),
     };
