@@ -251,6 +251,10 @@ pushd _test_upa
            --proof-ids-file agg.pids.json \
            --calldata-file agg.proof.calldata
 
+    # test sending to the outer verifier
+    outer_verifier=`jq -r .outerVerifier config.upa.json`
+    upa dev staticcall --contract ${outer_verifier} agg.proof.calldata
+
     submit_aggregated_proof_flags="\
            --calldata-file agg.proof.calldata \
            --submission submit-1.submission.json \
