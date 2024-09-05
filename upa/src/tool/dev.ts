@@ -90,6 +90,51 @@ export const send = command({
   },
 });
 
+export const staticcall = command({
+  name: "staticcall",
+  args: {
+    endpoint: endpoint(),
+    contractAddress: option({
+      type: string,
+      long: "contract",
+      description: "Contract address",
+    }),
+    calldataFile: positional({
+      type: string,
+      description: "calldata file",
+    }),
+    base64: flag({
+      long: "base64",
+      description: "Read file as base64",
+    }),
+  },
+  description: "Send ETH",
+  handler: async function ({
+    endpoint,
+    contractAddress,
+    calldataFile,
+    base64,
+  }) {
+    const provider = new ethers.JsonRpcProvider(endpoint);
+    const calldata = (() => {
+      if (base64) {
+        const b64 = fs.readFileSync(calldataFile, "ascii");
+        return ethers.hexlify(Buffer.from(b64, "base64"));
+      }
+
+      return ethers.hexlify(fs.readFileSync(calldataFile));
+    })();
+
+    // Simulate using estimateGas.  This should throw if the tx would fail.
+    const gas = await provider.estimateGas({
+      to: contractAddress,
+      data: calldata,
+    });
+
+    console.log(`expected gas: ${gas}`);
+  },
+});
+
 export const balance = command({
   name: "balance",
   args: {
@@ -406,5 +451,6 @@ export const dev = subcommands({
     aggregator: devAggregator,
     "groth16-verify": groth16Verify,
     "submit-compressed-proof": submitCompressedProof,
+    staticcall,
   },
 });
