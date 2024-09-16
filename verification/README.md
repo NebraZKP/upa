@@ -21,7 +21,7 @@ You should be aware that:
 Prepare your environment for verification with the current UPA deployment, configuration, and a valid RPC endpoint.
 
 1. Go to https://docs.nebra.one/developer-guide/deployments
-2. Copy the current `upa.instance` into a JSON file named `upa_instance.json` located in the current `verification` directory. (If you use a different filename, modify the `.env` file accordingly.)
+2. Copy the current `upa.instance.json` into a JSON file named `upa_instance.json` located in the current `verification` directory. (If you use a different filename, modify the `.env` file accordingly.)
 3. Copy the current `upa.config` into a JSON file named `upa_config.json` located in the current directory. (If you use a different filename, modify the `.env` file accordingly.)
 4. Assign the `RPC_ENDPOINT` variable in the `.env` file with an RPC endpoint. (A free endpoint is fine; only a single query will be made.)
 

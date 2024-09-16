@@ -11,7 +11,7 @@ export function demoAppInstance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "instance",
-    defaultValue: () => "demo-app.instance",
+    defaultValue: () => "demo-app.instance.json",
     description: description || "demo-app instance file",
   });
 }
@@ -43,7 +43,7 @@ export function upaInstance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "upa-instance",
-    defaultValue: () => `upa.instance`,
+    defaultValue: () => `upa.instance.json`,
     description: description || "The UPA instance used by demo-app",
   });
 }

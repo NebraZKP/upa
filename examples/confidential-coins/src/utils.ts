@@ -14,7 +14,7 @@ export function instance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "instance",
-    defaultValue: () => "confidential-coins.instance",
+    defaultValue: () => "confidential-coins.instance.json",
     description: description || "confidential-coins instance file",
   });
 }
@@ -47,7 +47,7 @@ export function upaInstance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "upa-instance",
-    defaultValue: () => `upa.instance`,
+    defaultValue: () => `upa.instance.json`,
     description: description || "The UPA instance used by confidential-coins",
   });
 }

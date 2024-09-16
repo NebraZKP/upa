@@ -63,7 +63,7 @@ $ . scripts/shell_setup.sh
 
 > Note: this command must be run in each shell, and can be run from any directory
 
-Copy the `upa.instance` file for the UPA instance you wish to use into the
+Copy the `upa.instance.json` file for the UPA instance you wish to use into the
 current directory.
 
 Deploy the demo-app contract
@@ -72,9 +72,9 @@ Deploy the demo-app contract
 $ demo-app deploy --keyfile <keyfile-path>
 ```
 
-which will create a `demo-app.instance` file in the current directory.
-Clients interacting with this deployment will need the `upa.instance` and
-`demo-app.instance` files.
+which will create a `demo-app.instance.json` file in the current directory.
+Clients interacting with this deployment will need the `upa.instance.json` and
+`demo-app.instance.json` files.
 
 > Note: some parameters can be specified via a `.env` file for convenience.  See `--help`.
 
@@ -88,7 +88,7 @@ Clients interacting with this deployment will need the `upa.instance` and
 Ensure that the generated files in `circuits` match those created by the demo-app deployer.
 > TODO: how do we make this process eaasier?
 
-Place the `upa.instance` and `demo-app.instance` files in the current
+Place the `upa.instance.json` and `demo-app.instance.json` files in the current
 directory.
 
 Use the `demo-app` subcommands:

@@ -51,7 +51,7 @@ pushd _test_confidential_coins
     AGGREGATOR_KEYFILE="aggregator.key"
     SNARKJSVKFILE="../circuits/snarkjs_verification_key.json"
     APP_VKFILE="../circuits/upa_verification_key.json"
-    UPAINSTANCE="upa.instance"
+    UPAINSTANCE="upa.instance.json"
 
     export KEYFILE_PASSWORD=""
 

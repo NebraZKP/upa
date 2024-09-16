@@ -118,7 +118,7 @@ export function instance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "instance",
-    defaultValue: () => "upa.instance",
+    defaultValue: () => "upa.instance.json",
     description: description || "UPA instance file",
   });
 }
