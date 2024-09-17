@@ -84,6 +84,7 @@
     "hardhat": "^2.17.4",
     "readline-sync": "^1.4.10",
     "snarkjs": "^0.7.3",
-    "winston": "^3.10.0"
+    "winston": "^3.10.0",
+    "winston-loki": "^6.0.8"
   }
 }
