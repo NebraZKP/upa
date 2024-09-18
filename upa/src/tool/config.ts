@@ -19,6 +19,7 @@ import * as path from "path";
 import { strict as assert } from "assert";
 import { GnarkInputs, GnarkProof, GnarkVerificationKey } from "../sdk/gnark";
 import { computeCircuitId } from "../sdk/utils";
+import { SP1ProofFixture } from "../sdk/sp1";
 
 /// Load an instance descriptor file
 export function loadInstance(instanceFile: string): UpaInstanceDescriptor {
@@ -218,6 +219,10 @@ export function loadGnarkInputs(filename: string): GnarkInputs {
   const result = inputsJSON.map(BigInt);
   console.log(result);
   return result;
+}
+
+export function loadSP1ProofFixture(fixtureFile: string): SP1ProofFixture {
+  return JSON.parse(fs.readFileSync(fixtureFile, "ascii")) as SP1ProofFixture;
 }
 
 export function loadAppVkProofInputsFile(filename: string): AppVkProofInputs {

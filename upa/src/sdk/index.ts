@@ -16,6 +16,7 @@ export { UpaClient, SubmissionHandle } from "./client";
 export { Groth16Verifier } from "./groth16Verifier";
 export * as snarkjs from "./snarkjs";
 export * as gnark from "./gnark";
+export * as sp1 from "./sp1";
 export * as events from "./events";
 export * as submission from "./submission";
 export { SubmissionDescriptor, Submission } from "./submission";
