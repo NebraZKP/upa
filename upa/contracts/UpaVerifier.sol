@@ -212,7 +212,9 @@ contract UpaVerifier is
         }
         require(_groth16Verifier != address(0), Groth16VerifierAddressIsZero());
         require(_aggregatorCollateral > 0, NotEnoughCollateral());
-        require(_maxNumPublicInputs >= 2, MaxNumPublicInputsTooLow());
+        if (_outerVerifier != address(0) && _maxNumPublicInputs < 2) {
+            revert MaxNumPublicInputsTooLow();
+        }
         require(
             _fixedReimbursement < MAX_FIXED_REIMBURSEMENT,
             FixedReimbursementTooHigh()
@@ -973,12 +975,8 @@ contract UpaVerifier is
         _getVerifierStorage().outerVerifier = _outerVerifier;
     }
 
-    function setSidOuterVerifier(
-        address _sidOuterVerifier,
-        uint8 _maxNumPublicInputs
-    ) public onlyOwner {
+    function setSidOuterVerifier(address _sidOuterVerifier) public onlyOwner {
         emit UpgradeSidOuterVerifier(_sidOuterVerifier);
-        setMaxNumPublicInputs(_maxNumPublicInputs);
         _getVerifierStorage().sidOuterVerifier = _sidOuterVerifier;
     }
 

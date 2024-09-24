@@ -94,10 +94,6 @@ export const setSidAggregatedProofVerifier = command({
       type: string,
       description: "Address of new sid aggregated proof verifier",
     }),
-    maxNumPublicInputs: positional({
-      type: number,
-      description: "Max num public inputs",
-    }),
   },
   description:
     "Set the sid aggregated proof verifier, which outputs submissionId",
@@ -111,7 +107,6 @@ export const setSidAggregatedProofVerifier = command({
     dumpTx,
     fromAddress,
     address,
-    maxNumPublicInputs,
   }): Promise<void> {
     const newVerifier: string = ethers.getAddress(address);
 
@@ -125,8 +120,7 @@ export const setSidAggregatedProofVerifier = command({
     const { verifier } = await config.upaFromInstanceFile(instance, wallet);
 
     const txReq = await verifier.setSidOuterVerifier.populateTransaction(
-      newVerifier,
-      maxNumPublicInputs
+      newVerifier
     );
 
     await config.handleTxRequest(
