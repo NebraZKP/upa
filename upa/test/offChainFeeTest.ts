@@ -362,10 +362,11 @@ describe("Off-chain submission fees", async () => {
     await deposits.connect(user).initiateWithdrawal();
 
     // View which block initiated the withdrawal
-    const withdrawInitBlock =
-      await deposits.pendingWithdrawalInitializedAtBlock(user.getAddress());
+    const canWithdrawAtBlock = await deposits.canWithdrawAtBlock(
+      user.getAddress()
+    );
 
-    expect(withdrawInitBlock > 0).is.true;
+    expect(canWithdrawAtBlock > 0).is.true;
 
     // Attempt to withdraw before the notice period is done
     const NOTICE_PERIOD = await deposits.WITHDRAWAL_NOTICE_BLOCKS();

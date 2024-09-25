@@ -28,9 +28,12 @@ contract Deposits is IDeposits, EIP712 {
         uint256 balance;
         /// Total amount claimed by the aggregator so far
         uint256 totalClaimed;
-        /// The block when a pending withdrawal was initiated. Zero if there
+        /// The block at which a withdrawal becomes "active".
+        /// Equal to WITHDRAWAL_NOTICE_BLOCKS blocks after
+        /// initiating the withdrawal.
+        /// Zero if there
         /// is no pending withdrawal.
-        uint256 pendingWithdrawalInitializedAtBlock;
+        uint256 canWithdrawAtBlock;
     }
 
     // Data to be signed by the submitter
@@ -101,20 +104,20 @@ contract Deposits is IDeposits, EIP712 {
     /// there is a pending withdrawal initiated.
     function getSubmitterTotal(
         address submitter
-    ) external view returns (uint256 total, uint256 withdrawalInitBlock) {
+    ) external view returns (uint256 total, uint256 withdrawBlock) {
         SubmitterAccount storage account = accounts[submitter];
         total = account.balance + account.totalClaimed;
-        withdrawalInitBlock = account.pendingWithdrawalInitializedAtBlock;
+        withdrawBlock = account.canWithdrawAtBlock;
     }
 
     function balance(address account) external view returns (uint256) {
         return accounts[account].balance;
     }
 
-    function pendingWithdrawalInitializedAtBlock(
+    function canWithdrawAtBlock(
         address account
     ) external view returns (uint256) {
-        return accounts[account].pendingWithdrawalInitializedAtBlock;
+        return accounts[account].canWithdrawAtBlock;
     }
 
     /// Top-up submitter's ETH balance
@@ -126,7 +129,9 @@ contract Deposits is IDeposits, EIP712 {
     /// aggregate further submissions from this account while it has a pending
     /// withdrawal.
     function initiateWithdrawal() external {
-        accounts[msg.sender].pendingWithdrawalInitializedAtBlock = block.number;
+        accounts[msg.sender].canWithdrawAtBlock =
+            block.number +
+            WITHDRAWAL_NOTICE_BLOCKS;
     }
 
     /// Perform a withdrawal. You must first call `initiateWithdrawal` at least
@@ -134,14 +139,12 @@ contract Deposits is IDeposits, EIP712 {
     function withdraw(uint256 amountWei) external {
         // There must be a pending withdrawal
         require(
-            accounts[msg.sender].pendingWithdrawalInitializedAtBlock != 0,
+            accounts[msg.sender].canWithdrawAtBlock != 0,
             NoPendingWithdrawal()
         );
         // The pending withdrawal must have been initiated with enough notice.
         require(
-            block.number -
-                accounts[msg.sender].pendingWithdrawalInitializedAtBlock >
-                WITHDRAWAL_NOTICE_BLOCKS,
+            block.number >= accounts[msg.sender].canWithdrawAtBlock,
             InsufficientNotice()
         );
         // Check the account has a sufficient balance.
@@ -152,7 +155,7 @@ contract Deposits is IDeposits, EIP712 {
 
         // Update balance and pending withdrawal status
         accounts[msg.sender].balance -= amountWei;
-        accounts[msg.sender].pendingWithdrawalInitializedAtBlock = 0;
+        accounts[msg.sender].canWithdrawAtBlock = 0;
 
         // Send the withdrawal amount
         (bool sent, ) = msg.sender.call{value: address(this).balance}("");

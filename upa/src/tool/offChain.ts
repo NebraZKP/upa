@@ -386,18 +386,18 @@ export const balance = command({
   },
 });
 
-export const pendingWithdrawalInitializedAtBlock = command({
-  name: "withdraw-init-block",
+export const withdrawAtBlock = command({
+  name: "withdraw-at-block",
   args: {
     endpoint: endpoint(),
     address: option({
       type: string,
       long: "address",
-      description: "Address whose withdraw init block we are viewing",
+      description: "Address whose canWithdrawAtBlock we are viewing",
     }),
     depositContract: depositContract(),
   },
-  description: "View the block at which a withdrawal was initiated",
+  description: "View the block at which an address can withdraw",
   handler: async function ({
     endpoint,
     address,
@@ -406,11 +406,10 @@ export const pendingWithdrawalInitializedAtBlock = command({
     const provider = new ethers.JsonRpcProvider(endpoint);
     const deposits =
       Deposits__factory.connect(depositContract).connect(provider);
-    const withdrawalInitBlock =
-      await deposits.pendingWithdrawalInitializedAtBlock(address);
+    const canWithdrawAtBlock = await deposits.canWithdrawAtBlock(address);
 
     // Print this to stdout, NOT the log, so it can be consumed by scripts.
-    console.log(withdrawalInitBlock);
+    console.log(canWithdrawAtBlock);
   },
 });
 
@@ -423,7 +422,7 @@ export const offChain = subcommands({
     "init-withdrawal": initiateWithdrawal,
     withdraw,
     balance,
-    "withdraw-init-block": pendingWithdrawalInitializedAtBlock,
+    "withdraw-at-block": withdrawAtBlock,
     "refund-fee": refundFee,
     "get-state": getState,
     "get-parameters": getParameters,
