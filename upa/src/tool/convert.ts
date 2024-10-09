@@ -224,7 +224,7 @@ const convertSp1 = command({
       sp1Version
     );
 
-    fs.writeFileSync(upaVkProofInputsFile, JSON.stringify(upaVkProofInputs));
+    fs.writeFileSync(upaVkProofInputsFile, JSONstringify(upaVkProofInputs));
   },
 });
 
