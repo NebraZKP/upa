@@ -99,7 +99,7 @@ jobs:
             echo "Installing circom"
             if [ ! -d "circom" ]; then
               echo "Directory 'circom' does not exist."
-              git clone --depth 1 https://github.com/iden3/circom.git
+              git clone --depth 1 --branch v2.1.9 https://github.com/iden3/circom.git
             else
               echo "Directory 'circom' already exists."
             fi
