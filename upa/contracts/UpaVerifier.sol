@@ -414,16 +414,16 @@ contract UpaVerifier is
             SidOuterVerifierAddressIsZero()
         );
 
-        // Call the verifier to check the proof
-        (bool success, ) = verifierStorage.sidOuterVerifier.call(proof);
-        require(success, InvalidProof());
-
         // Mark the submission Id as verified
         if (verifierStorage.verifiedAtBlock[submissionId] == 0) {
             verifierStorage.verifiedAtBlock[submissionId] = block.number;
 
             emit SubmissionVerified(submissionId);
         }
+
+        // Call the verifier to check the proof
+        (bool success, ) = verifierStorage.sidOuterVerifier.call(proof);
+        require(success, InvalidProof());
     }
 
     /// Verify an aggregated proof.
@@ -920,6 +920,9 @@ contract UpaVerifier is
             uint256 openChallengeRefundAmount = verifierStorage
                 .openChallengeRefundAmounts[submissionId];
             delete verifierStorage.openChallengeRefundAmounts[submissionId];
+
+            emit SubmissionChallengeSuccess();
+
             // If it's the last proof in the submission, the challenge is
             // successful and the aggregator gives the claimant the full amount.
             reimburseFee(
@@ -929,8 +932,6 @@ contract UpaVerifier is
                     openChallengeRefundAmount,
                 msg.sender
             );
-
-            emit SubmissionChallengeSuccess();
         } else {
             // If not, it's added to the due balance for this `submissionId`.
             // TODO: can we do without the openChallengeRefundAmounts?

@@ -22,7 +22,7 @@ pushd "${root_dir}/_slither"
 
     # Excluded detectors because are they low severity they give false
     # positives.
-    EXCLUDED_DETECTORS="pragma,assembly,naming-convention,unused-import"
+    EXCLUDED_DETECTORS="pragma,assembly,naming-convention,unused-import,low-level-calls"
 
     # Excluded paths
     EXCLUDED_PATHS="@openzeppelin|contracts/tests|Groth16Verifier.sol"
