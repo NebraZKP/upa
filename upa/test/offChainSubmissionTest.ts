@@ -521,6 +521,10 @@ describe("Submissions verified over multiple aggregations", async () => {
 
     await verifyAggProofTx_1.wait();
 
+    expect(
+      await verifier.getCurrentOffChainSubmissionProofIds()
+    ).to.be.deep.equal(offChainSubmission.proofIds.slice(0, 3));
+
     // Second aggregated batch
     const proofIds_2 = [
       ...onChainSubmissionHandle.submission.proofIds.slice(3, 6),
@@ -539,6 +543,10 @@ describe("Submissions verified over multiple aggregations", async () => {
       );
 
     await verifyAggProofTx_2.wait();
+
+    expect(
+      await verifier.getCurrentOffChainSubmissionProofIds()
+    ).to.be.deep.equal(offChainSubmission.proofIds.slice(0, 6));
 
     // Should not yet be verified.
     expect(
@@ -569,6 +577,10 @@ describe("Submissions verified over multiple aggregations", async () => {
       );
 
     await verifyAggProofTx_3.wait();
+
+    expect(
+      await verifier.getCurrentOffChainSubmissionProofIds()
+    ).to.be.deep.equal([]);
 
     // Now each individual proof and the entire submission should be verified.
     expect(
@@ -669,6 +681,10 @@ describe("Submissions verified over multiple aggregations", async () => {
 
     await verifyAggProofTx_1.wait();
 
+    expect(
+      await verifier.getCurrentOffChainSubmissionProofIds()
+    ).to.be.deep.equal(offChainSubmission.proofIds.slice(0, 9));
+
     // Second aggregated batch
     const proofIds_2 = [
       ...dummyProofIds,
@@ -687,6 +703,10 @@ describe("Submissions verified over multiple aggregations", async () => {
       );
 
     await verifyAggProofTx_2.wait();
+
+    expect(
+      await verifier.getCurrentOffChainSubmissionProofIds()
+    ).to.be.deep.equal([]);
 
     // Only the off-chain submission should be verified now.
     expect(
@@ -717,6 +737,10 @@ describe("Submissions verified over multiple aggregations", async () => {
       );
 
     await verifyAggProofTx_3.wait();
+
+    expect(
+      await verifier.getCurrentOffChainSubmissionProofIds()
+    ).to.be.deep.equal([]);
 
     // Now the on-chain submission should also be verified.
     expect(
