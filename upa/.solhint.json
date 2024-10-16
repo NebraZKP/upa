@@ -2,7 +2,7 @@
   "extends": "solhint:recommended",
   "plugins": ["prettier"],
   "rules": {
-    "max-line-length": ["error", 80],
+    "max-line-length": ["error", 90],
     "no-global-import": "off",
     "func-visibility": ["error", { "ignoreConstructors": true }],
     "no-inline-assembly": "off",
