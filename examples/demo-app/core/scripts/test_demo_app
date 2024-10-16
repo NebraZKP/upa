@@ -55,7 +55,7 @@ pushd _test_demo_app
     AGGREGATOR_KEYFILE="aggregator.key"
     SNARKJSVKFILE="../circuits/snarkjs_verification_key.json"
     APP_VKFILE="../circuits/upa_verification_key.json"
-    UPAINSTANCE="upa.instance"
+    UPAINSTANCE="upa.instance.json"
 
     export KEYFILE_PASSWORD=""
 
@@ -210,7 +210,7 @@ pushd _test_demo_app
     SUBMISSION_FILE_ROOT="submissions"
     demo-app submit-proofs-from-file \
          --keyfile ${APP_KEYFILE} \
-         --circuit-id `cat demo-app.instance | jq -r .circuitId` \
+         --circuit-id `cat demo-app.instance.json | jq -r .circuitId` \
          --submission-file-root ${SUBMISSION_FILE_ROOT} \
          --submission-size 2 \
          --proof-file ${TEST_PROOF_OUTPUT} \
