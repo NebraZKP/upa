@@ -589,11 +589,11 @@ contract UpaVerifier is
                 // Only update `verifiedAtBlock` for unverified submissions.
                 // We do not revert the transaction if the submission was
                 // already verified in order to reset the length of
-                // `currentOffChainSubmissionProofIds`. Otherwise, if the submission
-                // was verified over the course of multiple
+                // `currentOffChainSubmissionProofIds`. Otherwise, if the
+                // submission was verified over the course of multiple
                 // `verifyAggregatedProof` calls, only the last call would
-                // revert, leaving `currentOffChainSubmissionProofIds` stuck in an
-                // intermediate state.
+                // revert, leaving `currentOffChainSubmissionProofIds` stuck
+                // in an intermediate state.
                 if (verifierStorage.verifiedAtBlock[submissionId] == 0) {
                     verifierStorage.verifiedAtBlock[submissionId] = block
                         .number;
@@ -602,7 +602,7 @@ contract UpaVerifier is
                 }
 
                 // Reset the length of the array to zero
-                bytes32[]
+                bytes32[] // solhint-disable-next-line
                     storage currentOffChainSubmissionProofIdsPtr = verifierStorage
                         .currentOffChainSubmissionProofIds;
                 assembly {
