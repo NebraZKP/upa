@@ -113,12 +113,6 @@ interface IUpaVerifier {
         bytes32 submissionId
     ) external view returns (uint256);
 
-    /// Get the current off-chain submission proof ids.
-    function getCurrentOffChainSubmissionProofIds()
-        external
-        view
-        returns (bytes32[] memory);
-
     /// Make a censorship claim that `proof` for `circuitId` with public
     /// inputs `publicInputs` has been skipped by the aggregator.  If the
     /// claim is upheld by the contract (according to the protocol rules - see
