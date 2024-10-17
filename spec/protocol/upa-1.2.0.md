@@ -140,7 +140,7 @@ There is a single (permissioned) *Aggregator* that submits aggregated proofs to 
 function verifyAggregatedProof(
         bytes calldata proof,
         bytes32[] calldata proofIds,
-        uint16 numOnchainProofs,
+        uint16 numOnChainProofs,
         SubmissionProof[] calldata submissionProofs,
         uint256 offChainSubmissionMarkers)
     external;
@@ -181,7 +181,7 @@ In more detail, the algorithm for verifying on-chain submissions (in the correct
 Given a list of `proofIds` and `submissionProofs` and `dupSubmissionIdxs`, the contract verifies that `proofIds` appear in submissions as follows:
 
 - For each $\pid$ in `proofIds`:
-  - If $\pid$ corresponds to a dummy proof, skip ahead to the proofs submitted off-chain, which start at index `numOnchainProofs`.
+  - If $\pid$ corresponds to a dummy proof, skip ahead to the proofs submitted off-chain, which start at index `numOnChainProofs`.
   - Attempt to lookup the submission data (see "Proof Submission") for a submission with Id $\keccak(\pid)$ and duplicate submission index `dupSubmissionIdxs[i]` (where `i` is a 0-based index of the submission within this aggregated batch, incremented once for each iteration of this loop). If such a submission exists:
     - The proof was submitted as a single-proof submission.  The contract extracts the $\sidx$ from the submission data and ensures that $\sidx$ is greater than or equal to `nextSubmissionIdxToVerify`.  If not, reject the transaction.
     - The entry `numVerifiedInSubmission[` $\sidx$ `]` should logically be 0 (this can be sanity checked by the contract).  Set this entry to 1
