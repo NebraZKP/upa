@@ -124,7 +124,7 @@ contract UpaVerifier is
         /// which proofs in the submission are verified and which are not yet.
         Uint16VectorLib.Uint16Vector numVerifiedInSubmission;
         /// ProofIds for current off-chain submission
-        bytes32[] currentSubmissionProofIds;
+        bytes32[] currentOffChainSubmissionProofIds;
         /// For off-chain submissions only. Maps a key `submissionId` to the
         /// block at which the submission was verified. Maps unverified
         /// submissions to 0.
@@ -292,7 +292,7 @@ contract UpaVerifier is
         SubmissionProof calldata submissionVerification,
         bytes32[] calldata proofIds,
         uint64 nextSubmissionIdx,
-        uint16 numOnchainProofs,
+        uint16 numOnChainProofs,
         uint16 proofIdIdx,
         uint8 dupSubmissionIdx
     )
@@ -346,7 +346,7 @@ contract UpaVerifier is
         // assumed to not contain dummy proofIds, so `proofsThisSubmission`
         // will be `remainingInAggProof`.
         uint16 unverified = numProofsInSubmission - verified;
-        uint16 remainingInAggProof = numOnchainProofs - proofIdIdx;
+        uint16 remainingInAggProof = numOnChainProofs - proofIdIdx;
         proofsThisSubmission = (unverified < remainingInAggProof)
             ? (unverified)
             : (remainingInAggProof);
@@ -443,7 +443,7 @@ contract UpaVerifier is
     function verifyAggregatedProof(
         bytes calldata proof,
         bytes32[] calldata proofIds,
-        uint16 numOnchainProofs,
+        uint16 numOnChainProofs,
         SubmissionProof[] calldata submissionProofs,
         uint256 offChainSubmissionMarkers,
         uint256 duplicateSubmissionIndices
@@ -491,7 +491,7 @@ contract UpaVerifier is
         uint16 proofIdIdx = 0; // idx into proofIds
 
         // Process the on-chain proofIds.
-        while (proofIdIdx < numOnchainProofs) {
+        while (proofIdIdx < numOnChainProofs) {
             // console.log(" proofIdIdx: %s", proofIdIdx);
 
             bytes32 proofId = proofIds[proofIdIdx];
@@ -500,7 +500,7 @@ contract UpaVerifier is
             // assumed to be dummy as well and no more on-chain
             // proofs/submissions will be marked as verified.
             if (proofId == DUMMY_PROOF_ID) {
-                proofIdIdx = numOnchainProofs;
+                proofIdIdx = numOnChainProofs;
                 break;
             }
 
@@ -556,7 +556,7 @@ contract UpaVerifier is
                     submissionVerification,
                     proofIds,
                     nextSubmissionIdx,
-                    numOnchainProofs,
+                    numOnChainProofs,
                     proofIdIdx,
                     dupSubmissionIdx
                 );
@@ -572,10 +572,10 @@ contract UpaVerifier is
         for (; proofIdIdx < proofIds.length; ++proofIdIdx) {
             bytes32 proofId = proofIds[proofIdIdx];
 
-            verifierStorage.currentSubmissionProofIds.push(proofId);
+            verifierStorage.currentOffChainSubmissionProofIds.push(proofId);
 
             // Shifted index so that the first off-chain proof is at index 0.
-            uint256 offChainProofIdIdx = proofIdIdx - numOnchainProofs;
+            uint256 offChainProofIdIdx = proofIdIdx - numOnChainProofs;
             bool isEndOfSubmission = UpaInternalLib.marksEndOfSubmission(
                 offChainProofIdIdx,
                 offChainSubmissionMarkers
@@ -583,17 +583,17 @@ contract UpaVerifier is
 
             if (isEndOfSubmission) {
                 bytes32 submissionId = UpaLib.computeSubmissionId(
-                    verifierStorage.currentSubmissionProofIds
+                    verifierStorage.currentOffChainSubmissionProofIds
                 );
 
                 // Only update `verifiedAtBlock` for unverified submissions.
                 // We do not revert the transaction if the submission was
                 // already verified in order to reset the length of
-                // `currentSubmissionProofIds`. Otherwise, if the submission
-                // was verified over the course of multiple
+                // `currentOffChainSubmissionProofIds`. Otherwise, if the
+                // submission was verified over the course of multiple
                 // `verifyAggregatedProof` calls, only the last call would
-                // revert, leaving `currentSubmissionProofIds` stuck in an
-                // intermediate state.
+                // revert, leaving `currentOffChainSubmissionProofIds` stuck
+                // in an intermediate state.
                 if (verifierStorage.verifiedAtBlock[submissionId] == 0) {
                     verifierStorage.verifiedAtBlock[submissionId] = block
                         .number;
@@ -602,10 +602,11 @@ contract UpaVerifier is
                 }
 
                 // Reset the length of the array to zero
-                bytes32[] storage currentSubmissionProofIdsPtr = verifierStorage
-                    .currentSubmissionProofIds;
+                bytes32[] // solhint-disable-next-line
+                    storage currentOffChainSubmissionProofIdsPtr = verifierStorage
+                        .currentOffChainSubmissionProofIds;
                 assembly {
-                    sstore(currentSubmissionProofIdsPtr.slot, 0)
+                    sstore(currentOffChainSubmissionProofIdsPtr.slot, 0)
                 }
             }
         }
@@ -764,10 +765,20 @@ contract UpaVerifier is
         return verifierStorage.verifiedAtBlock[submissionId] > 0;
     }
 
+    /// Used by off-chain aggregator deposit contracts to enforce deadlines.
     function offChainSubmissionVerifiedAtBlock(
         bytes32 submissionId
     ) external view returns (uint256) {
         return _getVerifierStorage().verifiedAtBlock[submissionId];
+    }
+
+    /// Get the current off-chain submission proof ids.
+    function getCurrentOffChainSubmissionProofIds()
+        external
+        view
+        returns (bytes32[] memory)
+    {
+        return _getVerifierStorage().currentOffChainSubmissionProofIds;
     }
 
     /// Checks that `proofId` and `proofDigest` correspond to the first

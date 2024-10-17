@@ -370,14 +370,14 @@ describe("EventGetter for events", () => {
     const {
       proof: agg1Tx_proof,
       proofIds: agg1Tx_proofIds,
-      numOnchainProofs: agg1Tx_numOnchainProofs,
+      numOnChainProofs: agg1Tx_numOnChainProofs,
       submissionProofs: agg1Tx_submissionProofs,
       offChainSubmissionMarkers: agg1Tx_offChainSubmissionMarkers,
     } = getCallDataForVerifyAggregatedProofTx(upa.verifier, agg1Tx!);
 
     expect(agg1Tx_proof).eql(dummyProofData(agg1Tx_proofIds));
     expect(agg1Tx_proofIds).eql([pid_a, pid_offchain]);
-    expect(agg1Tx_numOnchainProofs).eql(1n);
+    expect(agg1Tx_numOnChainProofs).eql(1n);
     expect(agg1Tx_submissionProofs).eql([
       sub_1.computeSubmissionProof(0, 1)!.solidity(),
     ]);
@@ -386,14 +386,14 @@ describe("EventGetter for events", () => {
     const {
       proof: agg2Tx_proof,
       proofIds: agg2Tx_proofIds,
-      numOnchainProofs: agg2Tx_numOnchainProofs,
+      numOnChainProofs: agg2Tx_numOnChainProofs,
       submissionProofs: agg2Tx_submissionProofs,
       offChainSubmissionMarkers: agg2Tx_offChainSubmissionMarkers,
     } = getCallDataForVerifyAggregatedProofTx(upa.verifier, agg2Tx!);
 
     expect(agg2Tx_proof).eql(dummyProofData(agg2Tx_proofIds));
     expect(agg2Tx_proofIds).eql([pid_b, pid_c, pid_d]);
-    expect(agg2Tx_numOnchainProofs).eql(3n);
+    expect(agg2Tx_numOnChainProofs).eql(3n);
     expect(agg2Tx_submissionProofs).eql([
       sub_1.computeSubmissionProof(1, 1)!.solidity(),
       sub_3.computeSubmissionProof(0, 1)!.solidity(),
@@ -403,14 +403,14 @@ describe("EventGetter for events", () => {
     const {
       proof: agg3Tx_proof,
       proofIds: agg3Tx_proofIds,
-      numOnchainProofs: agg3Tx_numOnchainProofs,
+      numOnChainProofs: agg3Tx_numOnChainProofs,
       submissionProofs: agg3Tx_submissionProofs,
       offChainSubmissionMarkers: agg3Tx_offChainSubmissionMarkers,
     } = getCallDataForVerifyAggregatedProofTx(upa.verifier, agg3Tx!);
 
     expect(agg3Tx_proof).eql(dummyProofData(agg3Tx_proofIds));
     expect(agg3Tx_proofIds).eql([pid_e, pid_f]);
-    expect(agg3Tx_numOnchainProofs).eql(2n);
+    expect(agg3Tx_numOnChainProofs).eql(2n);
     expect(agg3Tx_submissionProofs).eql([
       sub_3.computeSubmissionProof(1, 2)!.solidity(),
     ]);
