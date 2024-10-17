@@ -243,7 +243,7 @@ export function getCallDataForVerifyAggregatedProofTx(
 ): {
   proof: string;
   proofIds: string[];
-  numOnchainProofs: bigint;
+  numOnChainProofs: bigint;
   submissionProofs: SubmissionProofStruct[];
   offChainSubmissionMarkers: bigint;
 } {
@@ -260,19 +260,19 @@ export function getCallDataForVerifyAggregatedProofTx(
 
   const proof = decoded.proof;
   const proofIds: string[] = decoded.proofIds.map(readBytes32);
-  const numOnchainProofs: bigint = BigInt(decoded.numOnchainProofs);
+  const numOnChainProofs: bigint = BigInt(decoded.numOnChainProofs);
   const submissionProofs: SubmissionProofStruct[] =
     decoded.submissionProofs.map((proof: ethers.Result) => proof.toObject());
   const offChainSubmissionMarkers = BigInt(decoded.offChainSubmissionMarkers);
 
   assert(bytes32IsWellFormed(proofIds[0]));
-  assert("bigint" === typeof numOnchainProofs);
+  assert("bigint" === typeof numOnChainProofs);
   assert("bigint" === typeof offChainSubmissionMarkers);
 
   return {
     proof,
     proofIds,
-    numOnchainProofs,
+    numOnChainProofs,
     submissionProofs,
     offChainSubmissionMarkers,
   };
