@@ -79,9 +79,10 @@ export function readBytes32(x: BytesLike): string {
   }
 }
 
-export function bytes32IsWellFormed(bytes32: string): boolean {
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function bytes32IsWellFormed(bytes32: string | String): boolean {
   return (
-    typeof bytes32 === "string" &&
+    (bytes32 instanceof String || typeof bytes32 === "string") &&
     bytes32.length == 64 + 2 &&
     bytes32.startsWith("0x")
   );
