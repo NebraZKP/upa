@@ -288,7 +288,7 @@ contract UpaVerifier is
     /// performs the necessary consistency checks (e.g. everything is in the
     /// right order, the submission Merkle proof is valid) and marks the number
     /// of proofs of the submissionn present in `proofIds` as verified.
-    /// `lastOnChainProofIdIdx` indicates where the on-chain proofs end in the proofIds.
+    /// `lastOnChainProofIdIdx` indicates where the on-chain proofs end.
     /// Note: `lastOnChainProofIdIdx` might also include dummy proofs.
     function handleMultiProofOnChainSubmission(
         SubmissionProof calldata submissionVerification,
