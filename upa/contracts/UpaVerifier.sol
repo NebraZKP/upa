@@ -292,7 +292,7 @@ contract UpaVerifier is
         SubmissionProof calldata submissionVerification,
         bytes32[] calldata proofIds,
         uint64 nextSubmissionIdx,
-        uint16 numOnChainProofs,
+        uint16 numProofs,
         uint16 proofIdIdx,
         uint8 dupSubmissionIdx
     )
@@ -346,7 +346,7 @@ contract UpaVerifier is
         // assumed to not contain dummy proofIds, so `proofsThisSubmission`
         // will be `remainingInAggProof`.
         uint16 unverified = numProofsInSubmission - verified;
-        uint16 remainingInAggProof = numOnChainProofs - proofIdIdx;
+        uint16 remainingInAggProof = numProofs - proofIdIdx;
         proofsThisSubmission = (unverified < remainingInAggProof)
             ? (unverified)
             : (remainingInAggProof);
@@ -440,6 +440,8 @@ contract UpaVerifier is
     /// proofIds belongs to an on-chain submission
     /// `offChainSubmissionMarkers` - encodes a bool[256] where a `1` marks
     /// each proofId that is at the end of an off-chain submission.
+    /// `duplicateSubmissionIndices` - packed uint8s, reading the lowest-order
+    /// byte first, indicating the index of the duplicated submission.
     function verifyAggregatedProof(
         bytes calldata proof,
         bytes32[] calldata proofIds,
@@ -609,6 +611,161 @@ contract UpaVerifier is
                     sstore(currentOffChainSubmissionProofIdsPtr.slot, 0)
                 }
             }
+        }
+
+        verifierStorage.nextSubmissionIdxToVerify = nextSubmissionIdx;
+        verifierStorage.lastVerifiedSubmissionHeight = verifiedSubmissionHeight;
+
+        // Verify the aggregated proof
+        verifyProofForIDs(proofIds, proof);
+    }
+
+    /// Verify a mixed aggregated proof with off-chain and on-chain proofs.
+    ///
+    /// `proof` - An aggregated proof for the validity of this batch.
+    /// `proofIds` - The proofIds belonging to this batch. These are assumed
+    /// to be arranged in the order: [Off-chain, On-chain, Dummy]. Furthermore,
+    /// it is assumed that if there are dummy proofIds in this batch, then
+    /// the batch fully verifies its contained on-chain submissions. I.e. the
+    /// on-chain proofIds do not end with a partial submission.
+    /// `numOffChainProofs` - The number of proofIds that were from off-chain
+    /// submissions.
+    /// `submissionProofs` - Merkle proofs, each showing that each interval of
+    /// proofIds belongs to an on-chain submission
+    /// `offChainSubmissionMarkers` - encodes a bool[256] where a `1` marks
+    /// each proofId that is at the end of an off-chain submission.
+    /// `duplicateSubmissionIndices` - packed uint8s, reading the lowest-order
+    /// byte first, indicating the index of the duplicated submission.
+    function verifyMixedAggregatedProof(
+        bytes calldata proof,
+        bytes32[] calldata proofIds,
+        uint16 numOffChainProofs,
+        SubmissionProof[] calldata submissionProofs,
+        uint256 offChainSubmissionMarkers,
+        uint256 duplicateSubmissionIndices
+    ) external onlyWorker {
+        // Expected to fit in a uint16 to match the proof counts.
+        require(proofIds.length <= type(uint16).max, TooManyProofIds());
+
+        VerifierStorage storage verifierStorage = _getVerifierStorage();
+
+        // require there is an outerVerifier contract
+        require(
+            verifierStorage.outerVerifier != address(0),
+            OuterVerifierAddressIsZero()
+        );
+
+        // Track the proof indices to ensure proofs are verified in order.
+        uint64 nextSubmissionIdx = verifierStorage.nextSubmissionIdxToVerify;
+        uint64 verifiedSubmissionHeight = verifierStorage
+            .lastVerifiedSubmissionHeight;
+
+        uint16 submissionProofIdx = 0; // idx into submissionProofs
+        uint16 proofIdIdx = 0; // idx into proofIds
+
+        // Process the off-chain proofIds first
+        for (; proofIdIdx < numOffChainProofs; ++proofIdIdx) {
+            bytes32 proofId = proofIds[proofIdIdx];
+
+            verifierStorage.currentOffChainSubmissionProofIds.push(proofId);
+
+            bool isEndOfSubmission = UpaInternalLib.marksEndOfSubmission(
+                proofIdIdx,
+                offChainSubmissionMarkers
+            );
+
+            if (isEndOfSubmission) {
+                bytes32 submissionId = UpaLib.computeSubmissionId(
+                    verifierStorage.currentOffChainSubmissionProofIds
+                );
+
+                // Only update `verifiedAtBlock` for unverified submissions.
+                // We do not revert the transaction if the submission was
+                // already verified in order to reset the length of
+                // `currentOffChainSubmissionProofIds`. Otherwise, if the
+                // submission was verified over the course of multiple
+                // `verifyAggregatedProof` calls, only the last call would
+                // revert, leaving `currentOffChainSubmissionProofIds` stuck
+                // in an intermediate state.
+                if (verifierStorage.verifiedAtBlock[submissionId] == 0) {
+                    verifierStorage.verifiedAtBlock[submissionId] = block
+                        .number;
+
+                    emit SubmissionVerified(submissionId);
+                }
+
+                // Reset the length of the array to zero
+                bytes32[] // solhint-disable-next-line
+                    storage currentOffChainSubmissionProofIdsPtr = verifierStorage
+                        .currentOffChainSubmissionProofIds;
+                assembly {
+                    sstore(currentOffChainSubmissionProofIdsPtr.slot, 0)
+                }
+            }
+        }
+
+        // Process the on-chain proofIds until we hit dummy proofs
+        while (proofIdIdx < proofIds.length) {
+            bytes32 proofId = proofIds[proofIdIdx];
+
+            // If we hit a dummy proof, process remaining proofs as dummy
+            if (proofId == DUMMY_PROOF_ID) {
+                break;
+            }
+
+            // Attempt to use the hash(proofId) as the submissionId. If this
+            // succeeds (namely, if we find a submission with this Id), then
+            // the proof was submitted alone, hence and we do not need a
+            // SubmissionProof.
+            bytes32 submissionId = UpaLib.computeSubmissionId(proofId);
+
+            // Interpret `duplicateSubmissionIndices` as packed uint8s,
+            // reading the lowest-order byte first (shifting below).
+            uint8 dupSubmissionIdx = uint8(duplicateSubmissionIndices);
+
+            (
+                uint64 submissionIdx,
+                uint64 submissionBlockNumber
+            ) = getSubmissionIdxAndHeight(submissionId, dupSubmissionIdx);
+
+            if (submissionIdx != 0) {
+                nextSubmissionIdx = handleSingleProofOnChainSubmission(
+                    submissionIdx
+                );
+                // Emit the event
+                emit SubmissionVerified(submissionId);
+
+                proofIdIdx++;
+                verifiedSubmissionHeight = submissionBlockNumber;
+            } else {
+                // This is a multi-entry submission. Use the next
+                // SubmissionProof entry.
+                require(
+                    submissionProofIdx < submissionProofs.length,
+                    MissingSubmissionProof()
+                );
+                SubmissionProof
+                    calldata submissionVerification = submissionProofs[
+                        submissionProofIdx++
+                    ];
+                uint16 proofsThisSubmission;
+                (
+                    verifiedSubmissionHeight,
+                    nextSubmissionIdx,
+                    proofsThisSubmission
+                ) = handleMultiProofOnChainSubmission(
+                    submissionVerification,
+                    proofIds,
+                    nextSubmissionIdx,
+                    uint16(proofIds.length),
+                    proofIdIdx,
+                    dupSubmissionIdx
+                );
+
+                proofIdIdx += proofsThisSubmission;
+            }
+
+            duplicateSubmissionIndices = duplicateSubmissionIndices >> 8;
         }
 
         verifierStorage.nextSubmissionIdxToVerify = nextSubmissionIdx;
