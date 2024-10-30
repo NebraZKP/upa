@@ -288,11 +288,13 @@ contract UpaVerifier is
     /// performs the necessary consistency checks (e.g. everything is in the
     /// right order, the submission Merkle proof is valid) and marks the number
     /// of proofs of the submissionn present in `proofIds` as verified.
+    /// `lastOnChainProofIdx` indicates where the on-chain proofs end in the proofIds.
+    /// Note: `lastOnChainProofIdx` might also include dummy proofs.
     function handleMultiProofOnChainSubmission(
         SubmissionProof calldata submissionVerification,
         bytes32[] calldata proofIds,
         uint64 nextSubmissionIdx,
-        uint16 numProofs,
+        uint16 lastOnChainProofIdx,
         uint16 proofIdIdx,
         uint8 dupSubmissionIdx
     )
@@ -346,7 +348,7 @@ contract UpaVerifier is
         // assumed to not contain dummy proofIds, so `proofsThisSubmission`
         // will be `remainingInAggProof`.
         uint16 unverified = numProofsInSubmission - verified;
-        uint16 remainingInAggProof = numProofs - proofIdIdx;
+        uint16 remainingInAggProof = lastOnChainProofIdx - proofIdIdx + 1;
         proofsThisSubmission = (unverified < remainingInAggProof)
             ? (unverified)
             : (remainingInAggProof);
@@ -558,7 +560,7 @@ contract UpaVerifier is
                     submissionVerification,
                     proofIds,
                     nextSubmissionIdx,
-                    numOnChainProofs,
+                    numOnChainProofs - 1,
                     proofIdIdx,
                     dupSubmissionIdx
                 );
@@ -757,7 +759,7 @@ contract UpaVerifier is
                     submissionVerification,
                     proofIds,
                     nextSubmissionIdx,
-                    uint16(proofIds.length),
+                    uint16(proofIds.length - 1),
                     proofIdIdx,
                     dupSubmissionIdx
                 );
