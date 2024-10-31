@@ -173,8 +173,9 @@ export function mergeSubmissionIntervals<T>(
       const nextMetadata = nextInterval.data as OffChainSubmissionMetadata;
 
       if (
-        nextInterval.startIdx !== 0 &&
-        curMetadata?.isOffChainSubmission === nextMetadata?.isOffChainSubmission
+        curMetadata?.isOffChainSubmission ===
+          nextMetadata?.isOffChainSubmission &&
+        nextInterval.startIdx !== 0
       ) {
         throw `SubmissionInterval misses head:
                     ${JSONstringify(nextInterval)}`;
