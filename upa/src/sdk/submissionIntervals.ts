@@ -139,9 +139,8 @@ export function mergeSubmissionIntervals<T>(
     const nextInterval = intervals[i];
 
     if (isDummySubmissionInterval(curInterval)) {
-      // The current submission is the dummy proof.
-      // After this only more dummy submissions are allowed, and
-      // they won't be merged.
+      // The current submission is made of dummy proofs.
+      // After this only more dummy submissions are allowed.
       // Assert the next submission is also a dummy submission.
       assert(
         isDummySubmissionInterval(nextInterval),
@@ -172,6 +171,9 @@ export function mergeSubmissionIntervals<T>(
       const curMetadata = curInterval.data as OffChainSubmissionMetadata;
       const nextMetadata = nextInterval.data as OffChainSubmissionMetadata;
 
+      // If we split an on-chain submission, between 2 aggregated batches,
+      // We need to allow the second part of the on-chain submission
+      // to start with index > 0 when following an off-chain submission.
       if (
         curMetadata?.isOffChainSubmission ===
           nextMetadata?.isOffChainSubmission &&
