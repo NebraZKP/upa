@@ -5,6 +5,7 @@ import { Submission, SubmissionProof } from "./submission";
 import { JSONstringify } from "./utils";
 import { DUMMY_PROOF_ID } from "./application";
 import { strict as assert } from "assert";
+import { log } from "../tool";
 
 // For inner / outer batches that contain full or partial multi-proof
 // submissions, we must track the sub-vector of proofs from each submission.
@@ -131,7 +132,6 @@ export function mergeSubmissionIntervals<T>(
 
   const mergedIntervals: SubmissionInterval<T>[] = [];
   let curInterval = intervals[0];
-  let doNotMerge = false;
 
   for (let i = 1; i < intervals.length; ++i) {
     const nextInterval = intervals[i];
@@ -145,10 +145,8 @@ export function mergeSubmissionIntervals<T>(
         isDummySubmissionInterval(nextInterval),
         `Non-dummy proof after dummy proof in batch`
       );
-      // No intervals shall be merged past this point
-      doNotMerge = true;
     }
-    if (!doNotMerge && siCanMerge(curInterval, nextInterval)) {
+    if (siCanMerge(curInterval, nextInterval)) {
       // The intervals can be merged.  Add next into current.
       curInterval = {
         submission: curInterval.submission,
