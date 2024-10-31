@@ -6,6 +6,9 @@ import { JSONstringify } from "./utils";
 import { DUMMY_PROOF_ID } from "./application";
 import { strict as assert } from "assert";
 
+type OffChainSubmissionMetadata =
+  | { isOffChainSubmission?: boolean }
+  | undefined;
 // For inner / outer batches that contain full or partial multi-proof
 // submissions, we must track the sub-vector of proofs from each submission.
 export type SubmissionInterval<T = undefined> = {
@@ -166,7 +169,13 @@ export function mergeSubmissionIntervals<T>(
                     ${JSONstringify(curInterval)}`;
       }
 
-      if (nextInterval.startIdx !== 0) {
+      const curMetadata = curInterval.data as OffChainSubmissionMetadata;
+      const nextMetadata = nextInterval.data as OffChainSubmissionMetadata;
+
+      if (
+        nextInterval.startIdx !== 0 &&
+        curMetadata?.isOffChainSubmission === nextMetadata?.isOffChainSubmission
+      ) {
         throw `SubmissionInterval misses head:
                     ${JSONstringify(nextInterval)}`;
       }
