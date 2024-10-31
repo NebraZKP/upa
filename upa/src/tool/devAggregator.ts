@@ -20,6 +20,13 @@ import {
   packOffChainSubmissionMarkers,
 } from "../sdk/aggregatedProofParams";
 
+type SubmissionIntervalWithMetadata = SubmissionInterval<
+  | {
+      isOffChainSubmission?: boolean;
+    }
+  | undefined
+>;
+
 export const devAggregator = command({
   name: "aggregator",
   args: {
@@ -69,7 +76,7 @@ export const devAggregator = command({
     const submittedEventGetter = new ProofSubmittedEventGetter(
       upaInstance.verifier
     );
-    const submissionQueue: SubmissionInterval[] = [];
+    const submissionQueue: SubmissionIntervalWithMetadata[] = [];
 
     // Submit a batch every `latency` seconds, even if only
     // partially full.
@@ -87,12 +94,12 @@ export const devAggregator = command({
 
     /**
      * Takes up to `batchSize` many proofs from the `submissionQueue`,
-     * splitting `SubmissionInterval`s if needed. These proofs are
+     * splitting `SubmissionIntervalWithMetadata`s if needed. These proofs are
      * removed from `submissionQueue`.
-     * @returns a `SubmissionInterval[]` representing the batch.
+     * @returns a `SubmissionIntervalWithMetadata[]` representing the batch.
      */
-    function pullBatchFromQueue(): SubmissionInterval[] {
-      const batch: SubmissionInterval[] = [];
+    function pullBatchFromQueue(): SubmissionIntervalWithMetadata[] {
+      const batch: SubmissionIntervalWithMetadata[] = [];
       let curBatchSize = 0;
       while (curBatchSize < batchSize && submissionQueue.length) {
         const numProofsRequired = batchSize - curBatchSize;
@@ -178,29 +185,39 @@ export const devAggregator = command({
           continue;
         }
 
-        submissionQueue.push(submissions[i] as SubmissionInterval);
+        submissionQueue.push(submissions[i] as SubmissionIntervalWithMetadata);
       }
       lastBlockSeen = endBlock;
     }
   },
 });
 
-// TODO(#689): Include offchain submissions in dev aggregator
 async function submitBatch(
-  batch: SubmissionInterval[],
+  batch: SubmissionIntervalWithMetadata[],
   upaInstance: UpaInstance,
   options?: NonPayableOverrides
 ) {
   // Compute the finalDigest
-  const proofIds = batch.flatMap((si) => siProofIds(si));
+  const onChainSubmissionIntervals = batch.filter(
+    (si) => !si.data?.isOffChainSubmission
+  );
+  const offChainSubmissionIntervals = batch.filter(
+    (si) => si.data?.isOffChainSubmission
+  );
+
+  const proofIds = [
+    ...offChainSubmissionIntervals,
+    ...onChainSubmissionIntervals,
+  ].flatMap(siProofIds);
+
   const calldata = dummyProofData(proofIds);
   const aggProofParams = computeAggregatedProofParameters(batch, []);
 
   // Submit aggregated proof
-  await upaInstance.verifier.verifyAggregatedProof(
+  await upaInstance.verifier.verifyMixedAggregatedProof(
     calldata,
-    aggProofParams.proofIds,
-    aggProofParams.numOnChainProofs,
+    proofIds,
+    aggProofParams.numOffChainProofs,
     aggProofParams.submissionProofs,
     packOffChainSubmissionMarkers(aggProofParams.offChainSubmissionMarkers),
     packDupSubmissionIdxs(aggProofParams.dupSubmissionIdxs),
