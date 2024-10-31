@@ -5,7 +5,6 @@ import { Submission, SubmissionProof } from "./submission";
 import { JSONstringify } from "./utils";
 import { DUMMY_PROOF_ID } from "./application";
 import { strict as assert } from "assert";
-import { log } from "../tool";
 
 // For inner / outer batches that contain full or partial multi-proof
 // submissions, we must track the sub-vector of proofs from each submission.
