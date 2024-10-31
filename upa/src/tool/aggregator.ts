@@ -33,6 +33,8 @@ import { loadWallet } from "./config";
 import { Deposits__factory } from "../../typechain-types";
 import fs from "fs";
 
+type AggregatedSubmissionType = "OnChain" | "Mixed";
+
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",
   args: {
@@ -166,9 +168,13 @@ const computeFinalDigest = command({
   },
 });
 
-const makeSubmitAggregatedProofCommand = (mixed: boolean) =>
+const makeSubmitAggregatedProofCommand = (
+  submissionType: AggregatedSubmissionType
+) =>
   command({
-    name: `submit-${mixed ? "mixed-" : ""}aggregated-proof`,
+    name: `submit-${
+      submissionType === "Mixed" ? "mixed-" : ""
+    }aggregated-proof`,
     args: {
       endpoint: options.endpoint(),
       keyfile: options.keyfile(),
@@ -312,9 +318,10 @@ const makeSubmitAggregatedProofCommand = (mixed: boolean) =>
 
       // Create and handle the tx
 
-      const batchIntervals = mixed
-        ? [...offChainSubmissionIntervals, ...submissionIntervals]
-        : [...submissionIntervals, ...offChainSubmissionIntervals];
+      const batchIntervals =
+        submissionType === "Mixed"
+          ? [...offChainSubmissionIntervals, ...submissionIntervals]
+          : [...submissionIntervals, ...offChainSubmissionIntervals];
       const proofIds = batchIntervals.flatMap(siProofIds);
 
       const submissionProofsSolidity = apParams.submissionProofs.map((p) =>
@@ -324,11 +331,15 @@ const makeSubmitAggregatedProofCommand = (mixed: boolean) =>
         maxFeePerGas: utils.parseGweiOrUndefined(maxFeePerGasGwei),
       };
       const txReq = await verifier[
-        mixed ? "verifyMixedAggregatedProof" : "verifyAggregatedProof"
+        submissionType === "Mixed"
+          ? "verifyMixedAggregatedProof"
+          : "verifyAggregatedProof"
       ].populateTransaction(
         calldata,
         proofIds,
-        apParams.numOnChainProofs,
+        submissionType === "Mixed"
+          ? apParams.numOffChainProofs
+          : apParams.numOnChainProofs,
         submissionProofsSolidity,
         packOffChainSubmissionMarkers(apParams.offChainSubmissionMarkers),
         packDupSubmissionIdxs(apParams.dupSubmissionIdxs),
@@ -412,8 +423,8 @@ export const aggregator = subcommands({
     "allocate-aggregator-fee": allocateAggregatorFee,
     "claim-aggregator-fee": claimAggregatorFee,
     "compute-final-digest": computeFinalDigest,
-    "submit-aggregated-proof": makeSubmitAggregatedProofCommand(false),
-    "submit-mixed-aggregated-proof": makeSubmitAggregatedProofCommand(true),
+    "submit-aggregated-proof": makeSubmitAggregatedProofCommand("OnChain"),
+    "submit-mixed-aggregated-proof": makeSubmitAggregatedProofCommand("Mixed"),
     "deploy-deposit-contract": deployDeposits,
     "claim-deposit-fees": claimDepositFees,
   },
