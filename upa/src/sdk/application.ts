@@ -8,9 +8,6 @@ export { Groth16VerifyingKey, Groth16Proof };
 /// Dummy proof ID
 export const DUMMY_PROOF_ID =
   "0x84636c7b9793a9833ef7ca3e1c118d7d21dadb97ef7bf1fbfd549c10bca3553f";
-/// Dummy submission ID, which is equal to keccak256(DUMMY_PROOF_ID).
-export const DUMMY_SUBMISSION_ID =
-  "0xd567a437cec381611ef7244fc6b112d760e3e4e3bc8629468b5e4a57c2fb1402";
 /// Dummy proof circuit ID
 export const DUMMY_PROOF_CIRCUIT_ID =
   "0xed5ef176f0a27744b95dcdb7dfa467b32ab4a9d640e202eb8c92f9880b31e737";
