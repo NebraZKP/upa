@@ -8,7 +8,6 @@ import {
   CircuitIdProofAndInputs,
   DUMMY_PROOF_CIRCUIT_ID,
   DUMMY_PROOF_ID,
-  DUMMY_SUBMISSION_ID,
 } from "../src/sdk/application";
 import { loadAppVK, loadDummyProofData } from "../src/tool/config";
 import {
@@ -21,7 +20,7 @@ import {
 } from "../src/sdk/utils";
 import { ethers } from "hardhat";
 import { hexlify } from "ethers";
-import { Submission } from "../src/sdk/submission";
+import { Submission } from "../src/sdk";
 import { Groth16Verifier } from "../src/sdk";
 
 export async function deployUpaLibTest(): Promise<UpaLibTest> {
@@ -151,12 +150,6 @@ describe("UpaLib Tests", async () => {
         DUMMY_PROOF_ID,
         "Hard-coded DUMMY_PROOF_ID in contract is out of date.\n" +
           `Update to ${dummyProofId}`
-      );
-      // Check that the dummy submission Id is equal to keccak256 of the
-      // dummy proof Id.
-      expect(ethers.keccak256(DUMMY_PROOF_ID)).eqls(
-        DUMMY_SUBMISSION_ID,
-        "Hard-coded DUMMY_SUBMISSION_ID in SDK is out of date."
       );
 
       // Check the dummy proof is valid

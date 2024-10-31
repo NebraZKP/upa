@@ -13,11 +13,11 @@ import * as log from "./log";
 import { readFileSync, writeFileSync } from "fs";
 import { dummyProofData } from "../sdk/upa";
 import { utils } from "../sdk";
-import { Submission } from "../sdk/submission";
+import { Submission } from "../sdk";
 import { config, options } from ".";
 import { PayableOverrides } from "../../typechain-types/common";
 import assert from "assert";
-import { sisFromSubmissions } from "../sdk/submissionIntervals";
+import { siProofIds, sisFromSubmissions } from "../sdk/submissionIntervals";
 import { JSONstringify } from "../sdk/utils";
 import {
   packDupSubmissionIdxs,
@@ -32,6 +32,8 @@ import {
 import { loadWallet } from "./config";
 import { Deposits__factory } from "../../typechain-types";
 import fs from "fs";
+
+type AggregatedSubmissionType = "OnChain" | "Mixed";
 
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",
@@ -166,176 +168,194 @@ const computeFinalDigest = command({
   },
 });
 
-const submitAggregatedProof = command({
-  name: "submit-aggregated-proof",
-  args: {
-    endpoint: options.endpoint(),
-    keyfile: options.keyfile(),
-    password: options.password(),
-    instance: options.instance(),
-    wait: options.wait(),
-    estimateGas: options.estimateGas(),
-    dumpTx: options.dumpTx(),
-    maxFeePerGasGwei: options.maxFeePerGasGwei(),
-    dumpArguments: option({
-      type: optional(string),
-      long: "dump-arguments",
-      description: "Write a JSON representation of the arguments to a file",
-    }),
-    calldataFile: option({
-      type: string,
-      long: "calldata-file",
-      description: "Proof file",
-    }),
-    submissionFiles: multioption({
-      type: array(string),
-      long: "submission",
-      description: "on-chain submission files",
-    }),
-    offset: option({
-      type: number,
-      long: "offset",
-      defaultValue: () => 0,
-      description: "skip proofs in first on-chain submission (default: 0)",
-    }),
-    finalCount: option({
-      type: optional(number),
-      long: "final-count",
-      description:
-        "include only leading proofs from final submission" + " (default: all)",
-    }),
-    offChainSubmissionFiles: multioption({
-      type: array(string),
-      long: "off-chain-submission",
-      description: "off-chain submission files",
-    }),
-    offChainOffset: option({
-      type: number,
-      long: "off-chain-offset",
-      defaultValue: () => 0,
-      description: "skip proofs in first off-chain submission (default: 0)",
-    }),
-    offChainFinalCount: option({
-      type: optional(number),
-      long: "off-chain-final-count",
-      description:
-        "include only leading proofs from final final submission " +
-        "(default: all)",
-    }),
-  },
-  description: "Submit an aggregated proof to the UPA contract",
-  handler: async function ({
-    endpoint,
-    keyfile,
-    password,
-    instance,
-    wait,
-    estimateGas,
-    dumpTx,
-    maxFeePerGasGwei,
-    dumpArguments,
-    calldataFile,
-    submissionFiles,
-    offset,
-    finalCount,
-    offChainSubmissionFiles,
-    offChainOffset,
-    offChainFinalCount,
-  }): Promise<void> {
-    assert(submissionFiles.length > 0 || offChainSubmissionFiles.length > 0);
-
-    const calldata = readFileSync(calldataFile);
-
-    // Init the on-chain submission config
-
-    const submissions: Submission[] = submissionFiles.map((f) => {
-      const s = Submission.from_json(readFileSync(f, "ascii"));
-      assert(s.getDupSubmissionIdx() !== undefined);
-      return s;
-    });
-
-    // Init the off-chain submission config
-
-    const offChainSubmissions: Submission[] = offChainSubmissionFiles.map((f) =>
-      Submission.from_json(readFileSync(f, "ascii"))
-    );
-
-    // Create the submission intervals
-
-    const submissionIntervals = sisFromSubmissions(
-      submissions,
-      offset,
-      finalCount
-    );
-
-    const offChainSubmissionIntervals = sisFromSubmissions(
-      offChainSubmissions,
-      offChainOffset,
-      offChainFinalCount
-    );
-
-    log.debug(
-      `on-chain: ${submissions.length} submissions, offset: ${offset}, ` +
-        `finalCount: ${finalCount}`
-    );
-    log.debug(
-      `off-chain: ${offChainSubmissions.length} submissions, ` +
-        `offset: ${offChainOffset}, finalCount: ${offChainFinalCount}`
-    );
-
-    // Compute all arguments to verifyAggregatedProof
-
-    const apParams = computeAggregatedProofParameters(
-      submissionIntervals,
-      offChainSubmissionIntervals
-    );
-
-    if (dumpArguments) {
-      log.info(`Writing args file to ${dumpArguments}`);
-      writeFileSync(dumpArguments, JSONstringify(apParams));
-    }
-
-    // Connect
-
-    const provider = new ethers.JsonRpcProvider(endpoint);
-    const wallet = await config.loadWallet(
+const makeSubmitAggregatedProofCommand = (
+  submissionType: AggregatedSubmissionType
+) =>
+  command({
+    name: `submit-${
+      submissionType === "Mixed" ? "mixed-" : ""
+    }aggregated-proof`,
+    args: {
+      endpoint: options.endpoint(),
+      keyfile: options.keyfile(),
+      password: options.password(),
+      instance: options.instance(),
+      wait: options.wait(),
+      estimateGas: options.estimateGas(),
+      dumpTx: options.dumpTx(),
+      maxFeePerGasGwei: options.maxFeePerGasGwei(),
+      dumpArguments: option({
+        type: optional(string),
+        long: "dump-arguments",
+        description: "Write a JSON representation of the arguments to a file",
+      }),
+      calldataFile: option({
+        type: string,
+        long: "calldata-file",
+        description: "Proof file",
+      }),
+      submissionFiles: multioption({
+        type: array(string),
+        long: "submission",
+        description: "on-chain submission files",
+      }),
+      offset: option({
+        type: number,
+        long: "offset",
+        defaultValue: () => 0,
+        description: "skip proofs in first on-chain submission (default: 0)",
+      }),
+      finalCount: option({
+        type: optional(number),
+        long: "final-count",
+        description:
+          "include only leading proofs from final submission" +
+          " (default: all)",
+      }),
+      offChainSubmissionFiles: multioption({
+        type: array(string),
+        long: "off-chain-submission",
+        description: "off-chain submission files",
+      }),
+      offChainOffset: option({
+        type: number,
+        long: "off-chain-offset",
+        defaultValue: () => 0,
+        description: "skip proofs in first off-chain submission (default: 0)",
+      }),
+      offChainFinalCount: option({
+        type: optional(number),
+        long: "off-chain-final-count",
+        description:
+          "include only leading proofs from final final submission " +
+          "(default: all)",
+      }),
+    },
+    description: "Submit an aggregated proof to the UPA contract",
+    handler: async function ({
+      endpoint,
       keyfile,
-      options.getPassword(password),
-      provider
-    );
-    const { verifier: verifier } = await config.upaFromInstanceFile(
+      password,
       instance,
-      wallet
-    );
-
-    // Create and handle the tx
-
-    const submissionProofsSolidity = apParams.submissionProofs.map((p) =>
-      p.solidity()
-    );
-    const optionsPayable: PayableOverrides = {
-      maxFeePerGas: utils.parseGweiOrUndefined(maxFeePerGasGwei),
-    };
-    const txReq = await verifier.verifyAggregatedProof.populateTransaction(
-      calldata,
-      apParams.proofIds,
-      apParams.numOnChainProofs,
-      submissionProofsSolidity,
-      packOffChainSubmissionMarkers(apParams.offChainSubmissionMarkers),
-      packDupSubmissionIdxs(apParams.dupSubmissionIdxs),
-      optionsPayable
-    );
-
-    await config.handleTxRequest(
-      wallet,
-      txReq,
+      wait,
       estimateGas,
       dumpTx,
-      wait,
-      verifier.interface
-    );
-  },
-});
+      maxFeePerGasGwei,
+      dumpArguments,
+      calldataFile,
+      submissionFiles,
+      offset,
+      finalCount,
+      offChainSubmissionFiles,
+      offChainOffset,
+      offChainFinalCount,
+    }): Promise<void> {
+      assert(submissionFiles.length > 0 || offChainSubmissionFiles.length > 0);
+
+      const calldata = readFileSync(calldataFile);
+
+      // Init the on-chain submission config
+
+      const submissions: Submission[] = submissionFiles.map((f) => {
+        const s = Submission.from_json(readFileSync(f, "ascii"));
+        assert(s.getDupSubmissionIdx() !== undefined);
+        return s;
+      });
+
+      // Init the off-chain submission config
+
+      const offChainSubmissions: Submission[] = offChainSubmissionFiles.map(
+        (f) => Submission.from_json(readFileSync(f, "ascii"))
+      );
+
+      // Create the submission intervals
+
+      const submissionIntervals = sisFromSubmissions(
+        submissions,
+        offset,
+        finalCount
+      );
+
+      const offChainSubmissionIntervals = sisFromSubmissions(
+        offChainSubmissions,
+        offChainOffset,
+        offChainFinalCount
+      );
+
+      log.debug(
+        `on-chain: ${submissions.length} submissions, offset: ${offset}, ` +
+          `finalCount: ${finalCount}`
+      );
+      log.debug(
+        `off-chain: ${offChainSubmissions.length} submissions, ` +
+          `offset: ${offChainOffset}, finalCount: ${offChainFinalCount}`
+      );
+
+      // Compute all arguments to verifyAggregatedProof
+
+      const apParams = computeAggregatedProofParameters(
+        submissionIntervals,
+        offChainSubmissionIntervals
+      );
+
+      if (dumpArguments) {
+        log.info(`Writing args file to ${dumpArguments}`);
+        writeFileSync(dumpArguments, JSONstringify(apParams));
+      }
+
+      // Connect
+
+      const provider = new ethers.JsonRpcProvider(endpoint);
+      const wallet = await config.loadWallet(
+        keyfile,
+        options.getPassword(password),
+        provider
+      );
+      const { verifier: verifier } = await config.upaFromInstanceFile(
+        instance,
+        wallet
+      );
+
+      // Create and handle the tx
+
+      const batchIntervals =
+        submissionType === "Mixed"
+          ? [...offChainSubmissionIntervals, ...submissionIntervals]
+          : [...submissionIntervals, ...offChainSubmissionIntervals];
+      const proofIds = batchIntervals.flatMap(siProofIds);
+
+      const submissionProofsSolidity = apParams.submissionProofs.map((p) =>
+        p.solidity()
+      );
+      const optionsPayable: PayableOverrides = {
+        maxFeePerGas: utils.parseGweiOrUndefined(maxFeePerGasGwei),
+      };
+      const txReq = await verifier[
+        submissionType === "Mixed"
+          ? "verifyMixedAggregatedProof"
+          : "verifyAggregatedProof"
+      ].populateTransaction(
+        calldata,
+        proofIds,
+        submissionType === "Mixed"
+          ? apParams.numOffChainProofs
+          : apParams.numOnChainProofs,
+        submissionProofsSolidity,
+        packOffChainSubmissionMarkers(apParams.offChainSubmissionMarkers),
+        packDupSubmissionIdxs(apParams.dupSubmissionIdxs),
+        optionsPayable
+      );
+
+      await config.handleTxRequest(
+        wallet,
+        txReq,
+        estimateGas,
+        dumpTx,
+        wait,
+        verifier.interface
+      );
+    },
+  });
 
 export const claimDepositFees = command({
   name: "claim-deposit-fees",
@@ -403,7 +423,8 @@ export const aggregator = subcommands({
     "allocate-aggregator-fee": allocateAggregatorFee,
     "claim-aggregator-fee": claimAggregatorFee,
     "compute-final-digest": computeFinalDigest,
-    "submit-aggregated-proof": submitAggregatedProof,
+    "submit-aggregated-proof": makeSubmitAggregatedProofCommand("OnChain"),
+    "submit-mixed-aggregated-proof": makeSubmitAggregatedProofCommand("Mixed"),
     "deploy-deposit-contract": deployDeposits,
     "claim-deposit-fees": claimDepositFees,
   },

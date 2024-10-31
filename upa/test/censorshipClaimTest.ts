@@ -178,8 +178,8 @@ describe("Censorship challenge tests", () => {
     );
 
     await verifier.connect(worker).verifyAggregatedProof(
-      dummyProofData(aggProofParams.proofIds),
-      aggProofParams.proofIds,
+      dummyProofData(submissionInterval.submission.proofIds),
+      submissionInterval.submission.proofIds,
       aggProofParams.numOnChainProofs,
       aggProofParams.submissionProofs.map((p) => p.solidity()),
       packOffChainSubmissionMarkers(aggProofParams.offChainSubmissionMarkers),

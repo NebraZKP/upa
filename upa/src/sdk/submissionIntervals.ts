@@ -3,7 +3,7 @@ import { EventSet, ProofSubmittedEventWithProofData } from "./events";
 import { UpaInstance } from "./upa";
 import { Submission, SubmissionProof } from "./submission";
 import { JSONstringify } from "./utils";
-import { DUMMY_SUBMISSION_ID } from "./application";
+import { DUMMY_PROOF_ID } from "./application";
 import { strict as assert } from "assert";
 
 // For inner / outer batches that contain full or partial multi-proof
@@ -134,24 +134,16 @@ export function mergeSubmissionIntervals<T>(
   let doNotMerge = false;
 
   for (let i = 1; i < intervals.length; ++i) {
-    const curSubId = curInterval.submission.getSubmissionId();
     const nextInterval = intervals[i];
-    const nextSubmissionId = nextInterval.submission.getSubmissionId();
 
-    if (curSubId === DUMMY_SUBMISSION_ID) {
+    if (isDummySubmissionInterval(curInterval)) {
       // The current submission is the dummy proof.
       // After this only more dummy submissions are allowed, and
       // they won't be merged.
       // Assert the next submission is also a dummy submission.
       assert(
-        nextSubmissionId === DUMMY_SUBMISSION_ID,
+        isDummySubmissionInterval(nextInterval),
         `Non-dummy proof after dummy proof in batch`
-      );
-      // Sanity check: make sure the dummy submission consists of
-      // only 1 proof
-      assert.ok(
-        curInterval.submission.proofIds.length === 1,
-        `Dummy submission with more than one proof`
       );
       // No intervals shall be merged past this point
       doNotMerge = true;
@@ -295,4 +287,26 @@ export async function submissionIntervalsFromEvents(
   });
 
   return Promise.all(intervalsP);
+}
+
+export function isDummySubmissionInterval<T>(
+  si: SubmissionInterval<T>
+): boolean {
+  const proofIds = si.submission.proofIds;
+  const firstProofId = proofIds[si.startIdx];
+  if (firstProofId === DUMMY_PROOF_ID) {
+    assert(
+      proofIds.every((id) => id === DUMMY_PROOF_ID),
+      `Mixed on-chain and dummy proofs in submission 
+        ${si.submission.submissionId}`
+    );
+    return true;
+  } else {
+    assert(
+      proofIds.every((id) => id !== DUMMY_PROOF_ID),
+      `Mixed on-chain and dummy proofs in submission 
+        ${si.submission.submissionId}`
+    );
+    return false;
+  }
 }

@@ -15,8 +15,8 @@ const MAX_NUMBER_OF_SUBMISSION_MARKERS = 256;
 /// The set of arguments that must be passed to the UPA.verifyAggregatedProof
 /// contract method.
 export type AggregatedProofParameters = {
-  proofIds: string[];
   numOnChainProofs: number;
+  numOffChainProofs: number;
   /// NOTE: must convert to `solidity` form before sending.
   submissionProofs: SubmissionProof[];
   /// Need packing before sending.
@@ -40,7 +40,7 @@ export function computeAggregatedProofParameters<T>(
     .map(siComputeSubmissionProof)
     .filter((p) => !!p) as SubmissionProof[];
 
-  // TODO: make `computeUnpackedOffChainSubmissionmarkers` accept
+  // TODO: make `computeUnpackedOffChainSubmissionMarkers` accept
   // SubmissionInterval[]
   const offChainSubmissionMarkers: boolean[] = (() => {
     if (offChainSubmissionIntervals.length > 0) {
@@ -63,8 +63,8 @@ export function computeAggregatedProofParameters<T>(
   assert(onChainNumProofs + offChainNumProofs === proofIds.length);
 
   return {
-    proofIds,
     numOnChainProofs: onChainNumProofs,
+    numOffChainProofs: offChainNumProofs,
     submissionProofs,
     offChainSubmissionMarkers,
     dupSubmissionIdxs,
