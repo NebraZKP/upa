@@ -6,6 +6,9 @@ import { JSONstringify } from "./utils";
 import { DUMMY_PROOF_ID } from "./application";
 import { strict as assert } from "assert";
 
+type OffChainSubmissionMetadata =
+  | { isOffChainSubmission?: boolean }
+  | undefined;
 // For inner / outer batches that contain full or partial multi-proof
 // submissions, we must track the sub-vector of proofs from each submission.
 export type SubmissionInterval<T = undefined> = {
@@ -131,24 +134,20 @@ export function mergeSubmissionIntervals<T>(
 
   const mergedIntervals: SubmissionInterval<T>[] = [];
   let curInterval = intervals[0];
-  let doNotMerge = false;
 
   for (let i = 1; i < intervals.length; ++i) {
     const nextInterval = intervals[i];
 
     if (isDummySubmissionInterval(curInterval)) {
-      // The current submission is the dummy proof.
-      // After this only more dummy submissions are allowed, and
-      // they won't be merged.
+      // The current submission is made of dummy proofs.
+      // After this only more dummy submissions are allowed.
       // Assert the next submission is also a dummy submission.
       assert(
         isDummySubmissionInterval(nextInterval),
         `Non-dummy proof after dummy proof in batch`
       );
-      // No intervals shall be merged past this point
-      doNotMerge = true;
     }
-    if (!doNotMerge && siCanMerge(curInterval, nextInterval)) {
+    if (siCanMerge(curInterval, nextInterval)) {
       // The intervals can be merged.  Add next into current.
       curInterval = {
         submission: curInterval.submission,
@@ -169,7 +168,17 @@ export function mergeSubmissionIntervals<T>(
                     ${JSONstringify(curInterval)}`;
       }
 
-      if (nextInterval.startIdx !== 0) {
+      const curMetadata = curInterval.data as OffChainSubmissionMetadata;
+      const nextMetadata = nextInterval.data as OffChainSubmissionMetadata;
+
+      // If we split an on-chain submission, between 2 aggregated batches,
+      // We need to allow the second part of the on-chain submission
+      // to start with index > 0 when following an off-chain submission.
+      if (
+        curMetadata?.isOffChainSubmission ===
+          nextMetadata?.isOffChainSubmission &&
+        nextInterval.startIdx !== 0
+      ) {
         throw `SubmissionInterval misses head:
                     ${JSONstringify(nextInterval)}`;
       }
