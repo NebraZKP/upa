@@ -692,9 +692,9 @@ contract UpaVerifier is
                 if (verifierStorage.verifiedAtBlock[submissionId] == 0) {
                     verifierStorage.verifiedAtBlock[submissionId] = block
                         .number;
-
-                    emit SubmissionVerified(submissionId);
                 }
+
+                emit SubmissionVerified(submissionId);
 
                 // Reset the length of the array to zero
                 bytes32[] // solhint-disable-next-line
