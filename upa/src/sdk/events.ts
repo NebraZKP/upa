@@ -278,6 +278,61 @@ export function getCallDataForVerifyAggregatedProofTx(
   };
 }
 
+export function getCallDataForVerifyMixedAggregatedProofTx(
+  verifier: IUpaVerifier,
+  tx: ethers.TransactionResponse
+): {
+  proof: string;
+  proofIds: string[];
+  numOffChainProofs: bigint;
+  submissionProofs: SubmissionProofStruct[];
+  offChainSubmissionMarkers: bigint;
+  duplicateSubmissionIndices: bigint;
+} {
+  const submitFragment = verifier.getFunction(
+    "verifyMixedAggregatedProof"
+  )!.fragment;
+  const decoded = verifier.interface.decodeFunctionData(
+    submitFragment,
+    tx.data
+  );
+
+  // The decoded data is dynamically indexed.  Extract everything to make it a
+  // concrete struct.
+
+  const proof = decoded.proof;
+  const proofIds: string[] = decoded.proofIds.map(readBytes32);
+  const numOffChainProofs: bigint = BigInt(decoded.numOffChainProofs);
+  const submissionProofs: SubmissionProofStruct[] =
+    decoded.submissionProofs.map((proof: ethers.Result) => proof.toObject());
+  const offChainSubmissionMarkers = BigInt(decoded.offChainSubmissionMarkers);
+  const duplicateSubmissionIndices = BigInt(decoded.duplicateSubmissionIndices);
+
+  assert(bytes32IsWellFormed(proofIds[0]));
+  assert("bigint" === typeof numOffChainProofs);
+  assert("bigint" === typeof offChainSubmissionMarkers);
+  assert("bigint" === typeof duplicateSubmissionIndices);
+
+  return {
+    proof,
+    proofIds,
+    numOffChainProofs,
+    submissionProofs,
+    offChainSubmissionMarkers,
+    duplicateSubmissionIndices,
+  };
+}
+
+// Extension of the SubmissionVerifiedEvent data, to include proofIds
+// that were aggregated in the tx data needed to discern which proofs
+// are on-chain/off-chain.
+export type SubmissionVerifiedEventWithProofIdsData =
+  SubmissionVerifiedEvent.OutputObject & {
+    readonly proofIds: string[];
+    readonly numOffChainProofs: bigint;
+    readonly offChainSubmissionMarkers: bigint;
+  };
+
 /// Specialized version of EventGetter for ProofVerified events.
 export class SubmissionVerifiedEventGetter extends EventGetterBase<
   SubmissionVerifiedEvent.Event,
@@ -297,6 +352,53 @@ export class SubmissionVerifiedEventGetter extends EventGetterBase<
     return {
       submissionId: args.submissionId,
     };
+  }
+
+  /**
+   * Given the SubmissionVerified events emitted from the contract, query the
+   * calldata for each tx and extract the data needed to parse the proofIds
+   * and discern which ones are on-chain/off-chain.
+   */
+  getProofIdsDataForVerifiedEvents(
+    eventSets: EventSet<SubmissionVerifiedEvent.OutputObject>[]
+  ): Promise<EventSet<SubmissionVerifiedEventWithProofIdsData>[]> {
+    const eventSetsWithDataP: Promise<
+      EventSet<SubmissionVerifiedEventWithProofIdsData>
+    >[] = eventSets.map(async (evSet) => {
+      const txId = evSet.txHash;
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      const tx = await this.upa.runner!.provider!.getTransaction(txId);
+      const {
+        proof,
+        proofIds,
+        numOffChainProofs,
+        submissionProofs,
+        offChainSubmissionMarkers,
+        duplicateSubmissionIndices,
+      } = getCallDataForVerifyMixedAggregatedProofTx(
+        this.upa as IUpaVerifier,
+        tx!
+      );
+      /* eslint-enable @typescript-eslint/no-unused-vars */
+
+      const eventsWithData: SubmissionVerifiedEventWithProofIdsData[] =
+        evSet.events.map((ev) => {
+          return {
+            submissionId: ev.submissionId,
+            proofIds: proofIds,
+            numOffChainProofs: numOffChainProofs,
+            offChainSubmissionMarkers: offChainSubmissionMarkers,
+          };
+        });
+
+      return {
+        blockNumber: evSet.blockNumber,
+        txHash: evSet.txHash,
+        events: eventsWithData,
+      };
+    });
+
+    return Promise.all(eventSetsWithDataP);
   }
 }
 

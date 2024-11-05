@@ -9,6 +9,7 @@ import {
   ProofSubmittedEventGetter,
   SubmissionVerifiedEventGetter,
   getCallDataForVerifyAggregatedProofTx,
+  getCallDataForVerifyMixedAggregatedProofTx,
 } from "../src/sdk/events";
 import { submitProofs } from "../src/sdk/upa";
 import { Submission } from "../src/sdk/submission";
@@ -174,6 +175,167 @@ describe("EventGetter for events", () => {
           dummyProofData(proofIds),
           proofIds,
           proofIds.length,
+          [sub_3.computeSubmissionProof(1, 2)!.solidity()],
+          packOffChainSubmissionMarkers([]),
+          packDupSubmissionIdxs([0])
+        );
+      return agg3Tx.hash;
+    })();
+
+    return {
+      upa,
+      startHeight,
+      pid_a,
+      pid_b,
+      pid_c,
+      pid_d,
+      pid_e,
+      pid_f,
+      pid_offchain,
+      sub1TxHash,
+      sub2TxHash,
+      sub3TxHash,
+      sub_1,
+      sub_2,
+      sub_3,
+      sub_offchain,
+      agg1TxHash,
+      agg2TxHash,
+      agg3TxHash,
+    };
+  };
+
+  // Same as above but use verifyMixedAggregatedProof
+  // On-chain submissions:
+  //   1: [ A, B ],
+  //   2: [ C ],
+  //   3: [ D, E, F]
+  // Off-chain submissions:
+  //   1: [ offchain ]
+  //
+  // Verify:
+  //   1: [ A, offchain ],
+  //   2: [ B, C, D ],
+  //   3: [ E, F ],
+  const deploySubmitVerifyMixed = async () => {
+    const { upa, worker } = await loadFixture(deployUpaDummyVerifier);
+    const { verifier } = upa;
+
+    const vk = loadAppVK("../circuits/src/tests/data/vk.json");
+    await verifier.registerVK(vk);
+    const cid = utils.readBytes32((await verifier.getCircuitIds())[0]);
+    const pid_a = utils.computeProofId(cid, pi_a);
+    const pid_b = utils.computeProofId(cid, pi_b);
+    const pid_c = utils.computeProofId(cid, pi_c);
+    const pid_d = utils.computeProofId(cid, pi_d);
+    const pid_e = utils.computeProofId(cid, pi_e);
+    const pid_f = utils.computeProofId(cid, pi_f);
+    const pid_offchain = utils.computeProofId(cid, pi_offchain);
+
+    const startHeight = await ethers.provider.getBlockNumber();
+
+    // On-chain submissions:
+    //   1: [ A, B ],
+    //   2: [ C ],
+    //   3: [ D, E, F]
+    // Off-chain submissions:
+    //   1: [ offchain ]
+
+    const sub_1 = Submission.fromCircuitIdsProofsAndInputs([
+      { circuitId: cid, proof: pf_a, inputs: pi_a },
+      { circuitId: cid, proof: pf_b, inputs: pi_b },
+    ]);
+    const sub1TxHash = await (async () => {
+      const s1Tx = await submitProofs(
+        verifier,
+        sub_1.circuitIds,
+        sub_1.proofs,
+        sub_1.inputs
+      );
+      return s1Tx.hash;
+    })();
+
+    const sub_2 = Submission.fromCircuitIdsProofsAndInputs([
+      { circuitId: cid, proof: pf_a, inputs: pi_c },
+    ]);
+    const sub2TxHash = await (async () => {
+      const s2Tx = await submitProofs(
+        verifier,
+        sub_2.circuitIds,
+        sub_2.proofs,
+        sub_2.inputs
+      );
+      return s2Tx.hash;
+    })();
+
+    const sub_3 = Submission.fromCircuitIdsProofsAndInputs([
+      { circuitId: cid, proof: pf_b, inputs: pi_d },
+      { circuitId: cid, proof: pf_a, inputs: pi_e },
+      { circuitId: cid, proof: pf_b, inputs: pi_f },
+    ]);
+    const sub3TxHash = await (async () => {
+      const s3Tx = await submitProofs(
+        verifier,
+        sub_3.circuitIds,
+        sub_3.proofs,
+        sub_3.inputs
+      );
+      return s3Tx.hash;
+    })();
+
+    const sub_offchain = Submission.fromCircuitIdsProofsAndInputs([
+      { circuitId: cid, proof: pf_a, inputs: pi_offchain },
+    ]);
+    const submissionMarkers = packOffChainSubmissionMarkers(
+      sub_offchain.getOffChainSubmissionMarkers()
+    );
+
+    // Verify:
+    //   1: [ A, offchain ],
+    //   2: [ B, C, D ],
+    //   3: [ E, F ],
+
+    const agg1TxHash = await (async () => {
+      const proofIds = [pid_offchain, pid_a];
+      const agg1Tx = await verifier
+        .connect(worker)
+        .verifyMixedAggregatedProof(
+          dummyProofData(proofIds),
+          proofIds,
+          proofIds.length - 1,
+          [sub_1.computeSubmissionProof(0, 1)!.solidity()],
+          submissionMarkers,
+          packDupSubmissionIdxs([0])
+        );
+      return agg1Tx.hash;
+    })();
+
+    const agg2TxHash = await (async () => {
+      const proofIds = [pid_b, pid_c, pid_d];
+      const agg2Tx = await verifier
+        .connect(worker)
+        .verifyMixedAggregatedProof(
+          dummyProofData(proofIds),
+          proofIds,
+          0,
+          [
+            sub_1.computeSubmissionProof(1, 1)!.solidity(),
+            sub_3.computeSubmissionProof(0, 1)!.solidity(),
+          ],
+          packOffChainSubmissionMarkers([]),
+          packDupSubmissionIdxs([0, 0, 0])
+        );
+      return agg2Tx.hash;
+    })();
+
+    const agg3TxHash = await (async () => {
+      const proofIds = [pid_e, pid_f];
+      const agg3Tx = await verifier
+        .connect(worker)
+        .verifyMixedAggregatedProof(
+          dummyProofData(proofIds),
+          proofIds,
+          0,
           [sub_3.computeSubmissionProof(1, 2)!.solidity()],
           packOffChainSubmissionMarkers([]),
           packDupSubmissionIdxs([0])
@@ -416,6 +578,150 @@ describe("EventGetter for events", () => {
     ]);
     expect(agg3Tx_offChainSubmissionMarkers).eql(0n);
   });
+
+  it("extract verifyMixedAggregatedProof calldata", async function () {
+    const {
+      upa,
+      pid_a,
+      pid_b,
+      pid_c,
+      pid_d,
+      pid_e,
+      pid_f,
+      pid_offchain,
+      sub_1,
+      sub_3,
+      agg1TxHash,
+      agg2TxHash,
+      agg3TxHash,
+    } = await loadFixture(deploySubmitVerifyMixed);
+
+    const provider = upa.verifier.runner!.provider!;
+    const agg1Tx = await provider.getTransaction(agg1TxHash);
+    const agg2Tx = await provider.getTransaction(agg2TxHash);
+    const agg3Tx = await provider.getTransaction(agg3TxHash);
+
+    const {
+      proof: agg1Tx_proof,
+      proofIds: agg1Tx_proofIds,
+      numOffChainProofs: agg1Tx_numOffChainProofs,
+      submissionProofs: agg1Tx_submissionProofs,
+      offChainSubmissionMarkers: agg1Tx_offChainSubmissionMarkers,
+    } = getCallDataForVerifyMixedAggregatedProofTx(upa.verifier, agg1Tx!);
+
+    expect(agg1Tx_proof).eql(dummyProofData(agg1Tx_proofIds));
+    expect(agg1Tx_proofIds).eql([pid_offchain, pid_a]);
+    expect(agg1Tx_numOffChainProofs).eql(1n);
+    expect(agg1Tx_submissionProofs).eql([
+      sub_1.computeSubmissionProof(0, 1)!.solidity(),
+    ]);
+    expect(agg1Tx_offChainSubmissionMarkers).eql(1n);
+
+    const {
+      proof: agg2Tx_proof,
+      proofIds: agg2Tx_proofIds,
+      numOffChainProofs: agg2Tx_numOffChainProofs,
+      submissionProofs: agg2Tx_submissionProofs,
+      offChainSubmissionMarkers: agg2Tx_offChainSubmissionMarkers,
+    } = getCallDataForVerifyMixedAggregatedProofTx(upa.verifier, agg2Tx!);
+
+    expect(agg2Tx_proof).eql(dummyProofData(agg2Tx_proofIds));
+    expect(agg2Tx_proofIds).eql([pid_b, pid_c, pid_d]);
+    expect(agg2Tx_numOffChainProofs).eql(0n);
+    expect(agg2Tx_submissionProofs).eql([
+      sub_1.computeSubmissionProof(1, 1)!.solidity(),
+      sub_3.computeSubmissionProof(0, 1)!.solidity(),
+    ]);
+    expect(agg2Tx_offChainSubmissionMarkers).eql(0n);
+
+    const {
+      proof: agg3Tx_proof,
+      proofIds: agg3Tx_proofIds,
+      numOffChainProofs: agg3Tx_numOffChainProofs,
+      submissionProofs: agg3Tx_submissionProofs,
+      offChainSubmissionMarkers: agg3Tx_offChainSubmissionMarkers,
+    } = getCallDataForVerifyMixedAggregatedProofTx(upa.verifier, agg3Tx!);
+
+    expect(agg3Tx_proof).eql(dummyProofData(agg3Tx_proofIds));
+    expect(agg3Tx_proofIds).eql([pid_e, pid_f]);
+    expect(agg3Tx_numOffChainProofs).eql(0n);
+    expect(agg3Tx_submissionProofs).eql([
+      sub_3.computeSubmissionProof(1, 2)!.solidity(),
+    ]);
+    expect(agg3Tx_offChainSubmissionMarkers).eql(0n);
+  });
+
+  it("extract proofIds data for verifyMixedAggregatedProof", async function () {
+    const {
+      upa,
+      startHeight,
+      pid_a,
+      pid_b,
+      pid_c,
+      pid_d,
+      pid_e,
+      pid_f,
+      pid_offchain,
+      sub_1,
+      sub_2,
+      sub_3,
+      sub_offchain,
+    } = await loadFixture(deploySubmitVerifyMixed);
+    const curHeight = await ethers.provider.getBlockNumber();
+
+    const verifiedEventGetter = new SubmissionVerifiedEventGetter(upa.verifier);
+    const eventSets = await verifiedEventGetter.getFullGroupedByTransaction(
+      startHeight,
+      curHeight
+    );
+    const withData = await verifiedEventGetter.getProofIdsDataForVerifiedEvents(
+      eventSets
+    );
+
+    // Extract proof and input data
+    expect(withData.length).eql(3); // 3 verify txs
+
+    // agg1Tx verifies 2 proof pid_offchain, pid_a
+    // Only one submission is fully verified [ offchain ]
+    const agg1Tx_offChainSubmissionMarkers = packOffChainSubmissionMarkers(
+      sub_offchain.getOffChainSubmissionMarkers()
+    );
+
+    expect(withData[0].events.length).eql(1);
+    expect(withData[0].events[0].proofIds[0]).eql(pid_offchain);
+    expect(withData[0].events[0].proofIds[1]).eql(pid_a);
+    expect(withData[0].events[0].numOffChainProofs).eql(BigInt(1));
+    expect(withData[0].events[0].submissionId).eql(sub_offchain.submissionId);
+    expect(withData[0].events[0].offChainSubmissionMarkers).eql(
+      agg1Tx_offChainSubmissionMarkers
+    );
+
+    // agg2Tx verifies 3 proofs pid_b, pid_c, pid_d
+    // Two submissoins are fully verified [ A, B ], [ C ]
+    expect(withData[1].events.length).eql(2);
+    expect(withData[1].events[0].proofIds[0]).eql(pid_b);
+    expect(withData[1].events[0].proofIds[1]).eql(pid_c);
+    expect(withData[1].events[0].proofIds[2]).eql(pid_d);
+    expect(withData[1].events[0].numOffChainProofs).eql(BigInt(0));
+    expect(withData[1].events[0].submissionId).eql(sub_1.submissionId);
+    expect(withData[1].events[0].offChainSubmissionMarkers).eql(0n);
+    expect(withData[1].events[1].proofIds[0]).eql(pid_b);
+    expect(withData[1].events[1].proofIds[1]).eql(pid_c);
+    expect(withData[1].events[1].proofIds[2]).eql(pid_d);
+    expect(withData[1].events[1].numOffChainProofs).eql(BigInt(0));
+    expect(withData[1].events[1].submissionId).eql(sub_2.submissionId);
+    expect(withData[1].events[1].offChainSubmissionMarkers).eql(0n);
+
+    // agg3Tx verifies 2 proofs pid_e, pid_f
+    // One submission is fully verified [ D, E, F ]
+    expect(withData[2].events.length).eql(1);
+    expect(withData[2].events[0].proofIds[0]).eql(pid_e);
+    expect(withData[2].events[0].proofIds[1]).eql(pid_f);
+    expect(withData[2].events[0].numOffChainProofs).eql(BigInt(0));
+    expect(withData[2].events[0].submissionId).eql(sub_3.submissionId);
+    expect(withData[2].events[0].offChainSubmissionMarkers).eql(0n);
+  });
+
   it("should support event filtering", async function () {
     const { upa, startHeight, pid_b, sub1TxHash, sub_3, agg3TxHash } =
       await loadFixture(deploySubmitVerify);
