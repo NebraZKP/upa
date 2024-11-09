@@ -349,7 +349,7 @@
                 "slot": "7"
               },
               {
-                "label": "currentSubmissionProofIds",
+                "label": "currentOffChainSubmissionProofIds",
                 "type": "t_array(t_bytes32)dyn_storage",
                 "offset": 0,
                 "slot": "8"
@@ -456,7 +456,7 @@
             },
             {
               "contract": "UpaVerifier",
-              "label": "currentSubmissionProofIds",
+              "label": "currentOffChainSubmissionProofIds",
               "type": "t_array(t_bytes32)dyn_storage",
               "src": "contracts/UpaVerifier.sol:123",
               "offset": 0,
@@ -931,7 +931,7 @@
                 "slot": "7"
               },
               {
-                "label": "currentSubmissionProofIds",
+                "label": "currentOffChainSubmissionProofIds",
                 "type": "t_array(t_bytes32)dyn_storage",
                 "offset": 0,
                 "slot": "8"
@@ -1048,7 +1048,7 @@
             },
             {
               "contract": "UpaVerifier",
-              "label": "currentSubmissionProofIds",
+              "label": "currentOffChainSubmissionProofIds",
               "type": "t_array(t_bytes32)dyn_storage",
               "src": "contracts/UpaVerifier.sol:123",
               "offset": 0,
@@ -1524,7 +1524,7 @@
                 "slot": "7"
               },
               {
-                "label": "currentSubmissionProofIds",
+                "label": "currentOffChainSubmissionProofIds",
                 "type": "t_array(t_bytes32)dyn_storage",
                 "offset": 0,
                 "slot": "8"
@@ -1641,7 +1641,7 @@
             },
             {
               "contract": "UpaVerifier",
-              "label": "currentSubmissionProofIds",
+              "label": "currentOffChainSubmissionProofIds",
               "type": "t_array(t_bytes32)dyn_storage",
               "src": "contracts/UpaVerifier.sol:123",
               "offset": 0,
@@ -2124,7 +2124,7 @@
                 "slot": "7"
               },
               {
-                "label": "currentSubmissionProofIds",
+                "label": "currentOffChainSubmissionProofIds",
                 "type": "t_array(t_bytes32)dyn_storage",
                 "offset": 0,
                 "slot": "8"
@@ -2241,7 +2241,7 @@
             },
             {
               "contract": "UpaVerifier",
-              "label": "currentSubmissionProofIds",
+              "label": "currentOffChainSubmissionProofIds",
               "type": "t_array(t_bytes32)dyn_storage",
               "src": "contracts/UpaVerifier.sol:125",
               "offset": 0,
@@ -2734,7 +2734,7 @@
                 "slot": "7"
               },
               {
-                "label": "currentSubmissionProofIds",
+                "label": "currentOffChainSubmissionProofIds",
                 "type": "t_array(t_bytes32)dyn_storage",
                 "offset": 0,
                 "slot": "8"
@@ -2851,7 +2851,7 @@
             },
             {
               "contract": "UpaVerifier",
-              "label": "currentSubmissionProofIds",
+              "label": "currentOffChainSubmissionProofIds",
               "type": "t_array(t_bytes32)dyn_storage",
               "src": "contracts/UpaVerifier.sol:125",
               "offset": 0,
