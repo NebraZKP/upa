@@ -34,7 +34,7 @@ import {
   signOffChainSubmissionRequest,
   UnsignedOffChainSubmissionRequest,
 } from "../sdk/offChainClient";
-import { ethers } from "ethers";
+import * as ethers from "ethers";
 import { Deposits__factory } from "../../typechain-types";
 import fs from "fs";
 import { config, options } from ".";
@@ -379,10 +379,11 @@ export const balance = command({
     const provider = new ethers.JsonRpcProvider(endpoint);
     const deposits =
       Deposits__factory.connect(depositContract).connect(provider);
-    const balance = await deposits.balance(address);
+    const balanceWei = await deposits.balance(address);
+    const balanceEther = ethers.formatEther(balanceWei);
 
     // Print this to stdout, NOT the log, so it can be consumed by scripts.
-    console.log(balance);
+    console.log(balanceEther);
   },
 });
 
