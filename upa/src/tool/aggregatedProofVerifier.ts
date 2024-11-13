@@ -6,12 +6,12 @@ import * as ethers from "ethers";
 export const getAggregatedProofVerifier = command({
   name: "aggregated-proof-verifier",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     instance: options.instance(),
   },
   description: "Get the current aggregated proof verifier address",
-  handler: async function ({ endpoint, instance }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint, instance }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const { verifier } = await config.upaFromInstanceFile(instance, provider);
     console.log(await verifier.outerVerifier());
   },
@@ -20,7 +20,7 @@ export const getAggregatedProofVerifier = command({
 export const setAggregatedProofVerifier = command({
   name: "set-aggregated-proof-verifier",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -40,7 +40,7 @@ export const setAggregatedProofVerifier = command({
   },
   description: "Set the aggregated proof verifier",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -53,7 +53,7 @@ export const setAggregatedProofVerifier = command({
   }): Promise<void> {
     const newVerifier: string = ethers.getAddress(address);
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),
@@ -81,7 +81,7 @@ export const setAggregatedProofVerifier = command({
 export const setSidAggregatedProofVerifier = command({
   name: "set-sid-aggregated-proof-verifier",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -98,7 +98,7 @@ export const setSidAggregatedProofVerifier = command({
   description:
     "Set the sid aggregated proof verifier, which outputs submissionId",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -110,7 +110,7 @@ export const setSidAggregatedProofVerifier = command({
   }): Promise<void> {
     const newVerifier: string = ethers.getAddress(address);
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),

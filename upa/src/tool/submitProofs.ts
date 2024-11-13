@@ -21,7 +21,7 @@ import { PayableOverrides } from "../../typechain-types/common";
 export const submitProofs = command({
   name: "submit-proofs",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -61,7 +61,7 @@ export const submitProofs = command({
   description:
     "Make a submission of proofs to UPA.  Outputs Tx hash to stdout.  ",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -82,7 +82,7 @@ export const submitProofs = command({
     numProofs = numProofs || entries.length;
     const circuitIdProofAndInputs = entries.slice(skip, skip + numProofs);
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),

@@ -8,7 +8,7 @@ import { PayableOverrides } from "../../typechain-types/common";
 export const challenge = command({
   name: "challenge",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -25,7 +25,7 @@ export const challenge = command({
   },
   description: "Make a censorship challenge of a submission to UPA.\n",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -48,7 +48,7 @@ export const challenge = command({
 
     // TODO: do everything from the txid so we can parse the dupSubmissionIdx
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),

@@ -26,7 +26,7 @@ import assert from "assert";
 import { utils } from "../sdk";
 
 type UpgradeArgs = {
-  endpoint: string;
+  chainEndpoint: string;
   keyfile: string;
   password: string;
   instance: string;
@@ -49,9 +49,10 @@ const upgradeHandler = async function (args: UpgradeArgs): Promise<void> {
   }
 
   // Upgrade logic below
-  const { endpoint, keyfile, password, instance, maxRetries, prepare } = args;
+  const { chainEndpoint, keyfile, password, instance, maxRetries, prepare } =
+    args;
 
-  const provider = new ethers.JsonRpcProvider(endpoint);
+  const provider = new ethers.JsonRpcProvider(chainEndpoint);
   const wallet = await loadWallet(keyfile, getPassword(password), provider);
   const upaDesc = loadInstance(instance);
 
@@ -68,7 +69,7 @@ const upgradeHandler = async function (args: UpgradeArgs): Promise<void> {
 export const upgrade = command({
   name: "upgrade",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: options.instance(),

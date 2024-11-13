@@ -77,13 +77,21 @@ export function getPassword(password?: string): string {
   return stdinPassword;
 }
 
-export function endpoint(): Option {
+export function chainEndpoint(required: boolean = true): Option {
+  const defaultValue = () => {
+    const value = process.env.CHAIN_ENDPOINT;
+    if (!value && required) {
+      throw "CHAIN_ENDPOINT not specified";
+    }
+
+    return value || "http://127.0.0.1:8545/";
+  };
   return option({
     type: string,
-    long: "endpoint",
+    long: "chain-endpoint",
     short: "e",
-    defaultValue: () => process.env.RPC_ENDPOINT || "http://127.0.0.1:8545/",
-    description: "Node RPC endpoint (defaults to RPC_ENDPOINT env var)",
+    defaultValue,
+    description: "Chain RPC endpoint (defaults to CHAIN_ENDPOINT env var)",
   });
 }
 

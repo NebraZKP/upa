@@ -2,7 +2,7 @@ import { command, option, string } from "cmd-ts";
 import {
   instance,
   keyfile,
-  endpoint,
+  chainEndpoint,
   wait,
   password,
   getPassword,
@@ -21,7 +21,7 @@ export const setFee = command({
   description:
     "Set the fixed fee per proof of the UpaFixedGasFee contract (in gas)",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
@@ -37,7 +37,7 @@ export const setFee = command({
     maxFeePerGasGwei: maxFeePerGasGwei(),
   },
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -48,7 +48,7 @@ export const setFee = command({
     fromAddress,
     maxFeePerGasGwei,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(
       keyfile,
       getPassword(password),

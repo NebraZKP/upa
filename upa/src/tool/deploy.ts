@@ -3,7 +3,7 @@ import { loadUpaConfig, loadWallet } from "./config";
 import {
   instance,
   keyfile,
-  endpoint,
+  chainEndpoint,
   password,
   getPassword,
   upaConfigFile,
@@ -61,7 +61,7 @@ type DeployPrepareData = {
 };
 
 type DeployArgs = {
-  endpoint: string;
+  chainEndpoint: string;
   keyfile: string;
   password: string;
   verifierBin?: string;
@@ -95,7 +95,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
 
   // Deployment logic below
   const {
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     verifierBin,
@@ -114,7 +114,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
     prepare,
   } = args;
 
-  const provider = new ethers.JsonRpcProvider(endpoint);
+  const provider = new ethers.JsonRpcProvider(chainEndpoint);
   const wallet = await loadWallet(keyfile, getPassword(password), provider);
   const fixedFeePerProof = parseNumberOrUndefined(
     feeInGas,
@@ -187,7 +187,7 @@ const deployHandler = async function (args: DeployArgs): Promise<void> {
 export const deploy = command({
   name: "deploy",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance("Output file for instance information"),

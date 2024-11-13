@@ -2,7 +2,7 @@ import { command, positional, string } from "cmd-ts";
 import {
   instance,
   keyfile,
-  endpoint,
+  chainEndpoint,
   wait,
   password,
   getPassword,
@@ -21,7 +21,7 @@ export const registervk = command({
   name: "registervk",
   description: "Register a verifying key with UPA",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
@@ -35,7 +35,7 @@ export const registervk = command({
     }),
   },
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -45,7 +45,7 @@ export const registervk = command({
     vkFile,
   }): Promise<void> {
     const vk = loadAppVK(vkFile);
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const upa = await upaFromInstanceFile(instance, wallet);
 

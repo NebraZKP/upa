@@ -2,7 +2,7 @@ import { command, positional, string } from "cmd-ts";
 import {
   instance,
   keyfile,
-  endpoint,
+  chainEndpoint,
   wait,
   password,
   getPassword,
@@ -16,7 +16,7 @@ export const setWorker = command({
   name: "set-worker",
   description: "Set the worker address",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
@@ -29,7 +29,7 @@ export const setWorker = command({
     dumpTx: dumpTx(),
   },
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -38,7 +38,7 @@ export const setWorker = command({
     estimateGas,
     dumpTx,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const upa = await upaFromInstanceFile(instance, wallet);
 

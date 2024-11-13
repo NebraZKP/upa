@@ -8,7 +8,7 @@ import { Submission } from "../sdk";
 export const getSubmission = command({
   name: "get-submission",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     instance: options.instance(),
     txId: positional({
       type: string,
@@ -17,8 +17,8 @@ export const getSubmission = command({
     }),
   },
   description: "Get the on-chain submission information associated with a Tx",
-  handler: async function ({ endpoint, instance, txId }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint, instance, txId }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const { verifier } = await config.upaFromInstanceFile(instance, provider);
 
     const txReceipt = await provider.getTransactionReceipt(txId);

@@ -17,7 +17,7 @@ import {
   handleTxRequest,
   addressFromParamOrKeyfile,
 } from "./config";
-import { endpoint, keyfile, password, getPassword } from "./options";
+import { chainEndpoint, keyfile, password, getPassword } from "./options";
 import * as log from "./log";
 import * as ethers from "ethers";
 import * as fs from "fs";
@@ -56,7 +56,7 @@ export const ethkeygen = command({
 export const send = command({
   name: "send",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     destination: option({
@@ -72,13 +72,13 @@ export const send = command({
   },
   description: "Send ETH",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     destination,
     amount,
   }) {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const value = ethers.parseUnits(amount);
     const tx = await wallet.sendTransaction({
@@ -93,7 +93,7 @@ export const send = command({
 export const staticcall = command({
   name: "staticcall",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     contractAddress: option({
       type: string,
       long: "contract",
@@ -110,12 +110,12 @@ export const staticcall = command({
   },
   description: "Send ETH",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     contractAddress,
     calldataFile,
     base64,
   }) {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const calldata = (() => {
       if (base64) {
         const b64 = fs.readFileSync(calldataFile, "ascii");
@@ -138,7 +138,7 @@ export const staticcall = command({
 export const balance = command({
   name: "balance",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(undefined, false),
     address: positional({
       type: optional(string),
@@ -146,8 +146,8 @@ export const balance = command({
     }),
   },
   description: "Get the balance for an address (or keyfile)",
-  handler: async function ({ endpoint, keyfile, address }) {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint, keyfile, address }) {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const addr = addressFromParamOrKeyfile(address, keyfile);
 
     const balanceWei = await provider.getBalance(addr);
@@ -159,7 +159,7 @@ export const balance = command({
 const fund = command({
   name: "fund",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile("keyfile for account to fund", false),
     address: positional({
       type: optional(string),
@@ -174,7 +174,7 @@ const fund = command({
   },
   description: "Send a single ETH from a hosted address",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     address,
     keyfile,
     amount,
@@ -196,7 +196,7 @@ const fund = command({
       return readAddressFromKeyfile(keyfile);
     })();
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const signer = await provider.getSigner(0);
     const value = ethers.parseUnits(amount);
     const result = await signer.sendTransaction({
@@ -211,7 +211,7 @@ const fund = command({
 const trace = command({
   name: "trace",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     traceFile: option({
       type: string,
       long: "trace-file",
@@ -225,9 +225,9 @@ const trace = command({
     }),
   },
   description: "Dump a trace of the given tx",
-  handler: async function ({ endpoint, traceFile, txHash }) {
+  handler: async function ({ chainEndpoint, traceFile, txHash }) {
     const cmd =
-      `curl -s -X POST ${endpoint} -H "Content-Type:application-json" ` +
+      `curl -s -X POST ${chainEndpoint} -H "Content-Type:application-json" ` +
       `--data '{"method":"debug_traceTransaction","params":["${txHash}"],` +
       `"id":1,"jsonrpc":"2.0"}' > ${traceFile}`;
     console.log("cmd: " + cmd);
@@ -238,7 +238,7 @@ const trace = command({
 const getReceipt = command({
   name: "get-receipt",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     txHash: positional({
       type: string,
       displayName: "tx-hash",
@@ -246,8 +246,8 @@ const getReceipt = command({
     }),
   },
   description: "Get the gas cost for a given tx",
-  handler: async function ({ endpoint, txHash }) {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint, txHash }) {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const receipt = await provider.getTransactionReceipt(txHash);
     console.log(JSON.stringify(receipt));
   },
@@ -256,11 +256,11 @@ const getReceipt = command({
 const gasPrice = command({
   name: "gas-price",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
   },
   description: "Get the gas price estimates from the node",
-  handler: async function ({ endpoint }) {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint }) {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const feeData = await provider.getFeeData();
     console.log(JSON.stringify(feeData));
   },
@@ -269,7 +269,7 @@ const gasPrice = command({
 const intervalMining = command({
   name: "interval-mining",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     interval: positional({
       type: optional(string),
       displayName: "interval-ms",
@@ -279,10 +279,10 @@ const intervalMining = command({
   description:
     "If interval > 0, disable autoMine and use interval mining.\n" +
     "If interval == 0, enable autoMine and disable interval mining.",
-  handler: async function ({ endpoint, interval }) {
+  handler: async function ({ chainEndpoint, interval }) {
     const intervalMS = parseInt(interval || "1000");
     const autoMine = intervalMS == 0;
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     await provider.send("evm_setAutomine", [autoMine]);
     await provider.send("evm_setIntervalMining", [intervalMS]);
   },
@@ -291,11 +291,11 @@ const intervalMining = command({
 const getBlockBaseFee = command({
   name: "get-block-base-fee",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
   },
   description: "Return the base fee per gas of the latest block, in Gwei",
-  handler: async function ({ endpoint }) {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint }) {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const block = await provider.getBlock("latest");
     const feeWei = block?.baseFeePerGas;
     const feeGwei = ethers.formatUnits(feeWei!, "gwei");
@@ -306,7 +306,7 @@ const getBlockBaseFee = command({
 const setBlockBaseFee = command({
   name: "set-block-base-fee",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     feeGwei: positional({
       type: string,
       displayName: "base-fee-in-gwei",
@@ -314,9 +314,9 @@ const setBlockBaseFee = command({
     }),
   },
   description: "Set block base fee per gas of the next block",
-  handler: async function ({ endpoint, feeGwei }) {
+  handler: async function ({ chainEndpoint, feeGwei }) {
     const baseFeeWei = ethers.parseUnits(feeGwei, "gwei").toString();
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     await provider.send("hardhat_setNextBlockBaseFeePerGas", [baseFeeWei]);
   },
 });
@@ -374,7 +374,7 @@ const groth16Verify = command({
 export const submitCompressedProof = command({
   name: "submit-compressed-proof",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -389,7 +389,7 @@ export const submitCompressedProof = command({
     "Make a submission of proofs to UPA using a compressed proof (file " +
     "format: {vk, proof, inputs}).  Outputs Tx hash to stdout.  ",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -402,7 +402,7 @@ export const submitCompressedProof = command({
   }): Promise<void> {
     const vkProofInputs = loadAppVkCompressedProofAndInputsFile(proofFile);
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
     const { verifier } = await upaFromInstanceFile(instance, wallet);
 

@@ -42,7 +42,7 @@ export const devAggregator = command({
       defaultValue: () => 5,
       description: "Time (sec) between aggregated batches",
     }),
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -52,13 +52,13 @@ export const devAggregator = command({
   handler: async function ({
     batchSize,
     latency,
-    endpoint,
+    chainEndpoint,
     instance,
     keyfile,
     password,
   }): Promise<void> {
     log.info("Starting dev aggregator...");
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),

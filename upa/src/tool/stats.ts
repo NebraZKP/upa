@@ -1,6 +1,6 @@
 import { command, flag, boolean } from "cmd-ts";
 import { upaFromInstanceFile } from "./config";
-import { endpoint, instance } from "./options";
+import { chainEndpoint, instance } from "./options";
 import { Groth16VerifyingKey, utils } from "../sdk";
 import * as ethers from "ethers";
 import { strict as assert } from "assert";
@@ -26,7 +26,7 @@ type StateJSON = {
 export const stats = command({
   name: "stats",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     instance: instance(),
     listCircuits: flag({
       type: boolean,
@@ -43,12 +43,12 @@ export const stats = command({
   },
   description: "Query the UPA contract state",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     instance,
     listCircuits,
     showvks,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const { verifier } = await upaFromInstanceFile(instance, provider);
 
     const blockNumberP = provider.getBlockNumber();
