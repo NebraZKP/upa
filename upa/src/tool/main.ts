@@ -14,9 +14,12 @@ import { aggregator } from "./aggregator";
 import { owner } from "./owner";
 import { query } from "./query";
 import { offChain } from "./offChain";
+import * as pkg from "../../package.json";
 
 const root = subcommands({
   name: "upa",
+  version: pkg.version,
+  description: `Command-line tool for NEBRA UPA protocol v${pkg.version}`,
   cmds: {
     registervk,
     "submit-proofs": submitProofs,
