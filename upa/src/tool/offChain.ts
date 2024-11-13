@@ -380,10 +380,10 @@ export const balance = command({
     const deposits =
       Deposits__factory.connect(depositContract).connect(provider);
     const balanceWei = await deposits.balance(address);
-    const balanceEther = ethers.formatEther(balanceWei);
+    const balanceEth = ethers.formatEther(balanceWei);
 
     // Print this to stdout, NOT the log, so it can be consumed by scripts.
-    console.log(balanceEther);
+    console.log(balanceEth + " ETH");
   },
 });
 
