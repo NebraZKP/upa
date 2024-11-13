@@ -11,13 +11,13 @@ import {
 import { options, config } from "@nebrazkp/upa/tool";
 import { utils } from "@nebrazkp/upa/sdk";
 import { ConfidentialCoins__factory } from "../typechain-types";
-const { keyfile, endpoint, password } = options;
+const { keyfile, chainEndpoint, password } = options;
 const { loadWallet, upaFromInstanceFile } = config;
 
 export const deploy = command({
   name: "deploy",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance("Output file for instance information"),
@@ -26,14 +26,14 @@ export const deploy = command({
   },
   description: "Deploy the ConfidentialCoins contract.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
     upaInstance,
     vkFile,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
 
     const upa = await upaFromInstanceFile(upaInstance, provider);
