@@ -152,7 +152,7 @@ export const balance = command({
 
     const balanceWei = await provider.getBalance(addr);
     const balanceEth = ethers.formatEther(balanceWei);
-    console.log(balanceEth + " ETH");
+    console.log(balanceEth);
   },
 });
 
