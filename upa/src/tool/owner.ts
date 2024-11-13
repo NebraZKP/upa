@@ -10,6 +10,7 @@ import {
   setSidAggregatedProofVerifier,
 } from "./aggregatedProofVerifier";
 import { setWorker } from "./setWorker";
+import { setVersion } from "./setVersion";
 
 export const owner = subcommands({
   name: "owner",
@@ -18,6 +19,7 @@ export const owner = subcommands({
     deploy,
     "set-fee": setFee,
     "set-worker": setWorker,
+    "set-version": setVersion,
     upgrade,
     pause,
     unpause,
