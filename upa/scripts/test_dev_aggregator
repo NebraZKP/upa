@@ -39,7 +39,7 @@ mkdir -p _test_dev_aggregator
 pushd _test_dev_aggregator
 
     start_hardhat_node 10545
-    export RPC_ENDPOINT="http://127.0.0.1:10545/"
+    export CHAIN_ENDPOINT="http://127.0.0.1:10545/"
     export KEYFILE_PASSWORD=""
 
     KEYFILE="deployer.key"

@@ -42,7 +42,7 @@ pushd _test_demo_app
     . ${UPA_CONTRACTS}/scripts/utils.sh
 
     start_hardhat_node 10546 "yarn hardhat node --port 10546"
-    export RPC_ENDPOINT="http://127.0.0.1:10546/"
+    export CHAIN_ENDPOINT="http://127.0.0.1:10546/"
     trap stop_hardhat_node EXIT
 
     # Set interval mining mode - multi-submit etc require this throughout the
