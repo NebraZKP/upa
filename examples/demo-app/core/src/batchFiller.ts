@@ -21,7 +21,7 @@ const DEFAULT_AGGREGATED_BATCH_SIZE: number = 32;
 export const batchFiller = command({
   name: "batch-filler",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     maxFeePerGasGwei: options.maxFeePerGasGwei(),
@@ -68,7 +68,7 @@ export const batchFiller = command({
   },
   description: "Send a number of demo-app proofs to UPA to be verified.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -87,7 +87,7 @@ export const batchFiller = command({
       ? ethers.parseUnits(maxFeePerGasGwei, "gwei")
       : undefined;
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(keyfile, password, provider);
 
     const demoAppInstance = loadDemoAppInstance(instance);

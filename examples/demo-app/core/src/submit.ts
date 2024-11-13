@@ -14,7 +14,7 @@ import {
   utils,
 } from "@nebrazkp/upa/sdk";
 import { options, config } from "@nebrazkp/upa/tool";
-const { keyfile, endpoint, password } = options;
+const { keyfile, chainEndpoint, password } = options;
 const { loadWallet, loadInstance } = config;
 import * as ethers from "ethers";
 import { command } from "cmd-ts";
@@ -23,7 +23,7 @@ import { DemoApp__factory } from "../typechain-types";
 export const submit = command({
   name: "submit",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     demoAppInstanceFile: demoAppInstance(),
@@ -35,7 +35,7 @@ export const submit = command({
     "Send one demo-app proof to UPA, then when it's verified, " +
     "submit the corresponding solution to demo-app.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     demoAppInstanceFile,
@@ -43,7 +43,7 @@ export const submit = command({
     circuitWasm,
     circuitZkey,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
 
     const demoAppInstance = loadDemoAppInstance(demoAppInstanceFile);

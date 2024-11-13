@@ -16,7 +16,7 @@ import { Sema, RateLimit } from "async-sema";
 export const submitProofsFromFile = command({
   name: "submit-proofs-from-file",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     maxFeePerGasGwei: options.maxFeePerGasGwei(),
@@ -61,7 +61,7 @@ export const submitProofsFromFile = command({
   },
   description: "Submit proofs to UPA from a file, chunked into submissions.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     upaInstance,
@@ -72,7 +72,7 @@ export const submitProofsFromFile = command({
     maxFeePerGasGwei,
     waitForVerified,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(keyfile, password, provider);
     let nonce = await wallet.getNonce();
 

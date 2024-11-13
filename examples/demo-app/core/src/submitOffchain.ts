@@ -5,6 +5,7 @@ import {
   demoAppInstance,
   circuitWasm,
   circuitZkey,
+  submitSolution,
 } from "./utils";
 import {
   Groth16Proof,
@@ -13,14 +14,21 @@ import {
   offchain,
   AppVkProofInputs,
   upa,
+  SubmissionDescriptor,
 } from "@nebrazkp/upa/sdk";
 import { options, config } from "@nebrazkp/upa/tool";
-const { keyfile, endpoint, password, submissionEndpoint, depositContract } =
-  options;
+const {
+  keyfile,
+  chainEndpoint,
+  password,
+  submissionEndpoint,
+  depositContract,
+} = options;
 const { loadWallet, upaFromInstanceFile } = config;
 import * as ethers from "ethers";
 import { command, number, option, optional, string } from "cmd-ts";
 import { DemoApp__factory } from "../typechain-types";
+
 const {
   OffChainClient,
   UnsignedOffChainSubmissionRequest,
@@ -31,7 +39,7 @@ const { waitForSubmissionVerified } = upa;
 export const submitOffchain = command({
   name: "submit-offchain",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     demoAppInstanceFile: demoAppInstance(),
@@ -67,7 +75,7 @@ export const submitOffchain = command({
     "Send one demo-app proof to UPA, then when it's verified, " +
     "submit the corresponding solution to demo-app.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     demoAppInstanceFile,
@@ -84,7 +92,7 @@ export const submitOffchain = command({
     if (submissionEndpoint == "") {
       throw Error("Need to specify the submission endpoint");
     }
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
 
     const demoAppInstance = loadDemoAppInstance(demoAppInstanceFile);
@@ -182,10 +190,20 @@ export const submitOffchain = command({
       wallet
     );
 
-    for (const solution of solutions) {
-      const submitSolutionTxResponse = await demoApp.submitSolution(solution);
+    for (let i = 0; i < solutions.length; i++) {
+      let nonce = await wallet.getNonce();
+      const submissionDescriptor = SubmissionDescriptor.fromAppVkProofsInputs(
+        submission.proofs
+      );
+      const submitSolutionTxResponse = await submitSolution(
+        wallet,
+        demoApp,
+        nonce++,
+        submissionDescriptor,
+        i
+      );
       await submitSolutionTxResponse.wait();
-      console.log(`Successfully submitted solution ${solution}`);
+      console.log(`Successfully submitted solution ${solutions[i]}`);
     }
   },
 });

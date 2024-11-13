@@ -6,7 +6,7 @@ import { generateRandomProofInputs, upaInstance } from "./utils";
 import { demoAppInstance, loadDemoAppInstance } from "./utils";
 import { Groth16Proof, application, utils, UpaClient } from "@nebrazkp/upa/sdk";
 import { options, config } from "@nebrazkp/upa/tool";
-const { keyfile, endpoint, password } = options;
+const { keyfile, chainEndpoint, password } = options;
 const { loadWallet, loadInstance } = config;
 import { circuitWasm, circuitZkey } from "./utils";
 import { Sema, RateLimit } from "async-sema";
@@ -14,7 +14,7 @@ import { Sema, RateLimit } from "async-sema";
 export const submitInvalid = command({
   name: "submit",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     demoAppInstanceFile: demoAppInstance(),
@@ -38,7 +38,7 @@ export const submitInvalid = command({
   description:
     "Send a number of invalid demo-app proofs to UPA to be verified.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     demoAppInstanceFile,
@@ -48,7 +48,7 @@ export const submitInvalid = command({
     circuitZkey,
     submitRate,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
     const upaClient = await UpaClient.init(wallet, loadInstance(upaInstance));
 
