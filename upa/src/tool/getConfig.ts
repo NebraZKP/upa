@@ -1,6 +1,6 @@
 import { command } from "cmd-ts";
 import { upaFromInstanceFile } from "./config";
-import { endpoint, instance } from "./options";
+import { chainEndpoint, instance } from "./options";
 import { utils } from "../sdk";
 import * as ethers from "ethers";
 
@@ -18,12 +18,12 @@ type ConfigJSON = {
 export const getConfig = command({
   name: "get-config",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     instance: instance(),
   },
   description: "Query the UPA config",
-  handler: async function ({ endpoint, instance }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint, instance }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const { verifier } = await upaFromInstanceFile(instance, provider);
 
     const output: ConfigJSON = {

@@ -18,13 +18,13 @@ import { options, config } from "@nebrazkp/upa/tool";
 import { instance, circuitWasm, circuitZkey } from "./utils";
 import { ConfidentialCoins } from "../typechain-types/contracts";
 import { ProofStruct } from "../typechain-types/contracts/ConfidentialCoins";
-const { keyfile, endpoint, password } = options;
+const { keyfile, chainEndpoint, password } = options;
 const { loadWallet } = config;
 
 export const convert = command({
   name: "convert",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
@@ -40,7 +40,7 @@ export const convert = command({
   },
   description: "Perform many conversions, checking individual validity proofs",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -49,7 +49,7 @@ export const convert = command({
     circuitZkey,
   }): Promise<undefined> {
     let confidentialCoins = confidentialCoinsFromInstance(instance);
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
     confidentialCoins = confidentialCoins.connect(wallet);
 

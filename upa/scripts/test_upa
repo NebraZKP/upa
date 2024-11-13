@@ -25,7 +25,7 @@ function fund() {
 mkdir -p _test_upa
 pushd _test_upa
     start_hardhat_node 10545
-    echo RPC_ENDPOINT="http://127.0.0.1:10545/" > .env
+    echo CHAIN_ENDPOINT="http://127.0.0.1:10545/" > .env
     echo 'KEYFILE_PASSWORD=' >> .env
 
     KEYFILE="deployer.key"

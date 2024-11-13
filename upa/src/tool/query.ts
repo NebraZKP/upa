@@ -1,7 +1,7 @@
 import { command, subcommands } from "cmd-ts";
 import { stats } from "./stats";
 import { getConfig } from "./getConfig";
-import { endpoint, instance } from "./options";
+import { chainEndpoint, instance } from "./options";
 import { ethers } from "ethers";
 import { upaFromInstanceFile } from "./config";
 import { isVerified, isSubmissionVerified } from "./isVerified";
@@ -10,12 +10,12 @@ import { getAggregatedProofVerifier } from "./aggregatedProofVerifier";
 const getVerifierByteCode = command({
   name: "verifier-bytecode",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     instance: instance(),
   },
   description: "Query the bytecode of the aggregated proof verifier contract.",
-  handler: async function ({ endpoint, instance }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+  handler: async function ({ chainEndpoint, instance }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const { verifier } = await upaFromInstanceFile(instance, provider);
     const aggregatedProofVerifier = await verifier.outerVerifier();
 

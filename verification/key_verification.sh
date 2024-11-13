@@ -5,7 +5,7 @@ set -e
 
 # Check that the preparation steps have been completed
 source .env
-if [ -z "$RPC_ENDPOINT" ]; then
+if [ -z "$CHAIN_ENDPOINT" ]; then
     echo "Please provide an RPC endpoint in the .env file"
     exit 1
 fi
@@ -135,7 +135,7 @@ pushd "$ROOT_DIR/../upa"
     source scripts/shell_setup.sh
     # Get the deployed bytecode
     upa query verifier-bytecode \
-        --endpoint $RPC_ENDPOINT \
+        --chain-endpoint $CHAIN_ENDPOINT \
         --instance "$ROOT_DIR/$UPA_INSTANCE" > $DEPLOYED_VERIFIER
 popd
 

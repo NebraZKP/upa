@@ -18,6 +18,7 @@ import {
 } from "./merkleUtils";
 import {
   bytes32IsWellFormed,
+  computeCircuitId,
   computeProofId,
   computeSubmissionId,
   JSONstringify,
@@ -141,6 +142,28 @@ export class SubmissionDescriptor {
       inputs.push(pubInputs);
       proofIds.push(computeProofId(cpi.circuitId, pubInputs));
     });
+    return new SubmissionDescriptor(proofIds, circuitIds, proofs, inputs);
+  }
+
+  public static fromAppVkProofsInputs(
+    appVkProofsInputs: application.AppVkProofInputs[]
+  ) {
+    const circuitIds: string[] = [];
+    const proofIds: string[] = [];
+
+    const proofs: application.Groth16Proof[] = [];
+
+    const inputs: bigint[][] = [];
+
+    appVkProofsInputs.forEach((avpi) => {
+      const pubInputs = avpi.inputs;
+      const circuitId = computeCircuitId(avpi.vk);
+      circuitIds.push(circuitId);
+      proofs.push(avpi.proof);
+      inputs.push(pubInputs);
+      proofIds.push(computeProofId(circuitId, pubInputs));
+    });
+
     return new SubmissionDescriptor(proofIds, circuitIds, proofs, inputs);
   }
 

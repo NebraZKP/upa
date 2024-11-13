@@ -7,7 +7,7 @@ import {
   circuitZkey,
 } from "./utils";
 import { submitProofs } from "./submitProofsFromFile";
-import { submitSolution } from "./submitSolutionsFromFile";
+import { submitSolution } from "./utils";
 import {
   snarkjs,
   UpaClient,
@@ -27,7 +27,7 @@ import { Sema, RateLimit } from "async-sema";
 export const multiSubmit = command({
   name: "multi-submit",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     maxFeePerGasGwei: options.maxFeePerGasGwei(),
@@ -72,7 +72,7 @@ export const multiSubmit = command({
   },
   description: "Send a number of Demo-app proofs to UPA to be verified.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     demoAppInstanceFile,
@@ -86,7 +86,7 @@ export const multiSubmit = command({
     maxConcurrentTxs,
     skipSolutions,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(keyfile, password, provider);
     let nonce = await wallet.getNonce();
 

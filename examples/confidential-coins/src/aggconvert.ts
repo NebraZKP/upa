@@ -24,13 +24,13 @@ import {
 import { options, config } from "@nebrazkp/upa/tool";
 import { instance, circuitWasm, circuitZkey } from "./utils";
 import { ConfidentialCoins } from "../typechain-types/contracts";
-const { keyfile, endpoint, password } = options;
+const { keyfile, chainEndpoint, password } = options;
 const { loadWallet, loadInstance } = config;
 
 export const aggConvert = command({
   name: "agg-convert",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
@@ -47,7 +47,7 @@ export const aggConvert = command({
   },
   description: "Perform many conversions using UPA to aggregate the proofs",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -58,7 +58,7 @@ export const aggConvert = command({
   }): Promise<undefined> {
     let confidentialCoins = confidentialCoinsFromInstance(instance);
     const circuitId = loadConfidentialCoinsInstance(instance).circuitId;
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
     confidentialCoins = confidentialCoins.connect(wallet);
 

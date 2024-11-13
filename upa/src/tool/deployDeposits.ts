@@ -1,5 +1,11 @@
 import { handleTxRequestInternal, loadWallet } from "./config";
-import { keyfile, endpoint, password, getPassword, instance } from "./options";
+import {
+  keyfile,
+  chainEndpoint,
+  password,
+  getPassword,
+  instance,
+} from "./options";
 import { command, option, optional, string } from "cmd-ts";
 import * as ethers from "ethers";
 import * as options from "./options";
@@ -11,7 +17,7 @@ import { config } from ".";
 export const deployDeposits = command({
   name: "deploy-deposits",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     instance: instance(),
     password: password(),
@@ -36,7 +42,7 @@ export const deployDeposits = command({
   },
   description: "Deploy an aggregator's deposits contract",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     estimateGas,
@@ -47,7 +53,7 @@ export const deployDeposits = command({
     aggregator,
     instance,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
 
     aggregator = aggregator || (await wallet.getAddress());

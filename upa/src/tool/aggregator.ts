@@ -38,7 +38,7 @@ type AggregatedSubmissionType = "OnChain" | "Mixed";
 const allocateAggregatorFee = command({
   name: "allocate-aggregator-fee",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -49,7 +49,7 @@ const allocateAggregatorFee = command({
   },
   description: "Allocate the aggregator fee in UPA's fee model contract",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -58,7 +58,7 @@ const allocateAggregatorFee = command({
     dumpTx,
     maxFeePerGasGwei,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),
@@ -90,7 +90,7 @@ const allocateAggregatorFee = command({
 const claimAggregatorFee = command({
   name: "claim-aggregator-fee",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     instance: options.instance(),
@@ -102,7 +102,7 @@ const claimAggregatorFee = command({
   description:
     "Claims the allocated aggregator fee in UPA's fee model contract",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -111,7 +111,7 @@ const claimAggregatorFee = command({
     dumpTx,
     maxFeePerGasGwei,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await config.loadWallet(
       keyfile,
       options.getPassword(password),
@@ -176,7 +176,7 @@ const makeSubmitAggregatedProofCommand = (
       submissionType === "Mixed" ? "mixed-" : ""
     }aggregated-proof`,
     args: {
-      endpoint: options.endpoint(),
+      chainEndpoint: options.chainEndpoint(),
       keyfile: options.keyfile(),
       password: options.password(),
       instance: options.instance(),
@@ -233,7 +233,7 @@ const makeSubmitAggregatedProofCommand = (
     },
     description: "Submit an aggregated proof to the UPA contract",
     handler: async function ({
-      endpoint,
+      chainEndpoint,
       keyfile,
       password,
       instance,
@@ -305,7 +305,7 @@ const makeSubmitAggregatedProofCommand = (
 
       // Connect
 
-      const provider = new ethers.JsonRpcProvider(endpoint);
+      const provider = new ethers.JsonRpcProvider(chainEndpoint);
       const wallet = await config.loadWallet(
         keyfile,
         options.getPassword(password),
@@ -360,7 +360,7 @@ const makeSubmitAggregatedProofCommand = (
 export const claimDepositFees = command({
   name: "claim-deposit-fees",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     keyfile: options.keyfile(),
     password: options.password(),
     estimateGas: options.estimateGas(),
@@ -379,7 +379,7 @@ export const claimDepositFees = command({
   },
   description: "Claim fees from deposit contract (for off-chain submissions)",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     estimateGas,
@@ -394,7 +394,7 @@ export const claimDepositFees = command({
     const signedRequest = OffChainSubmissionRequest.from_json(parsedJSON);
     const signedRequestData = getSignedRequestData(signedRequest);
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(
       keyfile,
       options.getPassword(password),

@@ -1,19 +1,22 @@
 import * as ethers from "ethers";
 import { command } from "cmd-ts";
 import { options } from "@nebrazkp/upa/tool";
-const { endpoint } = options;
+const { chainEndpoint } = options;
 import { demoAppFromInstance, demoAppInstance } from "./utils";
 
 export const getstate = command({
   name: "getstate",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     demoAppInstanceFile: demoAppInstance(),
   },
   description: "Query the DemoApp contract state.",
-  handler: async function ({ endpoint, demoAppInstanceFile }): Promise<void> {
+  handler: async function ({
+    chainEndpoint,
+    demoAppInstanceFile,
+  }): Promise<void> {
     let demoApp = demoAppFromInstance(demoAppInstanceFile);
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     demoApp = demoApp.connect(provider);
 
     const proofsVerified = await demoApp.proofsVerified();

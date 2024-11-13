@@ -6,13 +6,13 @@ import { demoAppInstance, upaInstance, DemoAppInstance, vkFile } from "./utils";
 import { DemoApp__factory } from "../typechain-types";
 import { options, config } from "@nebrazkp/upa/tool";
 import { utils } from "@nebrazkp/upa/sdk";
-const { keyfile, endpoint, password } = options;
+const { keyfile, chainEndpoint, password } = options;
 const { loadWallet, upaFromInstanceFile } = config;
 
 export const deploy = command({
   name: "deploy",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     demoAppInstanceFile: demoAppInstance(
@@ -23,14 +23,14 @@ export const deploy = command({
   },
   description: "Deploy the DemoApp contract.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     demoAppInstanceFile,
     upaInstance,
     vkFile,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
 
     const upa = await upaFromInstanceFile(upaInstance, provider);

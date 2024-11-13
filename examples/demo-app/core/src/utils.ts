@@ -3,7 +3,12 @@ import { DemoApp, DemoApp__factory } from "../typechain-types";
 import * as fs from "fs";
 import * as path from "path";
 import { string, option } from "cmd-ts";
-import { snarkjs, Groth16Proof, Groth16VerifyingKey } from "@nebrazkp/upa/sdk";
+import {
+  snarkjs,
+  Groth16Proof,
+  Groth16VerifyingKey,
+  SubmissionDescriptor,
+} from "@nebrazkp/upa/sdk";
 
 export type Option = ReturnType<typeof option>;
 
@@ -136,4 +141,44 @@ export async function generateProof(
 /// Pauses execution for `s` seconds, then resumes.
 export function sleep(s: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 1000 * s));
+}
+
+/**
+ * Submits a solution to the demo app contract. The solution
+ * should already have been verified by the UPA contract.
+ *
+ * @param wallet - The wallet used to sign the transaction.
+ * @param demoApp - The instance of the demo app contract.
+ * @param nonce - The nonce value for the transaction.
+ * @param submission - The submission object containing the solution.
+ * @param solutionIdx - The index of the solution in the submission.
+ * @returns A promise that resolves to the transaction response.
+ */
+export async function submitSolution(
+  _wallet: ethers.AbstractSigner,
+  demoApp: DemoApp,
+  nonce: number,
+  submission: SubmissionDescriptor,
+  solutionIdx: number
+): Promise<ethers.ContractTransactionResponse> {
+  const solution = submission.inputs[solutionIdx];
+  console.log(`Submitted solution ${solution}`);
+  if (submission.isMultiProofSubmission()) {
+    // If the proof was part of a multi-proof submission, we
+    // need to pass a proof reference to the demo-app
+    // contract so it can check the proof's verification
+    // status.
+    return demoApp.submitSolutionWithProofReference(
+      solution,
+      submission.computeProofReference(solutionIdx)!.solidity(),
+      { nonce: nonce }
+    );
+  } else {
+    // If the proof was sent in a single-proof submission, we
+    // only need to pass the solution. A proof reference is not
+    // necessary.
+    return demoApp.submitSolution(solution, {
+      nonce: nonce,
+    });
+  }
 }

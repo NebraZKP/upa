@@ -12,13 +12,13 @@ import {
   circuitWasm,
   circuitZkey,
 } from "./utils";
-const { keyfile, endpoint, password } = options;
+const { keyfile, chainEndpoint, password } = options;
 const { loadWallet } = config;
 
 export const submitDirect = command({
   name: "submit-direct",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     demoAppInstanceFile: demoAppInstance(),
@@ -40,7 +40,7 @@ export const submitDirect = command({
   },
   description: "Send a number of proofs to DemoApp's verifier.",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     demoAppInstanceFile,
@@ -50,7 +50,7 @@ export const submitDirect = command({
     submitRate,
   }): Promise<undefined> {
     let demoApp = demoAppFromInstance(demoAppInstanceFile);
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, password, provider);
     demoApp = demoApp.connect(wallet);
 

@@ -2,7 +2,7 @@ import { command } from "cmd-ts";
 import {
   instance,
   keyfile,
-  endpoint,
+  chainEndpoint,
   wait,
   password,
   getPassword,
@@ -17,7 +17,7 @@ export const pause = command({
   name: "pause",
   description: "Pause the UPA Proof Receiver contract (must be owner)",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     instance: instance(),
@@ -27,7 +27,7 @@ export const pause = command({
     wait: wait(),
   },
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     instance,
@@ -36,7 +36,7 @@ export const pause = command({
     fromAddress,
     wait,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(
       keyfile,
       getPassword(password),

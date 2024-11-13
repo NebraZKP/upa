@@ -13,7 +13,7 @@ import { ProofReference } from "../sdk/submission";
 export const isSubmissionVerified = command({
   name: "is-submission-verified",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     instance: options.instance(),
     submissionId: positional({
       type: string,
@@ -23,11 +23,11 @@ export const isSubmissionVerified = command({
   },
   description: "Query UPA contract for verification status of a submission",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     instance,
     submissionId,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const upa = await config.upaFromInstanceFile(instance, provider);
 
     /// Choose which `isVerified` function to call, based on whether there is
@@ -47,14 +47,14 @@ export const isSubmissionVerified = command({
 export const isVerified = command({
   name: "is-verified",
   args: {
-    endpoint: options.endpoint(),
+    chainEndpoint: options.chainEndpoint(),
     instance: options.instance(),
     proofFile: options.proofFile(),
     proofReferenceFile: options.proofReferenceFile(),
   },
   description: "Query UPA contract for verification status of a given proof",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     instance,
     proofFile,
     proofReferenceFile,
@@ -72,7 +72,7 @@ export const isVerified = command({
       return undefined;
     })();
 
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const upa = await config.upaFromInstanceFile(instance, provider);
 
     /// Choose which `isVerified` function to call, based on whether there is

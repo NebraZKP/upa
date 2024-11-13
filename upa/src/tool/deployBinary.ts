@@ -1,5 +1,5 @@
 import { handleTxRequestInternal, loadWallet } from "./config";
-import { keyfile, endpoint, password, getPassword } from "./options";
+import { keyfile, chainEndpoint, password, getPassword } from "./options";
 import { command, positional, string } from "cmd-ts";
 import * as ethers from "ethers";
 import * as fs from "fs";
@@ -10,7 +10,7 @@ import { strict as assert } from "assert";
 export const deployBinary = command({
   name: "deploy-binary",
   args: {
-    endpoint: endpoint(),
+    chainEndpoint: chainEndpoint(),
     keyfile: keyfile(),
     password: password(),
     estimateGas: options.estimateGas(),
@@ -23,7 +23,7 @@ export const deployBinary = command({
   },
   description: "Deploy a binary contract",
   handler: async function ({
-    endpoint,
+    chainEndpoint,
     keyfile,
     password,
     estimateGas,
@@ -31,7 +31,7 @@ export const deployBinary = command({
     wait,
     verifierBin,
   }): Promise<void> {
-    const provider = new ethers.JsonRpcProvider(endpoint);
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
     const wallet = await loadWallet(keyfile, getPassword(password), provider);
 
     // Load binary contract
