@@ -85,16 +85,14 @@ Clients interacting with this deployment will need the `upa.instance` and
 
 # Interacting with a demo-app instance
 
-Ensure that the generated files in `circuits` match those created by the demo-app deployer.
-> TODO: how do we make this process eaasier?
-
 Place the `upa.instance` and `demo-app.instance` files in the current
 directory.
 
-Use the `demo-app` subcommands:
-- `submit`
-- `submit-once`
-- `get-state`
-- `submit-direct`
+`demo-app --help` will show the available commands.
 
-to interact with the contract.
+## Off-Chain Submission
+The `demo-app submit-offchain` function allows for submission of Groth16 proofs to our off-chain RPC server. When the aggregated submissions are posted on-chain, a transaction is sent to  mark the solutions  as verified on the demo-app contract.
+
+## On-Chain Submission
+There are multiple commands for on-chain submission. A convenient way to submit proofs on-chain is the `demo-app multi-submit` command. Groth16 proofs are submitted to our contract. The aggregator reads these proofs from the chain and aggregates them. The aggregated proof is then submitted back on-chain, at which point a transaction is sent to mark the solutions as verified on the demo-app contract.
+
