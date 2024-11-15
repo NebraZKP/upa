@@ -28,6 +28,7 @@ const { loadWallet, upaFromInstanceFile } = config;
 import * as ethers from "ethers";
 import { command, number, option, optional, string } from "cmd-ts";
 import { DemoApp__factory } from "../typechain-types";
+import * as fs from "fs";
 
 const {
   OffChainClient,
@@ -174,17 +175,23 @@ export const submitOffchain = command({
       wallet,
       depositContract
     );
-    console.log(`Sending submission: ${utils.JSONstringify(submission)}`);
+    console.log(`Sending submission: ${submissionId}`);
+    fs.writeFileSync(`${submissionId}.json`, utils.JSONstringify(submission));
+    console.log(`Full submission data written to ${submissionId}.json`);
+
     const response = await client.submit(submission);
     response as unknown;
 
     // TODO: write response to file
     console.log("Aggregator response:");
     console.log(utils.JSONstringify(response));
+    console.log("Waiting for submission to be verified...");
 
     // Wait for the submission to be verified
     const upa = await upaFromInstanceFile(upaInstance, provider);
     await waitForSubmissionVerified(upa, submission.submissionId);
+
+    console.log("Submission successfully aggregated!");
 
     const demoApp = DemoApp__factory.connect(demoAppInstance.demoApp).connect(
       wallet
