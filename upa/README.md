@@ -32,6 +32,33 @@ See [DEVELOPMENT.md].
 
 ## Release notes
 
+### V2.0.x
+UPA `V2` supports submission of Groth16 proofs to an off-chain submission
+endpoint, allowing users to save the gas cost of submitting on-chain. The
+ `upa` tool has been updated to support this new feature.
+
+The `upa off-chain` subcommand has been added to the `upa` tool.
+This subcommand allows users to perform various actions related to
+submitting Groth16 proofs off-chain. The `upa off-chain` subcommand
+supports the following subcommands:
+
+- submit - Submit a set of proofs to an off-chain aggregator
+- deposit - Deposit ETH into an aggregator's deposits contract
+- init-withdrawal - Initiate a withdrawal
+- withdraw - Withdraw deposit. Must `init-withdrawal` before notice period
+- balance - View the balance of an address
+- withdraw-at-block - View the block at which an address can withdraw
+- refund-fee - Refund a submission not aggregated within agreed expiry time
+- get-state - Get the submitter state held by an off-chain aggregator
+- get-parameters - Get the current parameters for an off-chain aggregator
+
+Note depositing into the aggregator's deposits contract is required before
+submitting proofs off-chain. This is because protocol fees can no longer be collected at submission time.
+Deposits can be withdrawn but there is a notice period before withdrawal is allowed, to prevent any attacks.
+In UPA's off-chain protocol, aggregator's agree to a block number by which the submission will
+be aggregated. If the submission is not aggregated by this block number, the
+submitter can get a fee refund.
+
 ### V1.2.x
 
 The `Proof` and `VerifyingKey` objects, representing Groth16 proofs and keys
