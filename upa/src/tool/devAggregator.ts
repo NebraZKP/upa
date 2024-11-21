@@ -16,7 +16,6 @@ import {
 } from "../sdk/submissionIntervals";
 import {
   computeAggregatedProofParameters,
-  packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
 } from "../sdk/aggregatedProofParams";
 
@@ -215,12 +214,12 @@ async function submitBatch(
 
   // Submit aggregated proof
   await upaInstance.verifier.verifyMixedAggregatedProof(
+    Uint8Array.from(aggProofParams.dupSubmissionIdxs),
     calldata,
     proofIds,
     aggProofParams.numOffChainProofs,
     aggProofParams.submissionProofs,
     packOffChainSubmissionMarkers(aggProofParams.offChainSubmissionMarkers),
-    packDupSubmissionIdxs(aggProofParams.dupSubmissionIdxs),
     options || {}
   );
 

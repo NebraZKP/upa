@@ -624,6 +624,8 @@ contract UpaVerifier is
 
     /// Verify a mixed aggregated proof with off-chain and on-chain proofs.
     ///
+    /// `duplicateSubmissionIndices` - bytes as packed uint8s
+    /// indicating the index of the duplicated submission.
     /// `proof` - An aggregated proof for the validity of this batch.
     /// `proofIds` - The proofIds belonging to this batch. These are assumed
     /// to be arranged in the order: [Off-chain, On-chain, Dummy]. Furthermore,
@@ -636,15 +638,13 @@ contract UpaVerifier is
     /// proofIds belongs to an on-chain submission
     /// `offChainSubmissionMarkers` - encodes a bool[256] where a `1` marks
     /// each proofId that is at the end of an off-chain submission.
-    /// `duplicateSubmissionIndices` - packed uint8s, reading the lowest-order
-    /// byte first, indicating the index of the duplicated submission.
     function verifyMixedAggregatedProof(
+        bytes memory duplicateSubmissionIndices,
         bytes calldata proof,
         bytes32[] calldata proofIds,
         uint16 numOffChainProofs,
         SubmissionProof[] calldata submissionProofs,
-        uint256 offChainSubmissionMarkers,
-        uint256 duplicateSubmissionIndices
+        uint256 offChainSubmissionMarkers
     ) external onlyWorker {
         // Expected to fit in a uint16 to match the proof counts.
         require(proofIds.length <= type(uint16).max, TooManyProofIds());
@@ -721,14 +721,16 @@ contract UpaVerifier is
             // SubmissionProof.
             bytes32 submissionId = UpaLib.computeSubmissionId(proofId);
 
-            // Interpret `duplicateSubmissionIndices` as packed uint8s,
-            // reading the lowest-order byte first (shifting below).
-            uint8 dupSubmissionIdx = uint8(duplicateSubmissionIndices);
+            // Interpret `duplicateSubmissionIndices` bytes as uint8s
+            uint256 dupSubmissionSlot;
 
             (
                 uint64 submissionIdx,
                 uint64 submissionBlockNumber
-            ) = getSubmissionIdxAndHeight(submissionId, dupSubmissionIdx);
+            ) = getSubmissionIdxAndHeight(
+                    submissionId,
+                    uint8(duplicateSubmissionIndices[dupSubmissionSlot])
+                );
 
             if (submissionIdx != 0) {
                 nextSubmissionIdx = handleSingleProofOnChainSubmission(
@@ -761,13 +763,13 @@ contract UpaVerifier is
                     nextSubmissionIdx,
                     uint16(proofIds.length - 1),
                     proofIdIdx,
-                    dupSubmissionIdx
+                    uint8(duplicateSubmissionIndices[dupSubmissionSlot])
                 );
 
                 proofIdIdx += proofsThisSubmission;
             }
 
-            duplicateSubmissionIndices = duplicateSubmissionIndices >> 8;
+            dupSubmissionSlot++;
         }
 
         verifierStorage.nextSubmissionIdxToVerify = nextSubmissionIdx;

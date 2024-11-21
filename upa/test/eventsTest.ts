@@ -12,7 +12,7 @@ import {
   getCallDataForVerifyMixedAggregatedProofTx,
 } from "../src/sdk/events";
 import { submitProofs } from "../src/sdk/upa";
-import { Submission } from "../src/sdk/submission";
+import { Submission } from "../src/sdk";
 import {
   packDupSubmissionIdxs,
   packOffChainSubmissionMarkers,
@@ -300,12 +300,12 @@ describe("EventGetter for events", () => {
       const agg1Tx = await verifier
         .connect(worker)
         .verifyMixedAggregatedProof(
+          Uint8Array.from([0]),
           dummyProofData(proofIds),
           proofIds,
           proofIds.length - 1,
           [sub_1.computeSubmissionProof(0, 1)!.solidity()],
-          submissionMarkers,
-          packDupSubmissionIdxs([0])
+          submissionMarkers
         );
       return agg1Tx.hash;
     })();
@@ -315,6 +315,7 @@ describe("EventGetter for events", () => {
       const agg2Tx = await verifier
         .connect(worker)
         .verifyMixedAggregatedProof(
+          Uint8Array.from([0, 0, 0]),
           dummyProofData(proofIds),
           proofIds,
           0,
@@ -322,8 +323,7 @@ describe("EventGetter for events", () => {
             sub_1.computeSubmissionProof(1, 1)!.solidity(),
             sub_3.computeSubmissionProof(0, 1)!.solidity(),
           ],
-          packOffChainSubmissionMarkers([]),
-          packDupSubmissionIdxs([0, 0, 0])
+          packOffChainSubmissionMarkers([])
         );
       return agg2Tx.hash;
     })();
@@ -333,12 +333,12 @@ describe("EventGetter for events", () => {
       const agg3Tx = await verifier
         .connect(worker)
         .verifyMixedAggregatedProof(
+          Uint8Array.from([0]),
           dummyProofData(proofIds),
           proofIds,
           0,
           [sub_3.computeSubmissionProof(1, 2)!.solidity()],
-          packOffChainSubmissionMarkers([]),
-          packDupSubmissionIdxs([0])
+          packOffChainSubmissionMarkers([])
         );
       return agg3Tx.hash;
     })();
