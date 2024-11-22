@@ -121,11 +121,7 @@ async function checkProofsAndSubmissionVerified(
     submission.inputs
   );
 
-  if (!onChainIsSubmissionVerified) {
-    return false;
-  }
-
-  return true;
+  return onChainIsSubmissionVerified;
 }
 
 describe("Submissions verified in one aggregation", async () => {
@@ -287,12 +283,12 @@ describe("Submissions verified in one aggregation", async () => {
     const verifyAggProofTx = await upa.verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds),
         proofIds,
         numProofsInSubmission,
         onChainSubmissionProofs,
-        offChainSubmissionMarkers,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers
       );
 
     await verifyAggProofTx.wait();
@@ -458,12 +454,12 @@ describe("Submissions verified in one aggregation", async () => {
     const verifyAggProofTx = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds),
         proofIds,
         numProofsInSubmission,
         onChainSubmissionProofs,
-        offChainSubmissionMarkers,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers
       );
 
     await verifyAggProofTx.wait();
@@ -636,12 +632,12 @@ describe("Submissions verified in one aggregation", async () => {
     const verifyAggProofTx = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds),
         proofIds,
         numProofsInOffChainSubmission,
         onChainSubmissionProofs,
-        offChainSubmissionMarkers,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers
       );
 
     await verifyAggProofTx.wait();
@@ -732,12 +728,12 @@ describe("Submissions verified in one aggregation", async () => {
     const verifyAggProofTx = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(offChainSubmission.proofIds),
         offChainSubmission.proofIds,
         numProofsInSubmission,
         [] /*onChainSubmissionProofs*/,
-        offChainSubmissionMarkers,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers
       );
 
     await verifyAggProofTx.wait();
@@ -981,12 +977,12 @@ describe("Submissions verified over multiple aggregations", async () => {
     const verifyAggProofTx_1 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds_1),
         proofIds_1,
         3,
         onChainSubmissionProofs_1,
-        offChainSubmissionMarkers_1,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers_1
       );
 
     await verifyAggProofTx_1.wait();
@@ -1004,12 +1000,12 @@ describe("Submissions verified over multiple aggregations", async () => {
     const verifyAggProofTx_2 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds_2),
         proofIds_2,
         3,
         onChainSubmissionProofs_2,
-        offChainSubmissionMarkers_2,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers_2
       );
 
     await verifyAggProofTx_2.wait();
@@ -1038,12 +1034,12 @@ describe("Submissions verified over multiple aggregations", async () => {
     const verifyAggProofTx_3 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds_3),
         proofIds_3,
         3,
         onChainSubmissionProofs_3,
-        offChainSubmissionMarkers_3,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers_3
       );
 
     await verifyAggProofTx_3.wait();
@@ -1303,12 +1299,12 @@ describe("Submissions verified over multiple aggregations", async () => {
     const verifyAggProofTx_1 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds_1),
         proofIds_1,
         9,
         onChainSubmissionProofs_1,
-        offChainSubmissionMarkers_1,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers_1
       );
 
     await verifyAggProofTx_1.wait();
@@ -1326,12 +1322,12 @@ describe("Submissions verified over multiple aggregations", async () => {
     const verifyAggProofTx_2 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds_2),
         proofIds_2,
         11,
         onChainSubmissionProofs_2,
-        offChainSubmissionMarkers_2,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers_2
       );
 
     await verifyAggProofTx_2.wait();
@@ -1361,12 +1357,12 @@ describe("Submissions verified over multiple aggregations", async () => {
     const verifyAggProofTx_3 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0]),
         dummyProofData(proofIds_3),
         proofIds_3,
         0,
         onChainSubmissionProofs_3,
-        offChainSubmissionMarkers_3,
-        packDupSubmissionIdxs([0])
+        offChainSubmissionMarkers_3
       );
 
     await verifyAggProofTx_3.wait();
@@ -1765,12 +1761,12 @@ describe("Aggregations containing multiple submissions", async () => {
     const verifyAggProofTx_1 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0, 0]),
         dummyProofData(firstAggProofIds),
         firstAggProofIds,
         6,
         firstAggSubmissionProofs,
-        firstAggMarkers,
-        packDupSubmissionIdxs([0, 0])
+        firstAggMarkers
       );
 
     await verifyAggProofTx_1.wait();
@@ -1820,12 +1816,12 @@ describe("Aggregations containing multiple submissions", async () => {
     const verifyAggProofTx_2 = await verifier
       .connect(worker)
       .verifyMixedAggregatedProof(
+        Uint8Array.from([0, 0]),
         dummyProofData(secondAggProofIds),
         secondAggProofIds,
         9,
         secondAggSubmissionProofs,
-        secondAggMarkers,
-        packDupSubmissionIdxs([0, 0])
+        secondAggMarkers
       );
 
     await verifyAggProofTx_2.wait();
@@ -1948,12 +1944,12 @@ describe("Offchain Benchmarks", async () => {
       const txResponse = await verifier
         .connect(worker)
         .verifyMixedAggregatedProof(
+          Uint8Array.from([0]),
           dummyProofData(submission.proofIds),
           submission.proofIds,
           submissionSize,
           [],
-          packedSubmissionMarkers,
-          packDupSubmissionIdxs([0])
+          packedSubmissionMarkers
         );
 
       const txReceipt = await txResponse.wait();
@@ -2120,12 +2116,12 @@ describe("Failure cases", async () => {
       verifier
         .connect(worker)
         .verifyMixedAggregatedProof(
+          Uint8Array.from([0]),
           dummyProofData(proofIds),
           proofIds,
           numProofsInOffChainSubmission,
           onChainSubmissionProofs,
-          offChainSubmissionMarkers,
-          packDupSubmissionIdxs([0])
+          offChainSubmissionMarkers
         )
     ).to.be.revertedWithCustomError(upa.verifier, "InvalidMerkleIntervalProof");
   });
@@ -2369,12 +2365,12 @@ describe("Failure cases", async () => {
       verifier
         .connect(worker)
         .verifyMixedAggregatedProof(
+          Uint8Array.from([0]),
           dummyProofData(proofIds_1),
           proofIds_1,
           9,
           onChainSubmissionProofs_1,
-          offChainSubmissionMarkers,
-          packDupSubmissionIdxs([0])
+          offChainSubmissionMarkers
         )
     ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
 
@@ -2382,12 +2378,12 @@ describe("Failure cases", async () => {
       verifier
         .connect(worker)
         .verifyMixedAggregatedProof(
+          Uint8Array.from([0]),
           dummyProofData(proofIds_2),
           proofIds_2,
           9,
           onChainSubmissionProofs_2,
-          offChainSubmissionMarkers,
-          packDupSubmissionIdxs([0])
+          offChainSubmissionMarkers
         )
     ).to.be.revertedWithCustomError(verifier, "InvalidMerkleIntervalProof");
   });
