@@ -105,6 +105,15 @@ export function submissionEndpoint(): Option {
   });
 }
 
+export function verifyEndpoint(): Option {
+  return option({
+    type: string,
+    long: "verify-endpoint",
+    defaultValue: () => process.env.VERIFY_ENDPOINT || "",
+    description: "Verify endpoint (defaults to VERIFY_ENDPOINT env var)",
+  });
+}
+
 export function depositContract() {
   return option({
     type: string,
@@ -185,6 +194,24 @@ export function vkProofInputsBatchFilePositional(): Option {
     description:
       "VK, proof, inputs batch file: " +
       '[{"vk": {..}, "proof": {..}, "inputs": [..]}, ..]',
+  });
+}
+
+export function vkProofInputsSingleOrBatchFile(): Option {
+  return option({
+    type: string,
+    long: "proofs-file",
+    description:
+      "JSON file: {vk, proof, inputs} object, or list of such objects",
+  });
+}
+
+export function vkProofInputsSingleOrBatchFilePositional(): Option {
+  return positional({
+    type: string,
+    displayName: "proofs-file",
+    description:
+      "JSON file: {vk, proof, inputs} object, or list of such objects",
   });
 }
 

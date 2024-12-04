@@ -11,6 +11,7 @@ import {
   loadWallet,
   loadAppVkProofInputsBatchFile,
   readAddressFromKeyfile,
+  loadAppVkProofInputsSingleOrBatchFile,
 } from "./config";
 import {
   password,
@@ -20,6 +21,8 @@ import {
   submissionEndpoint,
   depositContract,
   chainEndpoint,
+  verifyEndpoint,
+  vkProofInputsSingleOrBatchFilePositional,
 } from "./options";
 import {
   computeCircuitId,
@@ -27,6 +30,7 @@ import {
   computeSubmissionId,
   JSONstringify,
 } from "../sdk/utils";
+import { offchainVerify } from "../sdk";
 import {
   getSignedResponseData,
   OffChainClient,
@@ -414,6 +418,34 @@ export const withdrawAtBlock = command({
   },
 });
 
+export const verify = command({
+  name: "verify",
+  description: "Use a verification service to verify off-chain",
+  args: {
+    verifyEndpoint: verifyEndpoint(),
+    vkProofInputsFile: vkProofInputsSingleOrBatchFilePositional(),
+  },
+  handler: async function ({
+    verifyEndpoint,
+    vkProofInputsFile,
+  }): Promise<void> {
+    if (!verifyEndpoint) {
+      throw "no verify-endpoint specified";
+    }
+
+    const proofAndInputs =
+      loadAppVkProofInputsSingleOrBatchFile(vkProofInputsFile);
+    const verifier = new offchainVerify.VerifierClient(verifyEndpoint);
+    const result = await verifier.verify(proofAndInputs).catch((e) => {
+      console.log(`Error during request: ${e}`);
+      process.exit(1);
+    });
+
+    console.log(result ? "valid" : "invalid");
+    process.exit(result ? 0 : 1);
+  },
+});
+
 export const offChain = subcommands({
   name: "off-chain",
   description: "Utilities for off-chain submission",
@@ -427,5 +459,6 @@ export const offChain = subcommands({
     "refund-fee": refundFee,
     "get-state": getState,
     "get-parameters": getParameters,
+    verify,
   },
 });
