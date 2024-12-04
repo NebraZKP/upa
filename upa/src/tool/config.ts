@@ -217,7 +217,6 @@ export function loadGnarkProof(filename: string): GnarkProof {
 export function loadGnarkInputs(filename: string): GnarkInputs {
   const inputsJSON = JSON.parse(fs.readFileSync(filename, "ascii"));
   const result = inputsJSON.map(BigInt);
-  console.log(result);
   return result;
 }
 
