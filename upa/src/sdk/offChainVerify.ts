@@ -1,5 +1,7 @@
 import { jsonPostRequest } from "./offChainClient";
 import { AppVkProofInputs } from "./application";
+import { Signature, getAddress, recoverAddress } from "ethers";
+import { computeCircuitId, computeProofId, computeSubmissionId } from "./utils";
 
 export type VerifyRequestProofType = "groth16";
 export type VerifyRequestData = AppVkProofInputs[];
@@ -18,17 +20,34 @@ export class VerifyRequest {
 export class VerifierClient {
   constructor(public readonly url: string) {}
 
-  public async verify(data: AppVkProofInputs[]): Promise<boolean> {
+  public async getSignature(data: AppVkProofInputs[]): Promise<Signature> {
     const request = new VerifyRequest(data);
     const response = await jsonPostRequest(this.url, request);
 
-    if (typeof response !== "boolean") {
+    if (typeof response !== "object") {
       throw (
         `Unexpected response type: {typeof response}\n` +
         `{JSON.stringify(response)}`
       );
     }
 
-    return response;
+    return Signature.from(response as Signature);
+  }
+
+  public async verify(
+    data: AppVkProofInputs[],
+    verifierAddress: string
+  ): Promise<boolean> {
+    const signature = await this.getSignature(data);
+    const expectAddress = getAddress(verifierAddress);
+
+    // Verify the signature and confirm it is for expectAddress
+    const proof_ids = data.map((vki) => {
+      const cid = computeCircuitId(vki.vk);
+      return computeProofId(cid, vki.inputs);
+    });
+    const submission_id = computeSubmissionId(proof_ids);
+    const address = recoverAddress(submission_id, signature);
+    return address == expectAddress;
   }
 }

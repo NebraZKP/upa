@@ -29,6 +29,7 @@ import {
   chainEndpoint,
   verifyEndpoint,
   vkProofInputsSingleOrBatchFilePositional,
+  verifierAddress,
 } from "./options";
 import {
   computeCircuitId,
@@ -432,11 +433,12 @@ export const withdrawAtBlock = command({
 // The common part of offchain verify commands
 export async function doOffChainVerify(
   endpoint: string,
-  proofs: AppVkProofInputs[]
+  proofs: AppVkProofInputs[],
+  verifierAddress: string
 ): Promise<void> {
   const verifier = new offchainVerify.VerifierClient(endpoint);
-  const result = await verifier.verify(proofs).catch((e) => {
-    console.log(`Error during request: ${e}`);
+  const result = await verifier.verify(proofs, verifierAddress).catch((e) => {
+    console.log(`${e}`);
     process.exit(1);
   });
 
@@ -450,10 +452,12 @@ export const verify = command({
   args: {
     verifyEndpoint: verifyEndpoint(),
     vkProofInputsFile: vkProofInputsSingleOrBatchFilePositional(),
+    verifierAddress: verifierAddress(),
   },
   handler: async function ({
     verifyEndpoint,
     vkProofInputsFile,
+    verifierAddress,
   }): Promise<void> {
     if (!verifyEndpoint) {
       throw "no verify-endpoint specified";
@@ -461,7 +465,7 @@ export const verify = command({
 
     const proofAndInputs =
       loadAppVkProofInputsSingleOrBatchFile(vkProofInputsFile);
-    doOffChainVerify(verifyEndpoint, proofAndInputs);
+    doOffChainVerify(verifyEndpoint, proofAndInputs, verifierAddress);
   },
 });
 
@@ -470,6 +474,7 @@ export const verify_gnark = command({
   description: "Use an off-chain verification service to verify a gnark proof",
   args: {
     verifyEndpoint: verifyEndpoint(),
+    verifierAddress: verifierAddress(),
     vkFile: positional({
       type: string,
       displayName: "gnark-vk-file",
@@ -493,6 +498,7 @@ export const verify_gnark = command({
   },
   handler: async function ({
     verifyEndpoint,
+    verifierAddress,
     vkFile,
     proofFile,
     inputsFile,
@@ -509,7 +515,7 @@ export const verify_gnark = command({
     const proof = Groth16Proof.from_gnark(loadGnarkProof(proofFile));
     const inputs = loadGnarkInputs(inputsFile).map(BigInt);
 
-    doOffChainVerify(verifyEndpoint, [{ vk, proof, inputs }]);
+    doOffChainVerify(verifyEndpoint, [{ vk, proof, inputs }], verifierAddress);
   },
 });
 
@@ -518,6 +524,7 @@ export const verify_snarkjs = command({
   description: "Use an off-chain verification service to verify a gnark proof",
   args: {
     verifyEndpoint: verifyEndpoint(),
+    verifierAddress: verifierAddress(),
     vkFile: positional({
       type: string,
       displayName: "snarkjs-vk-file",
@@ -531,6 +538,7 @@ export const verify_snarkjs = command({
   },
   handler: async function ({
     verifyEndpoint,
+    verifierAddress,
     vkFile,
     proofFile,
   }): Promise<void> {
@@ -545,7 +553,7 @@ export const verify_snarkjs = command({
     const proof = Groth16Proof.from_snarkjs(snarkjsProof);
     const inputs = publicSignals.map(BigInt);
 
-    doOffChainVerify(verifyEndpoint, [{ vk, proof, inputs }]);
+    doOffChainVerify(verifyEndpoint, [{ vk, proof, inputs }], verifierAddress);
   },
 });
 

@@ -114,6 +114,23 @@ export function verifyEndpoint(): Option {
   });
 }
 
+export function verifierAddress() {
+  return option({
+    type: string,
+    long: "verifier-address",
+    short: "v",
+    description:
+      "Trusted verifier address for signature verification (VERIFIER_ADDRESS)",
+    defaultValue: () => {
+      const val = process.env.VERIFIER_ADDRESS;
+      if (val) {
+        return val;
+      }
+      throw "verifier address not specified";
+    },
+  });
+}
+
 export function depositContract() {
   return option({
     type: string,
