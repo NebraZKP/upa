@@ -114,19 +114,21 @@ export function verifyEndpoint(): Option {
   });
 }
 
-export function verifierAddress() {
+export function verifierAddress(): OptionalOption {
   return option({
-    type: string,
+    type: optional(string),
     long: "verifier-address",
     short: "v",
     description:
-      "Trusted verifier address for signature verification (VERIFIER_ADDRESS)",
+      "Trusted verifier address for signature verification (VERIFIER_ADDRESS)" +
+      ". If not given, any well-formed signature from the verifier will be " +
+      "accepted.",
     defaultValue: () => {
       const val = process.env.VERIFIER_ADDRESS;
       if (val) {
         return val;
       }
-      throw "verifier address not specified";
+      return undefined;
     },
   });
 }

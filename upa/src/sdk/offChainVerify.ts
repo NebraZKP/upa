@@ -36,10 +36,9 @@ export class VerifierClient {
 
   public async verify(
     data: AppVkProofInputs[],
-    verifierAddress: string
+    verifierAddress?: string
   ): Promise<boolean> {
     const signature = await this.getSignature(data);
-    const expectAddress = getAddress(verifierAddress);
 
     // Verify the signature and confirm it is for expectAddress
     const proof_ids = data.map((vki) => {
@@ -48,6 +47,16 @@ export class VerifierClient {
     });
     const submission_id = computeSubmissionId(proof_ids);
     const address = recoverAddress(submission_id, signature);
-    return address == expectAddress;
+
+    // If verifierAddress is given, compare to the signer's address.
+    // Otherwise, the verifier is trusted and the presence of a well-formed
+    // signature is sufficient evidence.
+
+    if (verifierAddress) {
+      const expectAddress = getAddress(verifierAddress);
+      return address == expectAddress;
+    }
+
+    return true;
   }
 }

@@ -434,7 +434,7 @@ export const withdrawAtBlock = command({
 export async function doOffChainVerify(
   endpoint: string,
   proofs: AppVkProofInputs[],
-  verifierAddress: string
+  verifierAddress?: string
 ): Promise<void> {
   const verifier = new offchainVerify.VerifierClient(endpoint);
   const result = await verifier.verify(proofs, verifierAddress).catch((e) => {
