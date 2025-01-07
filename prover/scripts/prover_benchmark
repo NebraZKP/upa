@@ -3,6 +3,9 @@
 set -x
 set -e
 
+# Set RUST_LOG environment variable for all cargo commands
+export RUST_LOG=info
+
 # Build UPA prover tool
 pushd ../prover
     cargo build --release
@@ -108,8 +111,8 @@ for config in $CONFIG_DIR/*.json; do
             --num-instance "${OUTER_IDENTIFIER}.num_instance" \
             $DRY_RUN_FLAG
     fi
-    OUTER_VERIFIER_YUL="${OUTER_IDENTIFIER}.verifier.yul"
-    if [ ! -f ]; then
+    OUTER_VERIFIER_YUL="$(pwd)/${OUTER_IDENTIFIER}.verifier.yul"
+    if [ ! -f $OUTER_VERIFIER_YUL ]; then
          # Generate the Yul verifier
         ${PROVER} universal-outer generate-verifier \
             --outer-srs $OUTER_SRS \
@@ -259,7 +262,7 @@ for config in $CONFIG_DIR/*.json; do
 
     # Verify aggregated proof
     $PROVER universal-outer verify \
-        --outer-verifier-yul-file ${OUTER_VERIFIER_YUL} \
+        --verifier-yul ${OUTER_VERIFIER_YUL} \
         --proof $OUTER_PROOF_FILE \
         --instance $OUTER_INSTANCE_FILE \
         --calldata $OUTER_CALLDATA_FILE \
