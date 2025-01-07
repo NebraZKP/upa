@@ -108,6 +108,18 @@ for config in $CONFIG_DIR/*.json; do
             --num-instance "${OUTER_IDENTIFIER}.num_instance" \
             $DRY_RUN_FLAG
     fi
+    OUTER_VERIFIER_YUL="${OUTER_IDENTIFIER}.verifier.yul"
+    if [ ! -f ]; then
+         # Generate the Yul verifier
+        ${PROVER} universal-outer generate-verifier \
+            --outer-srs $OUTER_SRS \
+            --verification-key "${OUTER_IDENTIFIER}.vk" \
+            --gate-config "${OUTER_IDENTIFIER}.gate_config" \
+            --num-instance "${OUTER_IDENTIFIER}.num_instance" \
+            --yul $OUTER_VERIFIER_YUL
+
+        solc --yul ${OUTER_VERIFIER_YUL} --bin | tail -1 > "${OUTER_IDENTIFIER}.verifier.bin"
+    fi
     popd
 
     # Generate sample data for aggregation
@@ -140,7 +152,7 @@ for config in $CONFIG_DIR/*.json; do
             --dry-run
     fi
 
-    # Launch BV and Keccak provers concurrently
+    # Launch BV and Keccak provers serially
 
     # Clean up any existing proofs, instances
     rm -f proof_bv_${BV_IDENTIFIER}_*.json
@@ -163,14 +175,14 @@ for config in $CONFIG_DIR/*.json; do
     # Start time for BV prover
     bv_start_time=$(date +%s%N)
 
-    # Launch BV provers
+    # Launch BV prover
     /usr/bin/time -v $PROVER universal-batch-verifier prove \
         --config $config \
         --srs $BV_SRS \
         --proving-key "${KEYS_DIR}/${BV_IDENTIFIER}.pk" \
         --gate-config "${KEYS_DIR}/${BV_IDENTIFIER}.gate_config" \
         --app-vk-proof-batch "proofs_pi_${NUM_PI}_inner_${INNER_BATCH_SIZE}.json" \
-        --proof "proof_bv_${BV_IDENTIFIER}_${i}.json" \
+        --proof "proof_bv_${BV_IDENTIFIER}.json" \
         --instance "instance_bv_${BV_IDENTIFIER}.json" \
         $DRY_RUN_FLAG
 
@@ -188,7 +200,7 @@ for config in $CONFIG_DIR/*.json; do
     echo "Total batch size: $TOTAL_BATCH_SIZE" | tee -a $log_file
 
     # Launch Keccak prover
-    /usr/bin/time -v RUST_BACKTRACE=1 $PROVER keccak prove \
+    /usr/bin/time -v $PROVER keccak prove \
         --config $config \
         --srs $KECCAK_SRS \
         --proving-key "${KEYS_DIR}/${KECCAK_IDENTIFIER}.pk" \
@@ -220,6 +232,9 @@ for config in $CONFIG_DIR/*.json; do
     bv_instances=`yes ' --ubv-instances '${bv_instance_file} | head -n ${OUTER_BATCH_SIZE}`
     echo $bv_instances
 
+    OUTER_PROOF_FILE="proof_outer_${OUTER_IDENTIFIER}.json"
+    OUTER_INSTANCE_FILE="instance_outer_${OUTER_IDENTIFIER}.json"
+    OUTER_CALLDATA_FILE="calldata_outer_${OUTER_IDENTIFIER}.json"
     /usr/bin/time -v $PROVER universal-outer prove \
         --config $config \
         --bv-protocol "${KEYS_DIR}/${BV_IDENTIFIER}.protocol" \
@@ -231,9 +246,9 @@ for config in $CONFIG_DIR/*.json; do
         --keccak-proof "proof_keccak_${KECCAK_IDENTIFIER}.json" \
         --keccak-instance "instance_keccak_${KECCAK_IDENTIFIER}.json" \
         --keccak-protocol "${KEYS_DIR}/${KECCAK_IDENTIFIER}.protocol" \
-        --proof "proof_outer_${OUTER_IDENTIFIER}.json" \
-        --instance "instance_outer_${OUTER_IDENTIFIER}.json" \
-        --calldata "calldata_outer_${OUTER_IDENTIFIER}.json" \
+        --proof $OUTER_PROOF_FILE \
+        --instance $OUTER_INSTANCE_FILE \
+        --calldata $OUTER_CALLDATA_FILE \
         $DRY_RUN_FLAG
 
     # End time
@@ -241,6 +256,15 @@ for config in $CONFIG_DIR/*.json; do
     # Calculate elapsed time
     outer_elapsed_time=$(echo "scale=2; ($outer_end_time - $outer_start_time) / 1000000000" | bc)
     echo "Outer proving time $outer_elapsed_time" | tee -a $log_file
+
+    # Verify aggregated proof
+    $PROVER universal-outer verify \
+        --outer-verifier-yul-file ${OUTER_VERIFIER_YUL} \
+        --proof $OUTER_PROOF_FILE \
+        --instance $OUTER_INSTANCE_FILE \
+        --calldata $OUTER_CALLDATA_FILE \
+        $DRY_RUN_FLAG
+
 done
 
 set +x
