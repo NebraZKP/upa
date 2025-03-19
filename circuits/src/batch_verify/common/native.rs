@@ -42,12 +42,6 @@ where
         hasher.absorb_g1(s);
     }
 
-    // Absorb the commitment terms if present.
-    if vk.has_commitment() {
-        hasher.absorb_g2(&vk.h1[0]);
-        hasher.absorb_g2(&vk.h2[0]);
-    }
-
     hasher.finalize()
 }
 
@@ -80,15 +74,6 @@ where
         hasher.absorb_g1(&g1_generator);
     }
 
-    if vk.has_commitment() {
-        hasher.absorb_g2(&vk.h1[0]);
-        hasher.absorb_g2(&vk.h2[0]);
-    } else {
-        let g2_generator = C2::generator();
-        hasher.absorb_g2(&g2_generator);
-        hasher.absorb_g2(&g2_generator);
-    }
-
     hasher.hasher.squeeze()
 }
 
@@ -100,11 +85,8 @@ pub mod unsafe_proof_generation {
     use super::json::{
         field_element_from_str, field_element_to_str, JsonVerificationKey,
     };
-    use crate::{
-        batch_verify::common::types::{Proof, PublicInputs, VerificationKey},
-        utils::commitment_point::{
-            be_bytes_to_field_element, commitment_hash_bytes_from_g1_point,
-        },
+    use crate::batch_verify::common::types::{
+        Proof, PublicInputs, VerificationKey,
     };
     use halo2_base::halo2_proofs::{
         arithmetic::Field,
@@ -144,11 +126,7 @@ pub mod unsafe_proof_generation {
             let delta_vk = g2 * delta;
             let s_vk =
                 s.iter().map(|elem| G1Affine::from(g1 * elem)).collect_vec();
-            // Requirement is h2 = -1/sigma * h1
-            let (h1, h2) = match sigma {
-                Some(sigma) => (vec![(-g2 * sigma).into()], vec![g2]),
-                _ => (vec![], vec![]),
-            };
+
             Self {
                 alpha,
                 beta,
@@ -162,8 +140,6 @@ pub mod unsafe_proof_generation {
                     gamma: gamma_vk.into(),
                     delta: delta_vk.into(),
                     s: s_vk,
-                    h1,
-                    h2,
                 },
             }
         }
@@ -230,38 +206,13 @@ pub mod unsafe_proof_generation {
             let g1 = G1Affine::generator();
             let g2 = G2Affine::generator();
 
-            let (m_scalar, m_point, pok) = match self.sigma {
-                Some(sigma) => {
-                    // Commitment requires
-                    //   M = m * G
-                    // pok = m * (sigma * G)
-                    let m = Fr::random(&mut *rng);
-                    let result = (
-                        m,
-                        vec![(g1 * m).into()],
-                        vec![(g1 * sigma * m).into()],
-                    );
-                    let last_pi: Fr = be_bytes_to_field_element(
-                        &commitment_hash_bytes_from_g1_point(&result.1[0]),
-                    );
-                    pi_term +=
-                        last_pi * self.s.last().expect("s cannot be empty");
-                    result
-                }
-                _ => (Fr::zero(), vec![], vec![]),
-            };
-
-            let c = (a * b
-                - self.alpha * self.beta
-                - (pi_term + m_scalar) * self.gamma)
+            let c = (a * b - self.alpha * self.beta - (pi_term) * self.gamma)
                 * self.delta.invert().expect("Delta can't be zero");
 
             Proof {
                 a: (g1 * a).into(),
                 b: (g2 * b).into(),
                 c: (g1 * c).into(),
-                m: m_point,
-                pok,
             }
         }
 
@@ -453,23 +404,16 @@ pub mod json {
         pub gamma: [[String; 2]; 2],
         pub delta: [[String; 2]; 2],
         pub s: Vec<[String; 2]>,
-        pub h1: Vec<[[String; 2]; 2]>,
-        pub h2: Vec<[[String; 2]; 2]>,
     }
 
     impl From<&JsonVerificationKey> for VerificationKey {
         fn from(vk_json: &JsonVerificationKey) -> Self {
-            if vk_json.h1.len() != vk_json.h2.len() {
-                panic!("Invalid VK. Inconsistent h1, h2")
-            }
             VerificationKey {
                 alpha: g1_from_json(&vk_json.alpha),
                 beta: g2_from_json(&vk_json.beta),
                 gamma: g2_from_json(&vk_json.gamma),
                 delta: g2_from_json(&vk_json.delta),
                 s: vk_json.s.iter().map(g1_from_json).collect(),
-                h1: vk_json.h1.iter().map(g2_from_json).collect(),
-                h2: vk_json.h2.iter().map(g2_from_json).collect(),
             }
         }
     }
@@ -482,8 +426,6 @@ pub mod json {
                 gamma: g2_to_json(&vk.gamma),
                 delta: g2_to_json(&vk.delta),
                 s: vk.s.iter().map(g1_to_json).collect(),
-                h1: vk.h1.iter().map(g2_to_json).collect(),
-                h2: vk.h2.iter().map(g2_to_json).collect(),
             }
         }
     }
@@ -496,48 +438,24 @@ pub mod json {
         pub pi_a: [String; 2],
         pub pi_b: [[String; 2]; 2],
         pub pi_c: [String; 2],
-        pub m: Vec<[String; 2]>,
-        pub pok: Vec<[String; 2]>,
     }
 
     impl From<&JsonProof> for Proof {
         fn from(json: &JsonProof) -> Self {
-            assert_eq!(
-                json.m.len(),
-                json.pok.len(),
-                "Bad data, proof.m proof.pok length mismatch"
-            );
-            assert!(
-                json.m.len() < 2,
-                "Multiple commitment points not supported."
-            );
             Proof {
                 a: g1_from_json(&json.pi_a),
                 b: g2_from_json(&json.pi_b),
                 c: g1_from_json(&json.pi_c),
-                m: json.m.iter().map(g1_from_json).collect(),
-                pok: json.pok.iter().map(g1_from_json).collect(),
             }
         }
     }
 
     impl From<&Proof> for JsonProof {
         fn from(proof: &Proof) -> Self {
-            assert_eq!(
-                proof.m.len(),
-                proof.pok.len(),
-                "Bad data, proof.m proof.pok length mismatch"
-            );
-            assert!(
-                proof.m.len() < 2,
-                "Multiple commitment points not supported."
-            );
             JsonProof {
                 pi_a: g1_to_json(&proof.a),
                 pi_b: g2_to_json(&proof.b),
                 pi_c: g1_to_json(&proof.c),
-                m: proof.m.iter().map(g1_to_json).collect(),
-                pok: proof.pok.iter().map(g1_to_json).collect(),
             }
         }
     }

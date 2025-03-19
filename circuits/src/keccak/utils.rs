@@ -8,9 +8,7 @@ use crate::{
     keccak::{
         KeccakCircuit, KeccakConfig, KeccakGateConfig, PaddedVerifyingKeyLimbs,
     },
-    utils::{
-        commitment_point::limbs_into_g1affine, keccak_hasher::KeccakHasher,
-    },
+    utils::keccak_hasher::KeccakHasher,
     EccPrimeField, SafeCircuit,
 };
 use core::{borrow::Borrow, iter};
@@ -694,7 +692,7 @@ pub(crate) fn inputs_per_application_proof(num_pub_ins: usize) -> usize {
         + 3 // len + has_commitment + commitment_hash
         + NUM_LIMBS
             * (NUM_FQ_PER_G1AFFINE * 3 // alpha + s[0] + commitment_point
-                + NUM_FQ_PER_G2AFFINE * 5 // beta + gamma + delta + h1 + h2
+                + NUM_FQ_PER_G2AFFINE * 3 // beta + gamma + delta
                 + NUM_FQ_PER_G1AFFINE * num_pub_ins // s[1..]
                 )
 }
@@ -743,44 +741,17 @@ pub fn keccak_inputs_from_ubv_instances<'a>(
             );
             assert_eq!(app_public_inputs.len(), len, "Missing public inputs");
 
-            // If the lth public input coincides with the commitment
-            // hash, then this input has a commitment.
-            const ZERO: Fr = Fr::zero();
-            const ONE: Fr = Fr::one();
-            let commitment_point_coordinates = {
-                match has_commitment {
-                    ZERO => vec![],
-                    ONE => {
-                        let commitment_point = limbs_into_g1affine(
-                            &commitment_point_limbs,
-                            LIMB_BITS,
-                            NUM_LIMBS,
-                        );
-                        vec![[commitment_point.x, commitment_point.y]]
-                    }
-                    _ => panic!("has commitment can only be 0 or 1"),
-                }
-            };
-            let has_commitment_bool = match has_commitment {
-                ZERO => 0,
-                _ => 1,
-            };
-            let len_s = len + 1 + has_commitment_bool;
+            let len_s = len + 1;
             let mut app_vk = PaddedVerifyingKeyLimbs::from_limbs(
                 &app_vk_vec,
                 max_num_public_inputs + 1,
             )
             .vk();
             app_vk.s.drain(len_s..);
-            if has_commitment_bool == 0 {
-                app_vk.h1 = Vec::new();
-                app_vk.h2 = Vec::new();
-            }
 
             keccak_inputs.push(KeccakVarLenInput {
                 app_vk,
                 app_public_inputs,
-                commitment_point_coordinates,
             })
         }
     }

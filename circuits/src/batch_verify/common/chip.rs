@@ -108,8 +108,6 @@ where
         ctx: &mut Context<F>,
         vk: &VerificationKey,
     ) -> AssignedVerificationKey<F> {
-        assert!(vk.has_commitment(), "vk must be padded already");
-
         let result = AssignedVerificationKey {
             alpha: self.assign_g1_reduced(ctx, vk.alpha),
             beta: self.assign_g2_reduced(ctx, vk.beta),
@@ -121,8 +119,6 @@ where
                 .copied()
                 .map(|s| self.assign_g1_reduced(ctx, s))
                 .collect(),
-            h1: self.assign_g2_reduced(ctx, vk.h1[0]),
-            h2: self.assign_g2_reduced(ctx, vk.h2[0]),
         };
 
         self.assert_vk_points_on_curve(ctx, &result);
@@ -142,22 +138,10 @@ where
         ctx: &mut Context<F>,
         proof: &Proof,
     ) -> AssignedProof<F> {
-        assert_eq!(
-            proof.m.len(),
-            proof.pok.len(),
-            "Invalid Proof. Inconsistent M, pok lengths."
-        );
-        match proof.m.len() {
-            0 => panic!("Proof.m not padded prior to assignment."),
-            1 => {}
-            num_commitments => panic!("Multiple commitments are not supported. {num_commitments} were present."),
-        }
         let result = AssignedProof {
             a: self.assign_g1_reduced(ctx, proof.a),
             b: self.assign_g2_reduced(ctx, proof.b),
             c: self.assign_g1_reduced(ctx, proof.c),
-            m: self.assign_g1_reduced(ctx, proof.m[0]),
-            pok: self.assign_g1_reduced(ctx, proof.pok[0]),
         };
         self.assert_proof_points_on_curve(ctx, &result);
         result
@@ -205,8 +189,6 @@ where
         self.assert_g1_point_is_on_curve(ctx, &proof.a);
         self.assert_g2_point_is_on_curve(ctx, &proof.b);
         self.assert_g1_point_is_on_curve(ctx, &proof.c);
-        self.assert_g1_point_is_on_curve(ctx, &proof.m);
-        self.assert_g1_point_is_on_curve(ctx, &proof.pok);
 
         // Subgroup check for the g2 point
         self.assert_g2_subgroup_membership(
@@ -234,21 +216,15 @@ where
         for s in vk.s.iter() {
             self.assert_g1_point_is_on_curve(ctx, s);
         }
-        self.assert_g2_point_is_on_curve(ctx, &vk.h1);
-        self.assert_g2_point_is_on_curve(ctx, &vk.h2);
 
         // Subgroup check for G2 points
         let beta = FromReduced::from_reduced(&vk.beta);
         let gamma = FromReduced::from_reduced(&vk.gamma);
         let delta = FromReduced::from_reduced(&vk.delta);
-        let h1 = FromReduced::from_reduced(&vk.h1);
-        let h2 = FromReduced::from_reduced(&vk.h2);
 
         self.assert_g2_subgroup_membership(ctx, &beta);
         self.assert_g2_subgroup_membership(ctx, &gamma);
         self.assert_g2_subgroup_membership(ctx, &delta);
-        self.assert_g2_subgroup_membership(ctx, &h1);
-        self.assert_g2_subgroup_membership(ctx, &h2);
     }
 
     /// Return r^0, r, ... r^{len - 1}
@@ -466,8 +442,6 @@ pub struct AssignedVerificationKey<F: EccPrimeField> {
     pub gamma: G2InputPoint<F>,
     pub delta: G2InputPoint<F>,
     pub s: Vec<G1InputPoint<F>>,
-    pub h1: G2InputPoint<F>,
-    pub h2: G2InputPoint<F>,
 }
 
 impl<F: EccPrimeField> AssignedVerificationKey<F> {
@@ -481,8 +455,6 @@ impl<F: EccPrimeField> AssignedVerificationKey<F> {
         for s_i in self.s.iter() {
             result.append(&mut get_g1_point_limbs(s_i, num_limbs));
         }
-        result.append(&mut get_g2_point_limbs(&self.h1, num_limbs));
-        result.append(&mut get_g2_point_limbs(&self.h2, num_limbs));
         result
     }
 }
@@ -519,14 +491,6 @@ impl AssignedVerificationKey<Fr> {
                     )
                 })
                 .collect(),
-            h1: vec![get_assigned_value_g2point(
-                fp_chip,
-                &g2_input_point_to_inner(&self.h1),
-            )],
-            h2: vec![get_assigned_value_g2point(
-                fp_chip,
-                &g2_input_point_to_inner(&self.h2),
-            )],
         }
     }
 }
@@ -545,8 +509,6 @@ where
         for s in self.s.iter() {
             s.hash(hasher);
         }
-        self.h1.hash(hasher);
-        self.h2.hash(hasher);
     }
 }
 
@@ -614,8 +576,6 @@ pub struct AssignedProof<F: EccPrimeField> {
     pub a: G1InputPoint<F>,
     pub b: G2InputPoint<F>,
     pub c: G1InputPoint<F>,
-    pub m: G1InputPoint<F>,
-    pub pok: G1InputPoint<F>,
 }
 
 impl<F: EccPrimeField> InCircuitHash<F> for AssignedProof<F> {
@@ -623,8 +583,6 @@ impl<F: EccPrimeField> InCircuitHash<F> for AssignedProof<F> {
         self.a.hash(hasher);
         self.b.hash(hasher);
         self.c.hash(hasher);
-        self.m.hash(hasher);
-        self.pok.hash(hasher);
     }
 }
 

@@ -10,10 +10,7 @@ use crate::{
         },
     },
     keccak::PaddedVerifyingKeyLimbs,
-    utils::{
-        advice_cell_count,
-        commitment_point::{g1affine_into_limbs, get_g1_point_limbs},
-    },
+    utils::advice_cell_count,
     EccPrimeField, SafeCircuit,
 };
 use core::{iter::once, marker::PhantomData};
@@ -86,9 +83,6 @@ pub(crate) fn universal_batch_verify_circuit<F: EccPrimeField>(
         .flat_map(|entry| {
             once(entry.len)
                 .chain(entry.vk.limbs(num_limbs))
-                .chain(once(entry.has_commitment))
-                .chain(once(entry.commitment_hash))
-                .chain(get_g1_point_limbs(&entry.proof.m, num_limbs))
                 .chain(entry.public_inputs)
         })
         .collect()
@@ -287,13 +281,6 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine>
             .flat_map(|be| {
                 once(*be.len())
                     .chain(PaddedVerifyingKeyLimbs::from_vk(be.vk()).flatten())
-                    .chain(once(Fr::from(be.has_commitment())))
-                    .chain(once(*be.commitment_hash()))
-                    .chain(g1affine_into_limbs(
-                        &be.proof().m[0],
-                        circuit_config.limb_bits,
-                        circuit_config.num_limbs,
-                    ))
                     .chain(be.inputs().0.iter().copied())
             })
             .collect()

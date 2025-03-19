@@ -14,10 +14,8 @@ use crate::{
         },
     },
     utils::{
-        advice_cell_count,
-        bitmask::{first_i_bits_bitmask, ith_bit_bitmask},
-        hashing::PoseidonHasher,
-        reduced::FromReduced,
+        advice_cell_count, bitmask::first_i_bits_bitmask,
+        hashing::PoseidonHasher, reduced::FromReduced,
     },
     EccPrimeField,
 };
@@ -28,13 +26,13 @@ use halo2_base::{
         RangeInstructions,
     },
     halo2_proofs::halo2curves::bn256::{G1Affine, G2Affine},
-    AssignedValue, Context, QuantumCell,
+    AssignedValue, Context,
 };
 use halo2_ecc::{
     bigint::ProperCrtUint,
     bn254::FpChip,
     ecc::{EcPoint, EccChip},
-    fields::{fp2::Fp2Chip, FieldChip},
+    fields::FieldChip,
 };
 use itertools::{multiunzip, Itertools};
 use log::info;
@@ -108,8 +106,7 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
     ) {
         // Bitmask computation
         let max_len = entry.public_inputs.0.len();
-        let number_of_non_padding_elements =
-            self.gate().add(ctx, entry.len, entry.has_commitment);
+        let number_of_non_padding_elements = entry.len;
         // We must constrain number_of_non_padding_elements < max_len + 1.
         // This can be satisfied due to `number_of_non_padding_elements`
         // overflowing if `entry.len` is too large, so we range check
@@ -173,83 +170,6 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
             ctx.constrain_equal(&prod, &entry.public_inputs.0[i]);
         }
         */
-
-        self.check_vk_commitment_padding(ctx, entry);
-        self.check_proof_commitment_padding(ctx, entry)
-    }
-
-    /// Enforces that either `vk.h1, vk.h2` are both assigned
-    /// as G2 padding point or else `entry.has_commitment` is
-    /// assigned as `true`.
-    fn check_vk_commitment_padding(
-        &self,
-        ctx: &mut Context<F>,
-        entry: &AssignedBatchEntry<F>,
-    ) {
-        let fp2_chip = Fp2Chip::new(self.fp_chip());
-        let g2_chip = EccChip::new(&fp2_chip);
-        // TODO: specify padding points as constants
-        let g2_padding_point = G2Affine::generator();
-        let g2_padding_point =
-            g2_chip.assign_constant_point(ctx, g2_padding_point);
-
-        let vk_h1_is_padding = g2_chip.is_equal(
-            ctx,
-            G2Point::from_reduced(&entry.vk.h1),
-            g2_padding_point.clone(),
-        );
-
-        // Repeat for vk.h2
-        let vk_h2_is_padding = g2_chip.is_equal(
-            ctx,
-            G2Point::from_reduced(&entry.vk.h2),
-            g2_padding_point,
-        );
-
-        let is_satisfied = self.gate().or_and(
-            ctx,
-            entry.has_commitment,
-            vk_h1_is_padding,
-            vk_h2_is_padding,
-        );
-        self.gate().assert_is_const(ctx, &is_satisfied, &F::one());
-    }
-
-    /// Enforces that either `proof.m, proof.pok` are assigned as
-    /// G1 padding point or else `entry.has_commitment` is
-    /// assigned as `true`.
-    fn check_proof_commitment_padding(
-        &self,
-        ctx: &mut Context<F>,
-        entry: &AssignedBatchEntry<F>,
-    ) {
-        // Check proof Pedersen commitment padding
-        let g1_chip = EccChip::new(self.fp_chip());
-        let g1_padding_point = G1Affine::generator();
-        let g1_padding_point =
-            g1_chip.assign_constant_point(ctx, g1_padding_point);
-
-        let proof_m_is_padding = g1_chip.is_equal(
-            ctx,
-            G1Point::from_reduced(&entry.proof.m),
-            g1_padding_point.clone(),
-        );
-
-        // Repeat for proof.pok
-        let minus_g1_padding_point = g1_chip.negate(ctx, g1_padding_point);
-        let proof_pok_is_padding = g1_chip.is_equal(
-            ctx,
-            G1Point::from_reduced(&entry.proof.pok),
-            minus_g1_padding_point,
-        );
-
-        let is_satisfied = self.gate().or_and(
-            ctx,
-            entry.has_commitment,
-            proof_m_is_padding,
-            proof_pok_is_padding,
-        );
-        self.gate().assert_is_const(ctx, &is_satisfied, &F::one());
     }
 
     /// Assigns `entry`.
@@ -264,52 +184,17 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
         entry: &BatchEntry<F>,
     ) -> AssignedBatchEntry<F> {
         let len = ctx.load_witness(*entry.len());
-        // Cast boolean `has_commitment` to field element, assign and constrain
-        // to boolean value.
-        let has_commitment = ctx.load_witness(F::from(entry.has_commitment()));
-        self.gate().assert_bit(ctx, has_commitment);
         let vk = self.assign_verification_key(ctx, entry.vk());
         let proof = self.assign_proof(ctx, entry.proof());
         let public_inputs = self.assign_public_inputs(ctx, entry.inputs());
-        let commitment_hash = ctx.load_witness(*entry.commitment_hash());
         let result = AssignedBatchEntry {
             len,
-            has_commitment,
             vk,
             proof,
             public_inputs,
-            commitment_hash,
         };
         self.check_padding(ctx, &result);
-        self.constrain_commitment_hash(ctx, &result);
         result
-    }
-
-    /// Constrains the index l public input in `entry` to be equal to
-    /// `entry.commitment_hash` when `entry.has_commitment = true`
-    /// and to equal zero otherwise.
-    ///
-    ///  # Specification
-    ///
-    /// This function performs **Step 1c: Constrain Commitment Hash** in the
-    /// universal batch verifier spec.
-    fn constrain_commitment_hash(
-        &self,
-        ctx: &mut Context<F>,
-        entry: &AssignedBatchEntry<F>,
-    ) {
-        let max_len = entry.public_inputs.0.len() as u64;
-        let bitmask = ith_bit_bitmask(ctx, self.gate(), entry.len, max_len);
-        let bits = bitmask.iter().map(|b| QuantumCell::<F>::from(*b));
-        let lth_public_input = self.gate().inner_product(
-            ctx,
-            entry.public_inputs.0.iter().copied(),
-            bits,
-        );
-        let expected =
-            self.gate()
-                .mul(ctx, entry.commitment_hash, entry.has_commitment);
-        ctx.constrain_equal(&lth_public_input, &expected);
     }
 
     /// Assigns `entries`.
@@ -462,8 +347,6 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
             cd_pairs: pairs.scaled_cd_pairs,
             pi_gamma_pairs: pairs.scaled_pi_gamma_pairs,
             alpha_beta_pairs: pairs.scaled_alpha_beta_pairs,
-            m_h1_pairs: pairs.scaled_m_h1_pairs,
-            pok_h2_pairs: pairs.scaled_pok_h2_pairs,
         }
     }
 
@@ -518,8 +401,6 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
                 })
                 .multiunzip();
 
-        let (m_pairs, pok_pairs) = self.pedersen_pairs(entries);
-
         let scaled_ab_pairs =
             self.bv_chip().scale_pairs(ctx, &minus_r_powers, &ab_pairs);
 
@@ -532,19 +413,11 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
         let scaled_pi_gamma_pairs =
             self.bv_chip().scale_pairs(ctx, r_powers, &pi_pairs);
 
-        let scaled_m_h1_pairs =
-            self.bv_chip().scale_pairs(ctx, &rt_powers, &m_pairs);
-
-        let scaled_pok_h2_pairs =
-            self.bv_chip().scale_pairs(ctx, &rt_powers, &pok_pairs);
-
         Groth16Pairs {
             scaled_ab_pairs,
             scaled_cd_pairs,
             scaled_pi_gamma_pairs,
             scaled_alpha_beta_pairs,
-            scaled_m_h1_pairs,
-            scaled_pok_h2_pairs,
         }
     }
 
@@ -648,12 +521,8 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
                 let mut ss = Vec::<EcPoint<F, ProperCrtUint<F>>>::from_reduced(
                     &entry.vk.s,
                 );
-                ss.push(<EcPoint<F, ProperCrtUint<F>>>::from_reduced(
-                    &entry.proof.m,
-                ));
                 let inputs: Vec<_> = once(&one)
                     .chain(entry.public_inputs.0.iter())
-                    .chain(once(&entry.has_commitment))
                     .map(|i| vec![*i])
                     .collect();
                 assert!(ss.len() > 1);
@@ -670,28 +539,6 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
             })
             .collect()
     }
-
-    /// Computes the Pedersen pairs (M, h1), (pok, h2).
-    fn pedersen_pairs(
-        &self,
-        entries: &AssignedBatchEntries<F>,
-    ) -> (Vec<EcPointPair<F>>, Vec<EcPointPair<F>>) {
-        entries
-            .0
-            .iter()
-            .map(|entry| {
-                let m_pair = (
-                    G1Point::<F>::from_reduced(&entry.proof.m),
-                    G2Point::<F>::from_reduced(&entry.vk.h1),
-                );
-                let pok_pair = (
-                    G1Point::<F>::from_reduced(&entry.proof.pok),
-                    G2Point::<F>::from_reduced(&entry.vk.h2),
-                );
-                (m_pair, pok_pair)
-            })
-            .unzip()
-    }
 }
 
 /// Assigned Batch Entry
@@ -699,16 +546,12 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
 pub struct AssignedBatchEntry<F: EccPrimeField> {
     /// Assigned length of the public inputs
     pub(super) len: AssignedValue<F>,
-    /// Pedersen commitment flag. Constrained to boolean values.
-    pub(super) has_commitment: AssignedValue<F>,
     /// Assigned Verification Key
     pub(super) vk: AssignedVerificationKey<F>,
     /// Assigned Proof
     pub(super) proof: AssignedProof<F>,
     /// Assigned Public Inputs
     pub(super) public_inputs: AssignedPublicInputs<F>,
-    /// Commitment Hash
-    pub(super) commitment_hash: AssignedValue<F>,
 }
 
 /// Assigned Batch Entries
@@ -757,10 +600,6 @@ pub(crate) struct AssignedPreparedProof<F: EccPrimeField> {
     pub(crate) pi_gamma_pairs: Vec<EcPointPair<F>>,
     /// (alpha, beta) pairs
     pub(crate) alpha_beta_pairs: Vec<EcPointPair<F>>,
-    /// (M, h1) pairs
-    pub(crate) m_h1_pairs: Vec<EcPointPair<F>>,
-    /// (pok, h2) pairs
-    pub(crate) pok_h2_pairs: Vec<EcPointPair<F>>,
 }
 
 impl<F: EccPrimeField> AssignedPreparedProof<F> {
@@ -773,9 +612,7 @@ impl<F: EccPrimeField> AssignedPreparedProof<F> {
             .zip_eq(self.alpha_beta_pairs.iter())
             .zip_eq(self.pi_gamma_pairs.iter())
             .zip_eq(self.cd_pairs.iter())
-            .zip_eq(self.m_h1_pairs.iter())
-            .zip_eq(self.pok_h2_pairs.iter())
-            .flat_map(|(((((a, b), c), d), e), f)| [a, b, c, d, e, f])
+            .flat_map(|(((a, b), c), d)| [a, b, c, d])
     }
 
     pub fn into_iter(self) -> impl Iterator<Item = EcPointPair<F>> {
@@ -784,8 +621,6 @@ impl<F: EccPrimeField> AssignedPreparedProof<F> {
             .zip_eq(self.alpha_beta_pairs.into_iter())
             .zip_eq(self.pi_gamma_pairs.into_iter())
             .zip_eq(self.cd_pairs.into_iter())
-            .zip_eq(self.m_h1_pairs.into_iter())
-            .zip_eq(self.pok_h2_pairs.into_iter())
-            .flat_map(|(((((a, b), c), d), e), f)| [a, b, c, d, e, f])
+            .flat_map(|(((a, b), c), d)| [a, b, c, d])
     }
 }

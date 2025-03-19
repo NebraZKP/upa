@@ -8,9 +8,8 @@ extern crate alloc;
 use self::{
     inputs::{KeccakCircuitInputs, KeccakVarLenInput},
     utils::{
-        byte_decomposition, byte_decomposition_list,
-        compose_into_field_element, compute_final_digest, compute_proof_id,
-        compute_submission_id, digest_as_field_elements,
+        byte_decomposition, byte_decomposition_list, compute_final_digest,
+        compute_proof_id, compute_submission_id, digest_as_field_elements,
         encode_digest_as_field_elements, g1_point_limbs_to_bytes,
         g2_point_limbs_to_bytes,
     },
@@ -18,19 +17,13 @@ use self::{
 use crate::{
     batch_verify::{
         common::types::VerificationKey,
-        universal::{
-            self,
-            types::{
-                UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING,
-                UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING_WITH_COMMITMENT,
-            },
-        },
+        universal::{self, types::UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING},
     },
     utils::{
         bitmask::first_i_bits_bitmask,
         commitment_point::{
-            commitment_hash_from_commitment_point_limbs, g1affine_into_limbs,
-            g2affine_into_limbs, limbs_into_g1affine, limbs_into_g2affine,
+            g1affine_into_limbs, g2affine_into_limbs, limbs_into_g1affine,
+            limbs_into_g2affine,
         },
         hashing::compute_domain_tag,
         upa_config::UpaConfig,
@@ -178,8 +171,6 @@ where
     pub(crate) gamma: Vec<F>,
     pub(crate) delta: Vec<F>,
     pub(crate) s: Vec<Vec<F>>,
-    pub(crate) h1: Vec<F>,
-    pub(crate) h2: Vec<F>,
 }
 
 impl<F> PaddedVerifyingKeyLimbs<F>
@@ -194,8 +185,6 @@ where
             .chain(self.gamma.iter())
             .chain(self.delta.iter())
             .chain(self.s.iter().flat_map(|s| s.iter()))
-            .chain(self.h1.iter())
-            .chain(self.h2.iter())
     }
 
     /// Returns a vector with the elements of `self`.
@@ -229,16 +218,12 @@ where
         for _ in 0..len_s {
             s.push(take_fq(&mut limbs_iter, 2));
         }
-        let h1 = take_fq(&mut limbs_iter, 4);
-        let h2 = take_fq(&mut limbs_iter, 4);
         Self {
             alpha,
             beta,
             gamma,
             delta,
             s,
-            h1,
-            h2,
         }
     }
 
@@ -260,8 +245,6 @@ where
                 .into_iter()
                 .map(|_| g1_generator_limbs.clone())
                 .collect(),
-            h1: g2_generator_limbs.clone(),
-            h2: g2_generator_limbs,
         }
     }
 
@@ -277,11 +260,7 @@ where
             gamma,
             delta,
             s,
-            h1,
-            h2,
         } = vk;
-        assert_eq!(h1.len(), h2.len(), "inconsistent vk");
-        assert_eq!(h1.len(), 1, "vk must be already padded");
         Self {
             alpha: g1affine_into_limbs(alpha, LIMB_BITS, NUM_LIMBS),
             beta: g2affine_into_limbs(beta, LIMB_BITS, NUM_LIMBS),
@@ -290,8 +269,6 @@ where
             s: s.iter()
                 .map(|s_i| g1affine_into_limbs(s_i, LIMB_BITS, NUM_LIMBS))
                 .collect(),
-            h1: g2affine_into_limbs(&h1[0], LIMB_BITS, NUM_LIMBS),
-            h2: g2affine_into_limbs(&h2[0], LIMB_BITS, NUM_LIMBS),
         }
     }
 
@@ -307,8 +284,6 @@ where
                 .iter()
                 .map(|s_i| limbs_into_g1affine(s_i, LIMB_BITS, NUM_LIMBS))
                 .collect(),
-            h1: vec![limbs_into_g2affine(&self.h1, LIMB_BITS, NUM_LIMBS)],
-            h2: vec![limbs_into_g2affine(&self.h2, LIMB_BITS, NUM_LIMBS)],
         }
     }
 }
@@ -338,12 +313,6 @@ where
     /// the [`KeccakConfig`]. The circuit won't check the padding, and the
     /// circuit satisfiability is independent of the field elements chosen to
     pub app_public_inputs: Vec<F>,
-
-    /// Commitment point hash
-    pub commitment_hash: F,
-
-    /// Commitment point limbs
-    pub commitment_point_limbs: Vec<F>,
 }
 
 impl<F> KeccakPaddedCircuitInput<F>
@@ -356,9 +325,6 @@ where
     pub fn to_instance_values(&self) -> Vec<F> {
         let mut result = vec![self.len];
         result.extend_from_slice(&self.app_vk.flatten());
-        result.push(self.has_commitment);
-        result.push(self.commitment_hash);
-        result.extend_from_slice(&self.commitment_point_limbs);
         result.extend_from_slice(&self.app_public_inputs);
         result
     }
@@ -370,15 +336,11 @@ where
         let app_public_inputs = (0..config.num_app_public_inputs)
             .map(|_| Default::default())
             .collect();
-        let commitment_hash = Default::default();
-        let commitment_point_limbs = vec![Default::default(); NUM_LIMBS * 2];
         Self {
             len: F::from(config.num_app_public_inputs as u64),
             app_vk,
             has_commitment,
             app_public_inputs,
-            commitment_hash,
-            commitment_point_limbs,
         }
     }
 
@@ -395,8 +357,6 @@ where
     ) -> Result<(), String> {
         let length_condition =
             self.len.get_lower_32() <= config.num_app_public_inputs;
-        let has_commitment_condition =
-            self.commitment_point_limbs.len() == 2 * NUM_LIMBS;
         if config.num_app_public_inputs != self.app_public_inputs.len() as u32 {
             Err(format!(
                 "config requires {} public inputs, but KeccakPaddedCircuitInput has {}",
@@ -409,12 +369,6 @@ where
                 config.num_app_public_inputs,
                 self.len.get_lower_32(),
             ))
-        } else if !has_commitment_condition {
-            Err(format!(
-                "commitment_point_limbs.len() expected {}, but KeccakPaddedCircuitInput has {}",
-                2 * NUM_LIMBS,
-                self.commitment_point_limbs.len()
-            ))
         } else {
             Ok(())
         }
@@ -425,13 +379,7 @@ where
         var_len_input: &KeccakVarLenInput<F>,
         max_num_public_inputs: usize,
     ) -> Self {
-        let commitment_point_coordinates =
-            &var_len_input.commitment_point_coordinates;
-        let has_commitment = !commitment_point_coordinates.is_empty();
-        assert!(
-            commitment_point_coordinates.len() < 2,
-            "Only up to one commitment point allowed"
-        );
+        let has_commitment = false;
         assert!(
             var_len_input.app_public_inputs.len() + has_commitment as usize
                 <= max_num_public_inputs,
@@ -442,37 +390,6 @@ where
             var_len_input.app_vk.s.len(),
             "vk incompatible with inputs"
         );
-        assert_eq!(
-            var_len_input.app_vk.h1.len(),
-            has_commitment as usize,
-            "vk incompatible with proof"
-        );
-        assert_eq!(
-            var_len_input.app_vk.h1.len(),
-            var_len_input.app_vk.h2.len(),
-            "inconsistent vk"
-        );
-        let commitment_point = commitment_point_coordinates
-            .get(0)
-            .map(|commitment_point_coordinates| {
-                let m = G1Affine {
-                    x: commitment_point_coordinates[0],
-                    y: commitment_point_coordinates[1],
-                };
-                assert!(
-                    bool::from(m.is_on_curve()),
-                    "Coordinates do not represent a curve point"
-                );
-                m
-            })
-            .unwrap_or(G1Affine::generator());
-        let commitment_point_limbs =
-            g1affine_into_limbs(&commitment_point, LIMB_BITS, NUM_LIMBS);
-        let commitment_hash = commitment_hash_from_commitment_point_limbs(
-            &commitment_point_limbs,
-            LIMB_BITS,
-            NUM_LIMBS,
-        );
 
         let padding = (var_len_input.app_public_inputs.len()
             + has_commitment as usize
@@ -481,9 +398,6 @@ where
             .map(|_| F::zero());
         let mut padded_app_public_inputs =
             var_len_input.app_public_inputs.clone();
-        if has_commitment {
-            padded_app_public_inputs.push(commitment_hash);
-        }
         padded_app_public_inputs.extend(padding);
 
         let mut vk = var_len_input.app_vk.clone();
@@ -496,8 +410,6 @@ where
             has_commitment: F::from(has_commitment),
             app_vk,
             app_public_inputs: padded_app_public_inputs,
-            commitment_hash,
-            commitment_point_limbs,
         }
     }
 }
@@ -617,8 +529,6 @@ where
     pub(crate) gamma: Vec<AssignedValue<F>>,
     pub(crate) delta: Vec<AssignedValue<F>>,
     pub(crate) s: Vec<Vec<AssignedValue<F>>>,
-    pub(crate) h1: Vec<AssignedValue<F>>,
-    pub(crate) h2: Vec<AssignedValue<F>>,
 }
 
 impl<F> AssignedVerifyingKeyLimbs<F>
@@ -644,8 +554,6 @@ where
                 .into_iter()
                 .map(|s_i| ctx.assign_witnesses(s_i))
                 .collect(),
-            h1: ctx.assign_witnesses(vk.h1),
-            h2: ctx.assign_witnesses(vk.h2),
         }
     }
 
@@ -657,8 +565,6 @@ where
             .chain(self.gamma.iter())
             .chain(self.delta.iter())
             .chain(self.s.iter().flat_map(|s| s.iter()))
-            .chain(self.h1.iter())
-            .chain(self.h2.iter())
     }
 
     /// Returns a vector with the elements of `self`.
@@ -685,16 +591,6 @@ pub(crate) struct AssignedKeccakInput<F: ScalarField> {
     /// limbs of a fully constrained (in the UBV circuit) Groth16 verification key.
     pub(crate) app_vk: AssignedVerifyingKeyLimbs<F>,
 
-    /// Has commitment flag.
-    ///
-    /// # Note
-    ///
-    /// This flag isn't constrained to be boolean in the keccak circuit.
-    /// However, it will be copy-constrained in the outer circuit to another
-    /// value which is known to be boolean (because it is constrained in the
-    /// UBV circuit).
-    pub(crate) has_commitment: AssignedValue<F>,
-
     /// Application public inputs
     ///
     /// # Note
@@ -703,12 +599,6 @@ pub(crate) struct AssignedKeccakInput<F: ScalarField> {
     /// the [`KeccakConfig`]. The circuit won't check the padding, and the
     /// circuit satisfiability is independent of the field elements chosen to
     app_public_inputs: Vec<AssignedValue<F>>,
-
-    /// Commitment point hash
-    pub(crate) commitment_hash: AssignedValue<F>,
-
-    /// Commitment point limbs
-    pub(crate) commitment_point_limbs: Vec<AssignedValue<F>>,
 }
 
 impl<F: ScalarField> AssignedKeccakInput<F> {
@@ -726,9 +616,6 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
     pub fn to_instance_values(&self) -> Vec<AssignedValue<F>> {
         let mut result = vec![self.len];
         result.extend_from_slice(&self.app_vk.flatten());
-        result.push(self.has_commitment);
-        result.push(self.commitment_hash);
-        result.extend_from_slice(&self.commitment_point_limbs);
         result.extend_from_slice(&self.app_public_inputs);
         result
     }
@@ -746,28 +633,19 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
 
         let len = ctx.load_witness(input.len);
         let app_public_inputs = ctx.assign_witnesses(input.app_public_inputs);
-        let commitment_hash = ctx.load_witness(input.commitment_hash);
-        let commitment_point_limbs =
-            ctx.assign_witnesses(input.commitment_point_limbs);
         let app_vk = AssignedVerifyingKeyLimbs::from_padded_verifying_key(
             ctx,
             input.app_vk,
         );
-        let has_commitment = ctx.load_witness(input.has_commitment);
-        // Constrain `len + has_commitment < MAX_LEN`
-        let len_inputs_and_commitment =
-            range.gate.add(ctx, len, has_commitment);
-        range.check_less_than_safe(ctx, len_inputs_and_commitment, max_len + 1);
+        // Constrain `len < MAX_LEN`
+        range.check_less_than_safe(ctx, len, max_len + 1);
         // Constrain `len > 0`
         let is_len_zero = range.gate.is_zero(ctx, len);
         range.gate.assert_is_const(ctx, &is_len_zero, &F::zero());
         Self {
             len,
             app_vk,
-            has_commitment,
             app_public_inputs,
-            commitment_hash,
-            commitment_point_limbs,
         }
     }
 }
@@ -863,32 +741,15 @@ where
                 .into_iter()
                 .map(|byte| ctx.load_constant(F::from(byte as u64)))
                 .collect_vec();
-        let domain_tag_groth16_with_commitment: Vec<AssignedValue<F>> =
-            compute_domain_tag(
-                UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING_WITH_COMMITMENT,
-            )
-            .into_iter()
-            .map(|byte| ctx.load_constant(F::from(byte as u64)))
-            .collect_vec();
         let mut domain_tag = Vec::with_capacity(KECCAK_OUTPUT_BYTES);
-        for (without_commitment, with_commitment) in domain_tag_groth16
-            .into_iter()
-            .zip_eq(domain_tag_groth16_with_commitment.into_iter())
-        {
-            domain_tag.push(range.gate.select(
-                ctx,
-                with_commitment,
-                without_commitment,
-                assigned_input.has_commitment,
-            ));
+        for byte in domain_tag_groth16.into_iter() {
+            domain_tag.push(byte);
         }
 
         // Compute vk_s length as public_inputs.len() + has_commitment + 1
         let len = assigned_input.len();
-        let pi_len_plus_has_commitment =
-            range.gate.add(ctx, *len, assigned_input.has_commitment);
         let one = ctx.load_constant(F::one());
-        let vk_s_len = range.gate.add(ctx, pi_len_plus_has_commitment, one);
+        let vk_s_len = range.gate.add(ctx, *len, one);
 
         // fixed input = domain_tag || alpha || beta || gamma || delta || vk_s length || vk_s[0] || vk_s[1]
         let mut fixed_input = domain_tag;
@@ -927,8 +788,7 @@ where
 
         // Variable input vk.s[2..]
         let num_limbs_per_g1 = ctx.load_constant(F::from(2 * NUM_LIMBS as u64));
-        let vk_remaining_len =
-            range.gate.sub(ctx, pi_len_plus_has_commitment, one);
+        let vk_remaining_len = range.gate.sub(ctx, *len, one);
         let vk_s_len_limbs =
             range.gate.mul(ctx, vk_remaining_len, num_limbs_per_g1);
         let vk_s = assigned_input
@@ -939,21 +799,13 @@ where
             .flatten()
             .cloned()
             .collect();
-        // Variable input vk.h1 || vk.h2
-        let mut vk_h = Vec::with_capacity(2 * 4 * NUM_LIMBS);
-        let vk_h_max_len = ctx.load_constant(F::from(2 * 4 * NUM_LIMBS as u64));
-        let vk_h_len =
-            range
-                .gate
-                .mul(ctx, vk_h_max_len, assigned_input.has_commitment);
-        vk_h.extend_from_slice(&assigned_input.app_vk.h1);
-        vk_h.extend_from_slice(&assigned_input.app_vk.h2);
+
         keccak.multi_var_query(
             ctx,
             range,
             fixed_input,
-            vec![vk_s, vk_h],
-            vec![vk_s_len_limbs, vk_h_len],
+            vec![vk_s],
+            vec![vk_s_len_limbs],
         )
     }
 
@@ -985,38 +837,6 @@ where
         let byte_len = variable::upa_input_len_to_byte_len(ctx, range, *len);
         // Step 3: Keccak variable length computation
         keccak.keccak_var_len(ctx, range, byte_repr, byte_len);
-    }
-
-    /// For `assigned_input.commitment_point_limbs`, computes:
-    /// 1) Its byte decomposition
-    /// 2) Its word decomposition
-    /// 3) Its keccak hash as a [`keccak_fixed_len`](KeccakChip::keccak_fixed_len) query.
-    ///
-    /// Then it constrains the resulting keccak hash (composed as a field element) to
-    /// be equal to `assigned_input.commitment_hash`.
-    fn commitment_point_hash_query(
-        ctx: &mut Context<F>,
-        range: &RangeChip<F>,
-        keccak: &mut KeccakChip<F>,
-        assigned_input: &AssignedKeccakInput<F>,
-    ) {
-        // Byte decomposition
-        let commitment_point_bytes = g1_point_limbs_to_bytes(
-            ctx,
-            range,
-            &assigned_input.commitment_point_limbs,
-        );
-        keccak.keccak_fixed_len(ctx, range, commitment_point_bytes);
-        let output_bytes = keccak
-            .fixed_len_queries()
-            .last()
-            .expect("Retrieving the last keccak query is not allowed to fail")
-            .output_bytes_assigned()
-            .try_into()
-            .expect("Conversion is not allowed to fail");
-        let commitment_hash =
-            compose_into_field_element(ctx, range, &output_bytes);
-        ctx.constrain_equal(&commitment_hash, &assigned_input.commitment_hash);
     }
 
     /// Computes the Merkle leaf corresponding to `proof_id`.
@@ -1260,13 +1080,6 @@ where
                 &circuit_id,
                 &assigned_input,
             );
-            // Specification: Curve-to-Field Hash
-            Self::commitment_point_hash_query(
-                ctx,
-                &range,
-                &mut keccak,
-                &assigned_input,
-            );
             public_inputs.push(assigned_input);
         }
 
@@ -1277,7 +1090,7 @@ where
         let proof_ids = keccak
             .var_len_queries()
             .iter()
-            .skip(1)
+            .skip(1) // TODO: Was skipping due to commitment hash query?
             .step_by(2) // we skip the circuitId computations
             .flat_map(|query| query.output_bytes_assigned().to_vec())
             .collect::<Vec<_>>();

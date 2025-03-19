@@ -1,8 +1,6 @@
 extern crate alloc;
 
-use crate::{
-    utils::commitment_point::commitment_hash_bytes_from_g1_point, EccPrimeField,
-};
+use crate::EccPrimeField;
 use halo2_base::halo2_proofs::halo2curves::{
     bn256::{Fr, G1Affine, G2Affine},
     CurveAffineExt,
@@ -20,10 +18,6 @@ where
     pub gamma: C2,
     pub delta: C2,
     pub s: Vec<C1>,
-    /// Commitment key. Valid lengths are 0, 1.
-    pub h1: Vec<C2>,
-    /// Commitment key. Valid lengths are 0, 1.
-    pub h2: Vec<C2>,
 }
 
 impl<C1: CurveAffineExt, C2: CurveAffineExt> VerificationKey<C1, C2> {
@@ -44,8 +38,6 @@ impl<C1: CurveAffineExt, C2: CurveAffineExt> VerificationKey<C1, C2> {
             gamma: g2,
             delta: g2,
             s: vec![g1; num_public_inputs + 1],
-            h1: vec![g2; has_commitment as usize],
-            h2: vec![g2; has_commitment as usize],
         }
     }
 
@@ -57,31 +49,6 @@ impl<C1: CurveAffineExt, C2: CurveAffineExt> VerificationKey<C1, C2> {
             .into_iter()
             .map(|_| C1::generator());
         self.s.extend(padding);
-        assert_eq!(
-            self.h1.len(),
-            self.h2.len(),
-            "Invalid VK. Inconsistent h1, h2"
-        );
-        if self.h1.is_empty() {
-            self.h1.push(C2::generator());
-            self.h2.push(C2::generator());
-        }
-    }
-
-    /// Check consistency
-    pub fn is_well_formed(&self) -> bool {
-        let commitment_length = self.h1.len();
-        (commitment_length == self.h2.len()) && (commitment_length < 2)
-    }
-
-    /// Checks if `self` has a commitment point
-    pub fn has_commitment(&self) -> bool {
-        assert!(self.is_well_formed());
-        match self.h1.len() {
-            0 => false,
-            1 => true,
-            num_commitments => unreachable!("A vk cannot have {num_commitments} after checking it is well-formed")
-        }
     }
 }
 
@@ -90,10 +57,6 @@ pub struct Proof {
     pub a: G1Affine,
     pub b: G2Affine,
     pub c: G1Affine,
-    /// Pedersen Commitment. Valid lengths are 0, 1.
-    pub m: Vec<G1Affine>,
-    /// Pedersen Commitment Proof of Knowledge. Valid lengths are 0, 1.
-    pub pok: Vec<G1Affine>,
 }
 
 impl Proof {
@@ -104,38 +67,7 @@ impl Proof {
             a: g1,
             b: G2Affine::generator(),
             c: g1,
-            m: vec![g1; has_commitment as usize],
-            pok: vec![g1; has_commitment as usize],
         }
-    }
-
-    /// Detects whether proof contains a non-trivial Pedersen commitment.
-    /// If absent, inserts padding values for these commitments.
-    /// Argument `has_commitment` is used to check for consistency with
-    /// the corresponding VK.
-    pub(crate) fn pad(&mut self, has_commitment: bool) {
-        assert_eq!(
-            self.m.len(),
-            self.pok.len(),
-            "Invalid proof. Inconsistent m, pok."
-        );
-        assert_eq!(
-            self.m.len(),
-            has_commitment as usize,
-            "Invalid proof. Not consistent with VK."
-        );
-        if !has_commitment {
-            self.m.push(G1Affine::generator());
-            self.pok.push(-G1Affine::generator());
-        }
-    }
-
-    /// Computes the commitment hash bytes from the commitment
-    /// point in `self`, if any.
-    pub fn compute_commitment_hash_bytes_from_commitment_point(
-        &self,
-    ) -> Option<[u8; 32]> {
-        self.m.get(0).map(commitment_hash_bytes_from_g1_point)
     }
 }
 

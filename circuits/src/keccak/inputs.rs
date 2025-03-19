@@ -8,14 +8,11 @@ use crate::{
         types::VerificationKey,
     },
     utils::{
-        field_elements_hex::{
-            self, deserialize_coordinates, serialize_coordinates,
-        },
+        field_elements_hex::{self},
         vk_hex,
     },
     EccPrimeField,
 };
-use halo2_base::halo2_proofs::halo2curves::bn256::Fq;
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 
@@ -33,13 +30,6 @@ where
     /// Unpadded application public inputs
     #[serde(with = "field_elements_hex")]
     pub app_public_inputs: Vec<F>,
-
-    /// Proof commitment point coordinates
-    #[serde(
-        serialize_with = "serialize_coordinates",
-        deserialize_with = "deserialize_coordinates"
-    )]
-    pub commitment_point_coordinates: Vec<[Fq; 2]>,
 }
 
 impl<F> KeccakVarLenInput<F>
@@ -62,12 +52,10 @@ where
         let app_public_inputs = (0..num_app_public_inputs)
             .map(|_| F::random(&mut *rng))
             .collect();
-        let commitment_point_coordinates = vec![];
 
         KeccakVarLenInput {
             app_vk,
             app_public_inputs,
-            commitment_point_coordinates,
         }
     }
 }

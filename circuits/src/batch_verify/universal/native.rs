@@ -12,12 +12,9 @@ use crate::{
             UniversalBatchVerifierInput,
             UPA_V1_0_0_CHALLENGE_DOMAIN_TAG_STRING,
             UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING,
-            UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING_WITH_COMMITMENT,
         },
     },
-    utils::{
-        commitment_point::be_bytes_to_field_element, hashing::WrongFieldHasher,
-    },
+    utils::hashing::WrongFieldHasher,
     CircuitWithLimbsConfig,
 };
 use core::borrow::Borrow;
@@ -33,16 +30,11 @@ use std::cell::RefCell;
 // other entries into a single term.
 pub(crate) struct PairingCheckPairs {
     groth16_pairs: [(G1Affine, G2Affine); 4],
-    /// The `(M, h1)`, `(\pi^{Ped}, h2)` pairs
-    /// of the optional Pedersen commitment.
-    pedersen_pairs: Option<[(G1Affine, G2Affine); 2]>,
 }
 
 impl PairingCheckPairs {
     fn iter(&self) -> impl Iterator<Item = &(G1Affine, G2Affine)> {
-        self.groth16_pairs
-            .iter()
-            .chain(self.pedersen_pairs.iter().flatten())
+        self.groth16_pairs.iter()
     }
 }
 
@@ -52,11 +44,7 @@ pub(crate) type ChallengePoints = (Fr, Fr);
 
 /// Computes the vk hash of `vk`.
 pub fn compute_circuit_id(vk: &VerificationKey) -> [u8; 32] {
-    assert!(vk.is_well_formed());
-    let domain_tag = match vk.has_commitment() {
-        false => UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING,
-        true => UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING_WITH_COMMITMENT,
-    };
+    let domain_tag = UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING;
     compute_vk_keccak_hash_with_domain_tag(vk, domain_tag)
 }
 
@@ -86,18 +74,6 @@ pub(crate) fn compute_challenge_points(
         poseidon.absorb_g1(&entry.proof.a);
         poseidon.absorb_g2(&entry.proof.b);
         poseidon.absorb_g1(&entry.proof.c);
-        if let Some(m) = entry.proof.m.get(0) {
-            poseidon.absorb_g1(m);
-            poseidon.absorb_g1(&entry.proof.pok[0]);
-        } else {
-            #[cfg(test)]
-            {
-                let m = G1Affine::generator();
-                let pok = -G1Affine::generator();
-                poseidon.absorb_g1(&m);
-                poseidon.absorb_g1(&pok);
-            }
-        }
         poseidon.hasher.update(entry.inputs.0.as_slice());
 
         #[cfg(test)]
@@ -162,6 +138,7 @@ where
 }
 
 /// Updates `entry`, adding the hash of the commitment point (if present) to `entry.inputs`.
+/// TODO: Without commitment this is just assert_well_formed
 fn update_entry(
     entry: &UniversalBatchVerifierInput,
 ) -> UniversalBatchVerifierInput {
@@ -171,15 +148,6 @@ fn update_entry(
         proof,
         mut inputs,
     } = entry.clone();
-    if entry.has_commitment() {
-        let extra_input = be_bytes_to_field_element(
-            &entry
-                .proof
-                .compute_commitment_hash_bytes_from_commitment_point()
-                .expect("This cannot fail for entries with commitment"),
-        );
-        inputs.0.push(extra_input);
-    }
     UniversalBatchVerifierInput { vk, proof, inputs }
 }
 
@@ -228,6 +196,7 @@ pub(crate) fn compute_pi_term_for_entry_without_commitment(
         })
 }
 
+// TODO: Without commitment this is just compute_pi_term_for_entry_without_commitment
 pub(crate) fn compute_pi_term_for_entry(
     entry: &UniversalBatchVerifierInput,
 ) -> G1 {
@@ -236,9 +205,6 @@ pub(crate) fn compute_pi_term_for_entry(
         &entry.vk.s,
         &entry.inputs,
     );
-    if entry.has_commitment() {
-        s += entry.proof.m[0];
-    }
     s
 }
 
@@ -280,26 +246,7 @@ pub(crate) fn compute_pairing_check_pairs(
         proof.borrow_mut().pad(entry.has_commitment());
         vk.borrow_mut().pad(entry.inputs.0.len());
     }
-
-    let pedersen_pairs_closure = || {
-        [
-            (
-                G1Affine::from(proof.borrow().m[0] * factor * t),
-                vk.borrow().h1[0],
-            ),
-            (
-                G1Affine::from(proof.borrow().pok[0] * factor * t),
-                vk.borrow().h2[0],
-            ),
-        ]
-    };
-    let pedersen_pairs =
-        vk.borrow().has_commitment().then(pedersen_pairs_closure);
-
-    PairingCheckPairs {
-        groth16_pairs,
-        pedersen_pairs,
-    }
+    PairingCheckPairs { groth16_pairs }
 }
 
 /// JSON types for IO

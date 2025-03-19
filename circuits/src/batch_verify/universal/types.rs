@@ -4,7 +4,6 @@ use crate::{
         native::unsafe_proof_generation::sample_proofs_inputs_vk,
         types::{Proof, PublicInputs, VerificationKey},
     },
-    utils::commitment_point::be_bytes_to_field_element,
     CircuitWithLimbsConfig, EccPrimeField, UpaConfig,
 };
 use halo2_base::{halo2_proofs::halo2curves::bn256::Fr, AssignedValue};
@@ -114,11 +113,9 @@ where
     /// The number of ordinary Groth16 public inputs,
     /// excluding the commitment hash if present.
     len: F,
-    has_commitment: bool,
     vk: VerificationKey,
     proof: Proof,
     inputs: PublicInputs<F>,
-    commitment_hash: F,
 }
 
 impl<F: EccPrimeField> BatchEntry<F> {
@@ -131,36 +128,19 @@ impl<F: EccPrimeField> BatchEntry<F> {
 
         let len = ubv_input.inputs.0.len();
         let total_len = config.max_num_public_inputs as usize;
-        let has_commitment = ubv_input.has_commitment();
 
         let mut vk = ubv_input.vk.clone();
         vk.pad(total_len);
         let mut proof = ubv_input.proof.clone();
-        proof.pad(has_commitment);
-
-        // We compute the commitment hash. It will be the right one if the
-        // proof had a commitment, and a meaningless one if it had been padded
-        let commitment_hash = be_bytes_to_field_element(
-            &proof
-                .compute_commitment_hash_bytes_from_commitment_point()
-                .expect("failed to hash commitment point"),
-        );
 
         let mut inputs = ubv_input.inputs.clone();
-        // If the commitment hash comes from a proper commitment point,
-        // we make it the len-th public input
-        if has_commitment {
-            inputs.0.push(commitment_hash);
-        }
         inputs.pad(total_len);
 
         Self {
             len: F::from(len as u64),
-            has_commitment,
             vk,
             proof,
             inputs,
-            commitment_hash,
         }
     }
 
@@ -177,11 +157,9 @@ impl<F: EccPrimeField> BatchEntry<F> {
         let inputs = PublicInputs::default_with_length(num_public_inputs);
         Self {
             len,
-            has_commitment,
             vk,
             proof,
             inputs,
-            commitment_hash: Default::default(),
         }
     }
 
@@ -189,10 +167,6 @@ impl<F: EccPrimeField> BatchEntry<F> {
     /// excluding the commitment hash if present.
     pub fn len(&self) -> &F {
         &self.len
-    }
-
-    pub fn has_commitment(&self) -> bool {
-        self.has_commitment
     }
 
     pub fn vk(&self) -> &VerificationKey {
@@ -205,10 +179,6 @@ impl<F: EccPrimeField> BatchEntry<F> {
 
     pub fn inputs(&self) -> &PublicInputs<F> {
         &self.inputs
-    }
-
-    pub fn commitment_hash(&self) -> &F {
-        &self.commitment_hash
     }
 }
 
@@ -281,46 +251,19 @@ impl<F: EccPrimeField> UniversalBatchVerifierInput<F> {
     /// Asserts `self` is well formed and consistent with `config`.
     pub fn assert_consistent(&self, config: &UniversalBatchVerifierConfig) {
         self.assert_well_formed();
-        let num_commitments = self.vk.h1.len();
         assert!(
-            self.inputs.0.len() + num_commitments
-                <= config.max_num_public_inputs as usize,
+            self.inputs.0.len() <= config.max_num_public_inputs as usize,
             "Public input length exceeds maximum allowed"
         );
     }
 
     /// Asserts `self` is well formed.
     pub fn assert_well_formed(&self) {
-        let num_commitments = self.vk.h1.len();
         assert_eq!(
             self.vk.s.len(),
-            self.inputs.0.len() + 1 + num_commitments,
+            self.inputs.0.len() + 1,
             "Verification key and public inputs lengths not compatible"
         );
-        assert!(
-            num_commitments < 2,
-            "Number of commitments can only be one or zero"
-        );
-        assert_eq!(
-            num_commitments,
-            self.vk.h2.len(),
-            "Invalid VK. Inconsistent h1, h2."
-        );
-        assert_eq!(
-            self.proof.m.len(),
-            self.proof.pok.len(),
-            "Invalid proof. Inconsistent m, pok."
-        );
-        assert_eq!(
-            num_commitments,
-            self.proof.m.len(),
-            "Proof and VK have inconsistent Pedersen commitments."
-        );
-    }
-
-    /// Returns `true` if `self` has a commitment
-    pub fn has_commitment(&self) -> bool {
-        self.vk.has_commitment()
     }
 
     /// Creates a dummy [`UniversalBatchVerifierInput`] for `config`.
@@ -394,10 +337,7 @@ impl<F: EccPrimeField> UniversalBatchVerifierInputs<F> {
     pub fn max_len(&self) -> usize {
         self.0
             .iter()
-            .map(|ubv_input| {
-                let has_commitment = ubv_input.has_commitment() as usize;
-                ubv_input.inputs.0.len() + has_commitment
-            })
+            .map(|ubv_input| ubv_input.inputs.0.len())
             .max()
             .expect(
                 "Extracting the max public input length is not allowed to fail",
@@ -468,8 +408,6 @@ where
     pub scaled_cd_pairs: Vec<EcPointPair<F>>,
     pub scaled_pi_gamma_pairs: Vec<EcPointPair<F>>,
     pub scaled_alpha_beta_pairs: Vec<EcPointPair<F>>,
-    pub scaled_m_h1_pairs: Vec<EcPointPair<F>>,
-    pub scaled_pok_h2_pairs: Vec<EcPointPair<F>>,
 }
 
 /// Challenge points
