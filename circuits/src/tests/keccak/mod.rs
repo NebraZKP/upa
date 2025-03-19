@@ -404,7 +404,7 @@ fn test_keccak_padded_circuit_input_to_instance_values() {
         dummy_commitment_limbs
             .push(Fr::from(i as u64 + NUM_APP_PUBLIC_INPUTS as u64));
     }
-    let dummy_commitment_hash = Fr::from(222);
+
     let mut dummy_app_vk_limbs = Vec::new();
     for i in 0..(2 * NUM_APP_PUBLIC_INPUTS as usize + 24) * NUM_LIMBS {
         dummy_app_vk_limbs.push(Fr::from(i as u64 + 333));

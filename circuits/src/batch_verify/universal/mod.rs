@@ -265,7 +265,6 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine>
         config: &Self::CircuitConfig,
         inputs: &Self::InstanceInputs,
     ) -> Vec<Fr> {
-        let circuit_config = config.circuit_config();
         let batch_entries =
             BatchEntries::from_ubv_inputs_and_config(inputs, config);
 

@@ -197,7 +197,7 @@ pub mod unsafe_proof_generation {
         {
             let a = Fr::random(&mut *rng);
             let b = Fr::random(&mut *rng);
-            let mut pi_term = self
+            let pi_term = self
                 .s
                 .iter()
                 .skip(1)

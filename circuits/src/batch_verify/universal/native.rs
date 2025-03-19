@@ -6,7 +6,7 @@ use crate::{
                 compute_vk_keccak_hash_with_domain_tag,
                 compute_vk_poseidon_hash,
             },
-            types::{PublicInputs, VerificationKey},
+            types::VerificationKey,
         },
         universal::types::{
             UniversalBatchVerifierInput,
@@ -23,7 +23,6 @@ use halo2_base::halo2_proofs::halo2curves::{
     pairing::MillerLoopResult,
 };
 use itertools::Itertools;
-use std::cell::RefCell;
 
 // The pairing check pairs required to verify a single Groth16 proof,
 // excluding the public input term, which is accumulated with that for all
@@ -102,7 +101,7 @@ where
     let batch = update_batch(batch);
 
     // Generate the challenge
-    let (r, t) = compute_challenge_points(batch.iter(), max_num_public_inputs);
+    let (r, _t) = compute_challenge_points(batch.iter(), max_num_public_inputs);
 
     // Track the current power of r
     let mut challenge = Fr::one();
@@ -115,7 +114,7 @@ where
                 "Too many public inputs"
             );
         }
-        let pairs = compute_pairing_check_pairs(&entry, &challenge, &t);
+        let pairs = compute_pairing_check_pairs(&entry, &challenge);
         all_pairs.extend(pairs.iter());
 
         challenge *= r;
@@ -143,12 +142,7 @@ fn update_entry(
     entry: &UniversalBatchVerifierInput,
 ) -> UniversalBatchVerifierInput {
     entry.assert_well_formed();
-    let UniversalBatchVerifierInput {
-        vk,
-        proof,
-        mut inputs,
-    } = entry.clone();
-    UniversalBatchVerifierInput { vk, proof, inputs }
+    entry.clone()
 }
 
 /// Run the universal batch verification algorithm on a batch of proofs.
@@ -184,28 +178,18 @@ where
     final_exp == Gt::identity()
 }
 
-pub(crate) fn compute_pi_term_for_entry_without_commitment(
-    vk_s: &[G1Affine],
-    inputs: &PublicInputs,
-) -> G1 {
-    vk_s.iter()
-        .skip(1)
-        .zip_eq(inputs.0.iter())
-        .fold(G1::from(vk_s[0]), |accum, (vk_s_i, x_i)| {
-            accum + (vk_s_i * x_i)
-        })
-}
-
-// TODO: Without commitment this is just compute_pi_term_for_entry_without_commitment
 pub(crate) fn compute_pi_term_for_entry(
     entry: &UniversalBatchVerifierInput,
 ) -> G1 {
-    // Compute vk_s[0] + \sum_{i=1}^\ell inputs[i] * vk_s[i]
-    let mut s = compute_pi_term_for_entry_without_commitment(
-        &entry.vk.s,
-        &entry.inputs,
-    );
-    s
+    entry
+        .vk
+        .s
+        .iter()
+        .skip(1)
+        .zip_eq(entry.inputs.0.iter())
+        .fold(G1::from(entry.vk.s[0]), |accum, (vk_s_i, x_i)| {
+            accum + (vk_s_i * x_i)
+        })
 }
 
 /// Compute the group points that must be checked for a Groth16 pairing check,
@@ -213,7 +197,6 @@ pub(crate) fn compute_pi_term_for_entry(
 pub(crate) fn compute_pairing_check_pairs(
     entry: &UniversalBatchVerifierInput,
     factor: &Fr,
-    t: &Fr,
 ) -> PairingCheckPairs {
     // Return pairs:
     //   [
@@ -236,13 +219,12 @@ pub(crate) fn compute_pairing_check_pairs(
         (G1Affine::from(entry.proof.c * factor), entry.vk.delta),
     ];
 
-    let proof = RefCell::new(entry.proof.clone());
-    let vk = RefCell::new(entry.vk.clone());
-
     // For tests, we want to pad the proofs so we have the same outputs
     // as in the circuit
     #[cfg(test)]
     {
+        use std::cell::RefCell;
+        let vk = RefCell::new(entry.vk.clone());
         vk.borrow_mut().pad(entry.inputs.0.len());
     }
     PairingCheckPairs { groth16_pairs }

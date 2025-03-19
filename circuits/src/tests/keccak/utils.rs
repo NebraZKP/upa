@@ -249,7 +249,7 @@ fn keccak_var_len_input_serialization() {
         lookup_bits: KECCAK_LOOKUP_BITS,
         output_submission_id: false, // Irrelevant for this test
     };
-    let mut inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
+    let inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
 
     let inputs_serialized = serde_json::to_string_pretty(&inputs).expect("");
     let inputs_deserialized: KeccakCircuitInputs<Fr> =

@@ -724,8 +724,8 @@ pub fn keccak_inputs_from_ubv_instances<'a>(
                 .take(NUM_LIMBS * (24 + 2 * max_num_public_inputs))
                 .copied()
                 .collect_vec();
-            let has_commitment =
-                *app_inputs.next().expect("Missing has commitment flag");
+            // TODO: This iterator may have different contents without commitment
+            let _ = *app_inputs.next().expect("Missing has commitment flag");
             let _ = *app_inputs.next().expect("Missing commitment hash");
             let commitment_point_limbs = app_inputs
                 .by_ref()

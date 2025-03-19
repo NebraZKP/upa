@@ -2,7 +2,6 @@ use crate::{
     batch_verify::universal::types::{
         UPA_V1_0_0_CHALLENGE_DOMAIN_TAG_STRING,
         UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING,
-        UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING_WITH_COMMITMENT,
     },
     utils::hashing::{
         brute_force_poseidon, compute_domain_tag, var_len_poseidon,
@@ -41,7 +40,6 @@ fn domain_tags() {
     }
 
     print_domain_tag(UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING);
-    print_domain_tag(UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING_WITH_COMMITMENT);
     print_domain_tag(UPA_V1_0_0_CHALLENGE_DOMAIN_TAG_STRING);
 }
 

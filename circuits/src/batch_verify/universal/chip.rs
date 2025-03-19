@@ -338,8 +338,7 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
         info!("r_powers: {:?}", advice_cell_count(builder));
 
         // Steps 4 and 5: compute other pairs
-        let pairs =
-            self.compute_pairs(builder, &r_powers, entries, challenge.1);
+        let pairs = self.compute_pairs(builder, &r_powers, entries);
         info!("compute_pairs: {:?}", advice_cell_count(builder));
 
         AssignedPreparedProof {
@@ -362,7 +361,6 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
         builder: &mut GateThreadBuilder<F>,
         r_powers: &[AssignedValue<F>],
         entries: &AssignedBatchEntries<F>,
-        t: AssignedValue<F>,
     ) -> Groth16Pairs<F> {
         // Step 4: compute public input pairs (PI, vk.gamma)
         let pi_pairs = self.compute_pi_pairs(builder, entries);
@@ -372,10 +370,6 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
         let minus_r_powers = r_powers
             .iter()
             .map(|r_power| self.gate().neg(ctx, *r_power))
-            .collect_vec();
-        let rt_powers = r_powers
-            .iter()
-            .map(|r_power| self.gate().mul(ctx, *r_power, t))
             .collect_vec();
 
         let (vk, proofs, _) = entries.unzip();
@@ -518,7 +512,7 @@ impl<'a, F: EccPrimeField> UniversalBatchVerifierChip<'a, F> {
             .0
             .iter()
             .map(|entry| {
-                let mut ss = Vec::<EcPoint<F, ProperCrtUint<F>>>::from_reduced(
+                let ss = Vec::<EcPoint<F, ProperCrtUint<F>>>::from_reduced(
                     &entry.vk.s,
                 );
                 let inputs: Vec<_> = once(&one)

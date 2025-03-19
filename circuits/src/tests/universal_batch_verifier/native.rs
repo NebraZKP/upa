@@ -9,8 +9,7 @@ use crate::{
         },
         universal::{
             native::{
-                compute_pi_term_for_entry_without_commitment,
-                verify_universal_groth16_batch,
+                compute_pi_term_for_entry, verify_universal_groth16_batch,
             },
             types::{
                 UniversalBatchVerifierConfig, UniversalBatchVerifierInput,
@@ -18,7 +17,7 @@ use crate::{
             },
         },
     },
-    tests::{encode_g1, PROOF_BATCH_1_8_FILE, VK_FILE},
+    tests::{encode_g1, Proof, VerificationKey, PROOF_BATCH_1_8_FILE, VK_FILE},
 };
 use halo2_base::halo2_proofs::halo2curves::bn256::{Fr, G1};
 use rand::Rng;
@@ -93,26 +92,28 @@ fn test_compute_pi_term() {
     // expected "unencoded" output of `compute_pi_term`, as a scalar field
     // element, and compare this to the actual output group point.
 
-    let vk_s = [encode_g1(7), encode_g1(11), encode_g1(13), encode_g1(17)];
+    let _vk_s = [encode_g1(7), encode_g1(11), encode_g1(13), encode_g1(17)];
     let inputs = [Fr::from(3), Fr::from(5), Fr::from(7)];
 
     // First 2 inputs should yield:
     //   7 + 3*11 + 5*13 = 7 + 33 + 65 = 105
     assert_eq!(
         G1::from(encode_g1(105)),
-        compute_pi_term_for_entry_without_commitment(
-            &vk_s[0..3],
-            &PublicInputs(Vec::from(&inputs[0..2])),
-        ),
+        compute_pi_term_for_entry(&UniversalBatchVerifierInput::new(
+            VerificationKey::default_with_length(3), // TODO: This is wrong
+            Proof::default(),
+            PublicInputs(Vec::from(&inputs[0..2])),
+        ),),
     );
 
     // First 2 inputs should yield:
     //   7 + 3*11 + 5*13 + 7*17 = 7 + 33 + 65 + 119 = 224
     assert_eq!(
         G1::from(encode_g1(224)),
-        compute_pi_term_for_entry_without_commitment(
-            &vk_s,
-            &PublicInputs(Vec::from(&inputs[..])),
-        ),
+        compute_pi_term_for_entry(&UniversalBatchVerifierInput::new(
+            VerificationKey::default_with_length(3), // TODO: This is wrong
+            Proof::default(),
+            PublicInputs(Vec::from(&inputs[..])),
+        ),),
     );
 }

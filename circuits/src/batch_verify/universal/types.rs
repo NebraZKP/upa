@@ -13,8 +13,6 @@ use serde::{Deserialize, Serialize};
 
 pub(crate) const UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING: &str =
     "UPA Groth16 circuit id";
-pub(crate) const UPA_V1_0_0_CIRCUITID_DOMAIN_TAG_STRING_WITH_COMMITMENT: &str =
-    "UPA Groth16 with commitment circuit id";
 pub(crate) const UPA_V1_0_0_CHALLENGE_DOMAIN_TAG_STRING: &str =
     "UPA v1.0.0 Challenge";
 
@@ -131,7 +129,6 @@ impl<F: EccPrimeField> BatchEntry<F> {
 
         let mut vk = ubv_input.vk.clone();
         vk.pad(total_len);
-        let mut proof = ubv_input.proof.clone();
 
         let mut inputs = ubv_input.inputs.clone();
         inputs.pad(total_len);
@@ -139,7 +136,7 @@ impl<F: EccPrimeField> BatchEntry<F> {
         Self {
             len: F::from(len as u64),
             vk,
-            proof,
+            proof: ubv_input.proof.clone(),
             inputs,
         }
     }
@@ -403,4 +400,5 @@ where
 }
 
 /// Challenge points
+/// TODO: Second point is now unused
 pub(crate) type ChallengePoints<F> = (AssignedValue<F>, AssignedValue<F>);
