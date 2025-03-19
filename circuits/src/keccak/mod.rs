@@ -389,14 +389,35 @@ where
     }
 
     /// Checks if `self` is a valid public input for `config`.
-    pub fn is_well_constructed(&self, config: &KeccakConfig) -> bool {
+    pub fn is_well_constructed(
+        &self,
+        config: &KeccakConfig,
+    ) -> Result<(), String> {
         let length_condition =
             self.len.get_lower_32() <= config.num_app_public_inputs;
         let has_commitment_condition =
             self.commitment_point_limbs.len() == 2 * NUM_LIMBS;
-        (config.num_app_public_inputs == self.app_public_inputs.len() as u32)
-            && length_condition
-            && has_commitment_condition
+        if config.num_app_public_inputs != self.app_public_inputs.len() as u32 {
+            Err(format!(
+                "config requires {} public inputs, but KeccakPaddedCircuitInput has {}",
+                config.num_app_public_inputs,
+                self.app_public_inputs.len()
+            ))
+        } else if !length_condition {
+            Err(format!(
+                "config supports only {} public inputs, KeccakPaddedCircuitInput has {}",
+                config.num_app_public_inputs,
+                self.len.get_lower_32(),
+            ))
+        } else if !has_commitment_condition {
+            Err(format!(
+                "commitment_point_limbs.len() expected {}, but KeccakPaddedCircuitInput has {}",
+                2 * NUM_LIMBS,
+                self.commitment_point_limbs.len()
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     /// Pads `var_len_input` with zeros to have length `max_num_public_inputs`.
@@ -545,22 +566,31 @@ impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakPaddedCircuitInputs<F> {
     }
 
     /// Checks if `self` consists of valid public inputs for `config`.
-    pub fn is_well_constructed(&self, config: &KeccakConfig) -> bool {
+    pub fn is_well_constructed(
+        &self,
+        config: &KeccakConfig,
+    ) -> Result<(), String> {
         // Total number of inputs should match `inner_batch_size` * `outer_batch_size`
         if config.inner_batch_size * config.outer_batch_size
             != self.inputs.len() as u32
         {
-            return false;
+            return Err(format!(
+                "KeccakPaddedCircuitInputs: expected {} inputs, saw {}",
+                config.inner_batch_size * config.outer_batch_size,
+                self.inputs.len()
+            ));
         }
 
         if config.output_submission_id ^ self.num_proof_ids.is_some() {
-            return false;
+            return Err(format!("KeccakPaddedCircuitInputs: config.output_submission_id({}) == self.num_proof_ids.is_some()({}).  Should be different.",
+                               config.output_submission_id,
+                               self.num_proof_ids.is_some()));
         }
 
         // Each individual input should be well-constructed.
-        self.inputs.iter().all(|input| {
-            KeccakPaddedCircuitInput::is_well_constructed(input, config)
-        })
+        self.inputs.iter().enumerate().map(|(n, input)| {
+            KeccakPaddedCircuitInput::is_well_constructed(input, config).map_err(|e| format!("KeccakPaddedCircuitInputs: {}-th entry error: {}", n, e))
+        }).collect()
     }
 }
 
@@ -1482,7 +1512,8 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
                 inputs,
                 config.num_app_public_inputs as usize,
             );
-        assert!(
+        assert_eq!(
+            Ok(()),
             circuit_inputs.is_well_constructed(config),
             "Invalid keccak circuit inputs"
         );
@@ -1515,7 +1546,8 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
 
         {
             // Check well-formedness of the public inputs w.r.t. the configuration
-            assert!(
+            assert_eq!(
+                Ok(()),
                 circuit_inputs.is_well_constructed(config),
                 "Invalid keccak circuit inputs"
             );
