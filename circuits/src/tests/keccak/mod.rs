@@ -6,12 +6,9 @@ use crate::{
         self, inputs::KeccakCircuitInputs, utils::compute_submission_id,
         AssignedKeccakInput, AssignedVerifyingKeyLimbs, KeccakConfig,
         KeccakPaddedCircuitInput, PaddedVerifyingKeyLimbs, KECCAK_LOOKUP_BITS,
-        LIMB_BITS, NUM_LIMBS,
+        NUM_LIMBS,
     },
     tests::utils::check_instance,
-    utils::commitment_point::{
-        be_bytes_to_field_element, commitment_hash_from_commitment_point_limbs,
-    },
     EccPrimeField, SafeCircuit,
 };
 use ark_std::{end_timer, start_timer};
@@ -98,60 +95,6 @@ pub enum KeccakCircuitInconsistency<F> {
 
 /// Keccak circuit test function
 impl KeccakCircuit {
-    /// Check that for each `input: KeccakInput` of `self.public_inputs`,
-    /// 1) The keccak output bytes of `self` match the `commitment_hash` in `input`.
-    /// 2) The limbs in `input` represent coordinates that hash to `input.commitment_hash`
-    pub fn are_commitment_point_queries_well_constructed(
-        &self,
-        starting_index_commitment_queries: usize,
-    ) -> Result<(), KeccakCircuitInconsistency<Fr>> {
-        for (i, input) in self.public_inputs.inputs.iter().enumerate() {
-            let expected_commitment_hash = input.commitment_hash.value();
-            let commitment_query_index =
-                i + 2 * starting_index_commitment_queries;
-            let query_commitment_hash_bytes: [u8; 32] = self
-                .keccak_output_bytes()[32 * commitment_query_index
-                ..32 * (commitment_query_index + 1)]
-                .iter()
-                .map(|assigned| {
-                    assigned
-                        .value()
-                        .get_lower_32()
-                        .try_into()
-                        .expect("Not a byte")
-                })
-                .collect_vec()
-                .try_into()
-                .expect("Conversion to array is not allowed to fail");
-            let commitment_hash = be_bytes_to_field_element::<Fr, 32>(
-                &query_commitment_hash_bytes,
-            );
-            let limbs = input
-                .commitment_point_limbs
-                .iter()
-                .map(|limb| *limb.value())
-                .collect_vec();
-            let computed_commitment_hash =
-                commitment_hash_from_commitment_point_limbs(
-                    &limbs[..],
-                    LIMB_BITS,
-                    NUM_LIMBS,
-                );
-            ((&commitment_hash == expected_commitment_hash)
-                && (&computed_commitment_hash == expected_commitment_hash))
-                .then_some(())
-                .ok_or({
-                    KeccakCircuitInconsistency::CommitmentQuery(
-                        commitment_query_index as u32,
-                        commitment_hash,
-                        computed_commitment_hash,
-                        *expected_commitment_hash,
-                    )
-                })?;
-        }
-        Ok(())
-    }
-
     /// Checks that `self` is well-formed w.r.t. `config`.
     ///
     /// # Note
@@ -166,18 +109,13 @@ impl KeccakCircuit {
         for (i, input) in self.public_inputs.inputs.iter().enumerate() {
             last_index = i as u32;
             let number_of_field_elements = input.num_field_elements();
-            let has_commitment = input.has_commitment();
             let num_bytes = 32 * (number_of_field_elements + 1);
             let mut vk = input.app_vk.value().vk();
-            vk.s = vk
-                .s
-                .into_iter()
-                .take(number_of_field_elements + 1 + has_commitment as usize)
-                .collect();
-            if !has_commitment {
-                vk.h1 = vec![];
-                vk.h2 = vec![];
-            }
+            vk.s =
+                vk.s.into_iter()
+                    .take(number_of_field_elements + 1)
+                    .collect();
+
             let circuit_id = compute_circuit_id(&vk);
             let input_bytes = circuit_id
                 .iter()
@@ -299,9 +237,6 @@ impl KeccakCircuit {
                     last_expected_bytes.into(),
                 )
             })?;
-        self.are_commitment_point_queries_well_constructed(
-            last_index as usize + 1,
-        )?;
         Ok(())
     }
 }
@@ -487,19 +422,11 @@ fn test_keccak_padded_circuit_input_to_instance_values() {
         has_commitment: Fr::zero(),
         app_public_inputs: dummy_app_public_inputs[..variable_len as usize]
             .to_vec(),
-        commitment_point_limbs: dummy_commitment_limbs,
-        commitment_hash: dummy_commitment_hash,
     };
 
     let mut expected_variable_instance_values =
         vec![variable_padded_circuit_input.len];
     expected_variable_instance_values.extend(dummy_app_vk_limbs);
-    expected_variable_instance_values
-        .push(variable_padded_circuit_input.has_commitment);
-    expected_variable_instance_values
-        .push(variable_padded_circuit_input.commitment_hash);
-    expected_variable_instance_values
-        .extend(&variable_padded_circuit_input.commitment_point_limbs);
     expected_variable_instance_values
         .extend(&variable_padded_circuit_input.app_public_inputs);
     assert_eq!(
@@ -512,11 +439,6 @@ impl<F: EccPrimeField> AssignedKeccakInput<F> {
     /// Returns the number of public inputs which will be keccak'd together.
     pub fn num_field_elements(&self) -> usize {
         self.len().value().get_lower_32() as usize
-    }
-
-    /// Returns 1 if the input uses the optional commitment, and 0 otherwise.
-    pub fn has_commitment(&self) -> bool {
-        self.has_commitment.value().get_lower_32() != 0
     }
 }
 
@@ -537,8 +459,6 @@ where
                 .iter()
                 .map(|s| s.iter().map(|e| *e.value()).collect())
                 .collect(),
-            h1: self.h1.iter().map(|e| *e.value()).collect(),
-            h2: self.h2.iter().map(|e| *e.value()).collect(),
         }
     }
 }

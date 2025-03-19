@@ -27,7 +27,7 @@ use crate::{
 };
 use halo2_base::{
     gates::builder::GateThreadBuilder,
-    halo2_proofs::halo2curves::bn256::{Fq, Fr, G1Affine},
+    halo2_proofs::halo2curves::bn256::{Fr, G1Affine},
     safe_types::RangeChip,
 };
 use hex::ToHex;
@@ -250,9 +250,6 @@ fn keccak_var_len_input_serialization() {
         output_submission_id: false, // Irrelevant for this test
     };
     let mut inputs = KeccakCircuitInputs::<Fr>::sample(&config, &mut rng);
-    inputs.inputs[0]
-        .commitment_point_coordinates
-        .push([Fq::random(rng), Fq::random(rng)]);
 
     let inputs_serialized = serde_json::to_string_pretty(&inputs).expect("");
     let inputs_deserialized: KeccakCircuitInputs<Fr> =

@@ -87,8 +87,6 @@ fn check_words() {
         app_vk: PaddedVerifyingKeyLimbs::dummy(&config),
         has_commitment: Fr::zero(),
         app_public_inputs: field_elements,
-        commitment_hash: Default::default(),
-        commitment_point_limbs: Default::default(),
     };
     // Assign keccak input
     let assigned_keccak_input =

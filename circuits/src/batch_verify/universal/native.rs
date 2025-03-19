@@ -243,7 +243,6 @@ pub(crate) fn compute_pairing_check_pairs(
     // as in the circuit
     #[cfg(test)]
     {
-        proof.borrow_mut().pad(entry.has_commitment());
         vk.borrow_mut().pad(entry.inputs.0.len());
     }
     PairingCheckPairs { groth16_pairs }
