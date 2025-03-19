@@ -588,9 +588,19 @@ impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakPaddedCircuitInputs<F> {
         }
 
         // Each individual input should be well-constructed.
-        self.inputs.iter().enumerate().map(|(n, input)| {
-            KeccakPaddedCircuitInput::is_well_constructed(input, config).map_err(|e| format!("KeccakPaddedCircuitInputs: {}-th entry error: {}", n, e))
-        }).collect()
+        self.inputs
+            .iter()
+            .enumerate()
+            .map(|(n, input)| {
+                KeccakPaddedCircuitInput::is_well_constructed(input, config)
+                    .map_err(|e| {
+                        format!(
+                            "KeccakPaddedCircuitInputs: {}-th entry error: {}",
+                            n, e
+                        )
+                    })
+            })
+            .collect()
     }
 }
 
@@ -1512,11 +1522,10 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
                 inputs,
                 config.num_app_public_inputs as usize,
             );
-        assert_eq!(
-            Ok(()),
-            circuit_inputs.is_well_constructed(config),
-            "Invalid keccak circuit inputs"
-        );
+        if let Err(msg) = circuit_inputs.is_well_constructed(config) {
+            panic!("Invalid keccak circuit inputs: {}", msg);
+        }
+
         Self::new(config, GateThreadBuilder::mock(), circuit_inputs)
     }
 
@@ -1546,11 +1555,10 @@ impl<'a> SafeCircuit<'a, Fr, G1Affine> for KeccakCircuit<Fr, G1Affine> {
 
         {
             // Check well-formedness of the public inputs w.r.t. the configuration
-            assert_eq!(
-                Ok(()),
-                circuit_inputs.is_well_constructed(config),
-                "Invalid keccak circuit inputs"
-            );
+            if let Err(msg) = circuit_inputs.is_well_constructed(config) {
+                panic!("Invalid keccak circuit inputs: {}", msg);
+            }
+
             // Check gate_config coincides with KECCAK_GATE_CONFIG
             let gate_config_env =
                 var("KECCAK_GATE_CONFIG").expect("KECCAK_GATE_CONFIG not set");
