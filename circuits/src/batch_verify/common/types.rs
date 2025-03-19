@@ -25,10 +25,7 @@ impl<C1: CurveAffineExt, C2: CurveAffineExt> VerificationKey<C1, C2> {
     /// Pedersen commitment is specified by `has_commitment`. Length is
     /// arguably ambiguous, but this is named to match the PublicInputs
     /// method.
-    pub fn default_with_length(
-        num_public_inputs: usize,
-        has_commitment: bool,
-    ) -> Self {
+    pub fn default_with_length(num_public_inputs: usize) -> Self {
         let g1 = C1::generator();
         let g2 = C2::generator();
         // Note, we need an extra s entry for the 0-th PI with value "1"
@@ -60,8 +57,8 @@ pub struct Proof {
 }
 
 impl Proof {
-    /// Return a dummy proof, with or without Pedersen commitment points.
-    pub fn default_with_commitment(has_commitment: bool) -> Self {
+    /// Return a dummy proof.
+    pub fn default() -> Self {
         let g1 = G1Affine::generator();
         Proof {
             a: g1,

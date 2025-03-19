@@ -148,12 +148,8 @@ impl<F: EccPrimeField> BatchEntry<F> {
     pub fn dummy(config: &UniversalBatchVerifierConfig) -> Self {
         let num_public_inputs = config.max_num_public_inputs as usize;
         let len = F::from(num_public_inputs as u64 - 1);
-        let has_commitment = true;
-        let vk = VerificationKey::default_with_length(
-            num_public_inputs,
-            has_commitment,
-        );
-        let proof = Proof::default_with_commitment(has_commitment);
+        let vk = VerificationKey::default_with_length(num_public_inputs);
+        let proof = Proof::default();
         let inputs = PublicInputs::default_with_length(num_public_inputs);
         Self {
             len,
@@ -277,12 +273,8 @@ impl<F: EccPrimeField> UniversalBatchVerifierInput<F> {
         // If one wishes a dummy input with commitment for e.g. keygen,
         // (although it won't make a difference in the generated constraints),
         // use `BatchEntry::dummy` instead.
-        let has_commitment = false;
-        let vk = VerificationKey::default_with_length(
-            num_public_inputs,
-            has_commitment,
-        );
-        let proof = Proof::default_with_commitment(has_commitment);
+        let vk = VerificationKey::default_with_length(num_public_inputs);
+        let proof = Proof::default();
         let inputs = PublicInputs::default_with_length(num_public_inputs);
         Self { vk, proof, inputs }
     }
