@@ -581,6 +581,7 @@ impl<F: EccPrimeField<Repr = [u8; 32]>> KeccakPaddedCircuitInputs<F> {
             ));
         }
 
+        // If `output_submission_id`, then `num_proof_ids` must be given.
         if config.output_submission_id ^ self.num_proof_ids.is_some() {
             return Err(format!("KeccakPaddedCircuitInputs: config.output_submission_id({}) == self.num_proof_ids.is_some()({}).  Should be different.",
                                config.output_submission_id,

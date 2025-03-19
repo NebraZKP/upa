@@ -52,7 +52,7 @@ echo PROVER_FLAGS: ${PROVER_FLAGS}
 
 function keygen_universal_bv() {
     # If DRY_RUN, early out if the specs file exists
-    if [ "${DRY_RUN}" == "1" ] && [ -e ${UBV_GATE_CONFIG} ] ; then
+    if [ -n "${DRY_RUN}" ] && [ -e ${UBV_GATE_CONFIG} ] ; then
         echo Specs file ${UBV_GATE_CONFIG} already exists
         return
     fi
@@ -61,6 +61,8 @@ function keygen_universal_bv() {
     if [ -e ${UBV_VK} ] ; then
         echo ${UBV_VK} already exists.
         return
+    else
+	echo No file ${UBV_VK}, running keygen
     fi
 
     ${PROVER} universal-batch-verifier keygen ${PROVER_FLAGS}
@@ -68,7 +70,7 @@ function keygen_universal_bv() {
 
 function keygen_universal_keccak() {
     # If DRY_RUN, early out if the specs file exists
-    if [ "${DRY_RUN}" == "1" ] && [ -e ${KECCAK_GATE_CONFIG} ] ; then
+    if [ -n "${DRY_RUN}" ] && [ -e ${KECCAK_GATE_CONFIG} ] ; then
         echo Specs file ${KECCAK_GATE_CONFIG} already exists
         return
     fi
@@ -77,6 +79,8 @@ function keygen_universal_keccak() {
     if [ -e ${KECCAK_VK} ] ; then
         echo Skipping KECCAK keygen.  ${KECCAK_VK} already exists.
         return
+    else
+	echo No file ${KECCAK_VK}, running keygen
     fi
 
     ${PROVER} keccak keygen ${PROVER_FLAGS}
@@ -84,7 +88,7 @@ function keygen_universal_keccak() {
 
 function keygen_universal_outer() {
 
-    if ! [ ${DRY_RUN} == "1" ] ; then
+    if [ -z "${DRY_RUN}" ] ; then
         # Check the svm version up front
         if ! (which solc) ; then
             if ! (which svm) ; then
@@ -106,6 +110,7 @@ function keygen_universal_outer() {
     # For some reason, outer keygen does not complain when it is run twice in
     # dry-run, so we only need to early-out if the VK already exists.
     if ! [ -e ${OUTER_VK} ] ; then
+        echo "Running OUTER keygen.  ${OUTER_VK} doesnt exist."
         ${PROVER} universal-outer keygen ${PROVER_FLAGS}
     else
         echo Skipping OUTER keygen.  ${OUTER_VK} already exists.
@@ -113,7 +118,7 @@ function keygen_universal_outer() {
 
     # Generate the outer contract on-chain verifier if it doesn't already exist
     if ! [ -e ${OUTER_VERIFIER_BIN} ] ; then
-        if [ "${DRY_RUN}" == "1" ] ; then
+        if [ -n "${DRY_RUN}" ] ; then
             cp ${this_dir}/../../upa/test/data/test.bin ${OUTER_VERIFIER_BIN}
         else
             ${PROVER} universal-outer generate-verifier
