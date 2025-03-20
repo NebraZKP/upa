@@ -751,62 +751,54 @@ where
         let one = ctx.load_constant(F::one());
         let vk_s_len = range.gate.add(ctx, *len, one);
 
-        // fixed input = domain_tag || alpha || beta || gamma || delta || vk_s length || vk_s[0] || vk_s[1]
-        let mut fixed_input = domain_tag;
-        fixed_input.append(&mut g1_point_limbs_to_bytes(
+        // fixed input = domain_tag || alpha || beta || gamma || delta || vk_s length
+        let mut preimage = domain_tag;
+        preimage.append(&mut g1_point_limbs_to_bytes(
             ctx,
             range,
             &assigned_input.app_vk.alpha,
         ));
-        fixed_input.append(&mut g2_point_limbs_to_bytes(
+        preimage.append(&mut g2_point_limbs_to_bytes(
             ctx,
             range,
             &assigned_input.app_vk.beta,
         ));
-        fixed_input.append(&mut g2_point_limbs_to_bytes(
+        preimage.append(&mut g2_point_limbs_to_bytes(
             ctx,
             range,
             &assigned_input.app_vk.gamma,
         ));
-        fixed_input.append(&mut g2_point_limbs_to_bytes(
+        preimage.append(&mut g2_point_limbs_to_bytes(
             ctx,
             range,
             &assigned_input.app_vk.delta,
         ));
-        fixed_input.append(&mut byte_decomposition(ctx, range, &vk_s_len));
-        fixed_input.append(&mut g1_point_limbs_to_bytes(
-            ctx,
-            range,
-            &assigned_input.app_vk.s[0],
-        ));
-        // We require `len > 0`, so this element always exists
-        fixed_input.append(&mut g1_point_limbs_to_bytes(
-            ctx,
-            range,
-            &assigned_input.app_vk.s[1],
-        ));
+        preimage.append(&mut byte_decomposition(ctx, range, &vk_s_len));
+        let fixed_input_length = preimage.len();
+        let fixed_input_length_assigned =
+            ctx.load_constant(F::from(fixed_input_length as u64));
+        // variable input: vk_s
+        for s in &assigned_input.app_vk.s {
+            preimage.append(&mut g1_point_limbs_to_bytes(ctx, range, s));
+        }
 
-        // Variable input vk.s[2..]
-        let num_limbs_per_g1 = ctx.load_constant(F::from(2 * NUM_LIMBS as u64));
-        let vk_remaining_len = range.gate.sub(ctx, *len, one);
-        let vk_s_len_limbs =
-            range.gate.mul(ctx, vk_remaining_len, num_limbs_per_g1);
-        let vk_s = assigned_input
-            .app_vk
-            .s
-            .iter()
-            .skip(2)
-            .flatten()
-            .cloned()
-            .collect();
-
-        keccak.multi_var_query(
+        // Fixed input length + vk_s_len * bytes_per_g1
+        let bytes_per_g1 =
+            ctx.load_constant(F::from((2 * NUM_BYTES_FQ) as u64));
+        let byte_len = range.gate.mul_add(
             ctx,
-            range,
-            fixed_input,
-            vec![vk_s],
-            vec![vk_s_len_limbs],
-        )
+            vk_s_len,
+            bytes_per_g1,
+            fixed_input_length_assigned,
+        );
+
+        keccak.keccak_var_len(ctx, range, preimage, byte_len);
+        return keccak
+            .var_len_queries()
+            .last()
+            .expect("no queries")
+            .output_bytes_assigned()
+            .to_vec();
     }
 
     /// For `assigned_input` and `circuit_id`:
@@ -1062,15 +1054,32 @@ where
                 (config.inner_batch_size * config.outer_batch_size + 1).into(),
             );
         }
-        for input in inputs.inputs {
+
+        // Compute circuit ID from VK of first input. Assume VK is same on
+        // all subsequent inputs
+        let assigned_input_0 = AssignedKeccakInput::from_keccak_padded_input(
+            ctx,
+            &range,
+            inputs.inputs[0].clone(),
+        );
+        let circuit_id = Self::compute_circuit_id(
+            ctx,
+            &range,
+            &mut keccak,
+            &assigned_input_0,
+        );
+        // Specification: Proof ID Computation
+        Self::compute_proof_id(
+            ctx,
+            &range,
+            &mut keccak,
+            &circuit_id,
+            &assigned_input_0,
+        );
+        public_inputs.push(assigned_input_0);
+        for input in inputs.inputs.into_iter().skip(1) {
             let assigned_input = AssignedKeccakInput::from_keccak_padded_input(
                 ctx, &range, input,
-            );
-            let circuit_id = Self::compute_circuit_id(
-                ctx,
-                &range,
-                &mut keccak,
-                &assigned_input,
             );
             // Specification: Proof ID Computation
             Self::compute_proof_id(
@@ -1087,6 +1096,7 @@ where
         // Here we select only the even var_len_queries because those
         // contain the proofIds. The odd ones contain the circuitIds
         // which are not hashes into the final digest.
+        // TODO: Misaligned now, but no need to change the work done here for cost estimate
         let proof_ids = keccak
             .var_len_queries()
             .iter()
