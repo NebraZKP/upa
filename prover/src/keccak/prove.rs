@@ -87,29 +87,16 @@ pub fn prove(params: ProveParams) {
         "Config incompatible with inputs"
     );
 
-    let keccak_inputs = {
-        // Outer Vec indexes BV proof, inner vec is inputs to given BV proof
-        let ubv_instances: Vec<Vec<Fr>> = params
-            .ubv_instances
-            .iter()
-            .map(|input_file| load_instance(input_file.as_str()))
-            .collect();
-        let ubv_instances = ubv_instances.iter().map(|inputs| &inputs[..]);
-        keccak_inputs_from_ubv_instances(
-            ubv_instances,
-            keccak_config.num_app_public_inputs as usize,
-            keccak_config.inner_batch_size as usize,
-        )
-    };
+    println!(
+        "WARNING: Using sampled keccak inputs, ignoring UBV instance argument."
+    );
+    let keccak_inputs = KeccakCircuitInputs::sample(&keccak_config, &mut OsRng);
 
     if params.dry_run {
         info!("dry-run.  computing instance and exiting");
         let instance = KeccakCircuit::<_, G1Affine>::compute_instance(
             &keccak_config,
-            &KeccakCircuitInputs {
-                inputs: keccak_inputs,
-                num_proof_ids: params.num_proof_ids,
-            },
+            &keccak_inputs,
         );
         save_instance(&instance_file, &instance);
         return;
@@ -142,10 +129,7 @@ pub fn prove(params: ProveParams) {
             &keccak_config,
             &gate_config,
             break_points,
-            &KeccakCircuitInputs {
-                inputs: keccak_inputs,
-                num_proof_ids: params.num_proof_ids,
-            },
+            &keccak_inputs,
         );
 
         // TODO: better interface for instance.  Avoid copy when returning.
