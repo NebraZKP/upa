@@ -279,9 +279,9 @@ export const convertSp1ProofFixture = (
       [PI_B_X_0, PI_B_X_1],
       [PI_B_Y_0, PI_B_Y_1],
     ],
-    [PI_C_X, PI_C_Y],
-    [],
-    []
+    [PI_C_X, PI_C_Y]
+    // [],
+    // []
   );
 
   // SP1 G2 VK Points in contract are negated
@@ -304,9 +304,9 @@ export const convertSp1ProofFixture = (
       [CONSTANT_X.toString(), CONSTANT_Y.toString()],
       [PUB_0_X.toString(), PUB_0_Y.toString()],
       [PUB_1_X.toString(), PUB_1_Y.toString()],
-    ],
-    [],
-    []
+    ]
+    // [],
+    // []
   );
 
   const UPA_PROOF_VK_INPUTS: AppVkProofInputs = {

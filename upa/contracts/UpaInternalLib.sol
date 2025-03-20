@@ -100,7 +100,7 @@ library UpaInternalLib {
 
         uint256 vkSLength = vk.s.length;
         uint256 vkSSizeBytes = vkSLength * 32 * 2 /* g1 size */;
-        uint256 commitmentSizeBytes = vk.h1.length * 4 * 32 /* h1 */;
+        uint256 commitmentSizeBytes = 0; // vk.h1.length * 4 * 32 /* h1 */;
         uint256 domainTag = commitmentSizeBytes == 0
             ? CIRCUIT_ID_DOMAIN_TAG
             : CIRCUIT_ID_DOMAIN_TAG_WITH_COMMITMENT;
@@ -117,8 +117,8 @@ library UpaInternalLib {
 
         // solhint-disable
         uint256[2][] calldata vk_s = vk.s;
-        uint256[2][2][] calldata vk_h1 = vk.h1;
-        uint256[2][2][] calldata vk_h2 = vk.h2;
+        // uint256[2][2][] calldata vk_h1 = vk.h1;
+        // uint256[2][2][] calldata vk_h2 = vk.h2;
         // solhint-enable
 
         assembly {
@@ -142,10 +142,10 @@ library UpaInternalLib {
             dst := add(dst, vkSSizeBytes)
 
             // Write vk.h1,h2
-            calldatacopy(dst, vk_h1.offset, commitmentSizeBytes)
-            dst := add(dst, commitmentSizeBytes)
-            calldatacopy(dst, vk_h2.offset, commitmentSizeBytes)
-            dst := add(dst, commitmentSizeBytes)
+            // calldatacopy(dst, vk_h1.offset, commitmentSizeBytes)
+            // dst := add(dst, commitmentSizeBytes)
+            // calldatacopy(dst, vk_h2.offset, commitmentSizeBytes)
+            // dst := add(dst, commitmentSizeBytes)
 
             circuitId := keccak256(add(preimage, 0x20), totalSizeBytes)
         }
@@ -158,13 +158,13 @@ library UpaInternalLib {
         uint256 pA = compressG1Point(proof.pA);
         uint256[2] memory pB = compressG2Point(proof.pB);
         uint256 pC = compressG1Point(proof.pC);
-        uint256[] memory m = new uint256[](proof.m.length);
-        uint256[] memory pok = new uint256[](proof.m.length);
-        for (uint256 i = 0; i < proof.m.length; i++) {
-            m[i] = compressG1Point(proof.m[i]);
-            pok[i] = compressG1Point(proof.pok[i]);
-        }
-        return Groth16CompressedProof(pA, pB, pC, m, pok);
+        // uint256[] memory m = new uint256[](proof.m.length);
+        // uint256[] memory pok = new uint256[](proof.m.length);
+        // for (uint256 i = 0; i < proof.m.length; i++) {
+        //     m[i] = compressG1Point(proof.m[i]);
+        //     pok[i] = compressG1Point(proof.pok[i]);
+        // }
+        return Groth16CompressedProof(pA, pB, pC); // , m, pok);
     }
 
     /// Compute the digest of a specific Groth16 proof.  Used to commit to

@@ -233,7 +233,7 @@ export function computeCircuitId(vk: Groth16VerifyingKey): string {
     return g2.flatMap(g1_hex);
   }
 
-  const hasCommitment = vk.h1.length > 0;
+  const hasCommitment = false;
   const domainTag = hasCommitment
     ? CIRCUIT_ID_DOMAIN_TAG_WITH_COMMITMENT
     : CIRCUIT_ID_DOMAIN_TAG;
@@ -248,8 +248,8 @@ export function computeCircuitId(vk: Groth16VerifyingKey): string {
       g2_hex(vk.delta),
       [bigintToHex32(BigInt(vk.s.length))],
       ...vk.s.map(g1_hex),
-      ...vk.h1.map(g2_hex),
-      ...vk.h2.map(g2_hex),
+      // ...vk.h1.map(g2_hex),
+      // ...vk.h2.map(g2_hex),
     ]
       .flat()
       .join("");

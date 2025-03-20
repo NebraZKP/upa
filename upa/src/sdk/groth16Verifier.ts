@@ -71,36 +71,36 @@ export class Groth16Verifier {
     inputs: (string | bigint)[],
     logger?: Logger
   ): Promise<boolean> {
-    const abiCoder = new AbiCoder();
-    const mString = abiCoder.encode(["uint256[2]"], [proof.m[0]]);
-    const newInput = BigInt(keccak256(mString)) % Bn254Modulus;
-    const pokCheck = await this.bn254PairingCheck([
-      [proof.m[0], vk.h1[0]],
-      [proof.pok[0], vk.h2[0]],
-    ]);
+    // const abiCoder = new AbiCoder();
+    // const mString = abiCoder.encode(["uint256[2]"], [proof.m[0]]);
+    // const newInput = BigInt(keccak256(mString)) % Bn254Modulus;
+    // const pokCheck = await this.bn254PairingCheck([
+    //   [proof.m[0], vk.h1[0]],
+    //   [proof.pok[0], vk.h2[0]],
+    // ]);
     const vkSnarkjs = new Groth16VerifyingKey(
       vk.alpha,
       vk.beta,
       vk.gamma,
       vk.delta,
-      vk.s.concat([proof.m[0]]),
-      [],
-      []
+      vk.s
+      // [],
+      // []
     );
     const proofSnarkJs = new Groth16Proof(
       proof.pi_a,
       proof.pi_b,
-      proof.pi_c,
-      [],
-      []
+      proof.pi_c
+      // [],
+      // []
     );
     const pairingCheck = await this.verifyGroth16ProofWithoutCommitment(
       vkSnarkjs,
       proofSnarkJs,
-      inputs.concat([newInput, 1n]),
+      inputs,
       logger
     );
-    return pokCheck && pairingCheck;
+    return pairingCheck;
   }
 
   /// Verifies a groth16 proof, with or without a commitment point.
@@ -110,7 +110,7 @@ export class Groth16Verifier {
     inputs: (string | bigint)[],
     logger?: Logger
   ): Promise<Groth16VerificationResult> {
-    const numCommitmentPoints = vk.h1.length;
+    const numCommitmentPoints = 0; // vk.h1.length;
     const numInputs = inputs.length;
     if (numCommitmentPoints > 1) {
       // Too many commitment points. The local Groth16 verifier
@@ -121,27 +121,27 @@ export class Groth16Verifier {
       // contract.
       return { result: false, error: "Too many commitment points" };
     }
-    if (numCommitmentPoints !== vk.h2.length) {
-      // Inconsistent VK. The local Groth16 verifier returns this
-      // error when a Groth16 VK has h1.length != h2.length.
-      //
-      // This error is unexpected for on-chain submissions because it is
-      // checked in the function `registerVK` of the `UpaProofReceiver`
-      // contract.
-      return { result: false, error: "Inconsistent VK" };
-    }
-    if (proof.m.length !== proof.pok.length) {
-      // Inconsistent proof. The local Groth16 verifier returns this error
-      // when a Groth16 proof has a commitment point but no Pedersen proof
-      // of knowledge or viceversa.
-      return { result: false, error: "Inconsistent proof" };
-    }
-    if (numCommitmentPoints !== proof.m.length) {
-      // Proof inconsistent with VK. The local Groth16 verifier returns this
-      // error when the proof has a commitment point but the VK doesn't have
-      // a Pedersen VK or viceversa.
-      return { result: false, error: "Proof inconsistent with VK" };
-    }
+    // if (numCommitmentPoints !== vk.h2.length) {
+    //   // Inconsistent VK. The local Groth16 verifier returns this
+    //   // error when a Groth16 VK has h1.length != h2.length.
+    //   //
+    //   // This error is unexpected for on-chain submissions because it is
+    //   // checked in the function `registerVK` of the `UpaProofReceiver`
+    //   // contract.
+    //   return { result: false, error: "Inconsistent VK" };
+    // }
+    // if (proof.m.length !== proof.pok.length) {
+    //   // Inconsistent proof. The local Groth16 verifier returns this error
+    //   // when a Groth16 proof has a commitment point but no Pedersen proof
+    //   // of knowledge or viceversa.
+    //   return { result: false, error: "Inconsistent proof" };
+    // }
+    // if (numCommitmentPoints !== proof.m.length) {
+    //   // Proof inconsistent with VK. The local Groth16 verifier returns this
+    //   // error when the proof has a commitment point but the VK doesn't have
+    //   // a Pedersen VK or viceversa.
+    //   return { result: false, error: "Proof inconsistent with VK" };
+    // }
     if (numInputs + 1 + numCommitmentPoints !== vk.s.length) {
       // Wrong number of public inputs. The local Groth16 verifier returns
       // this error when the number of public inputs is incompatible with

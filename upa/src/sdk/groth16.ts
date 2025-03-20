@@ -45,31 +45,33 @@ export class Groth16VerifyingKey {
   public readonly gamma: G2Point;
   public readonly delta: G2Point;
   public readonly s: G1Point[];
-  public readonly h1: G2Point[];
-  public readonly h2: G2Point[];
+  // public readonly h1: G2Point[];
+  // public readonly h2: G2Point[];
 
   constructor(
     alpha: [BigNumberish, BigNumberish],
     beta: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
     gamma: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
     delta: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
-    s: [BigNumberish, BigNumberish][],
-    h1: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]][],
-    h2: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]][]
+    s: [BigNumberish, BigNumberish][]
+    // h1: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]][],
+    // h2: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]][]
   ) {
-    if (h1.length !== h2.length) {
-      throw new Error("Invalid data: h1 and h2 length mismatch.");
-    }
-    if (h1.length > 1) {
-      throw new Error("Invalid data: Multiple commitments are not supported");
-    }
+    // if (h1) {
+    //   if (h1.length !== h2.length) {
+    //     throw new Error("Invalid data: h1 and h2 length mismatch.");
+    //   }
+    //   if (h1.length > 1) {
+    //     throw new Error("Invalid data: Multiple commitments are not supported");
+    //   }
+    // }
     this.alpha = toG1(alpha);
     this.beta = toG2(beta);
     this.gamma = toG2(gamma);
     this.delta = toG2(delta);
     this.s = s.map(toG1);
-    this.h1 = h1.map(toG2);
-    this.h2 = h2.map(toG2);
+    // this.h1 = h1.map(toG2);
+    // this.h2 = h2.map(toG2);
   }
 
   /**
@@ -84,9 +86,9 @@ export class Groth16VerifyingKey {
       sol.beta,
       sol.gamma,
       sol.delta,
-      sol.s,
-      sol.h1,
-      sol.h2
+      sol.s
+      // sol.h1,
+      // sol.h2
     );
   }
 
@@ -109,9 +111,9 @@ export class Groth16VerifyingKey {
       obj.beta,
       obj.gamma,
       obj.delta,
-      obj.s,
-      obj.h1,
-      obj.h2
+      obj.s
+      // obj.h1,
+      // obj.h2
     );
   }
 
@@ -130,15 +132,14 @@ export class Groth16VerifyingKey {
    */
   public static from_snarkjs(snarkjs: SnarkJSVKey): Groth16VerifyingKey {
     // SnarkJS does not support commitment points
-    const empty: G2Point[] = [];
     return new Groth16VerifyingKey(
       snarkJSG1ToG1(snarkjs.vk_alpha_1),
       snarkJSG2ToG2(snarkjs.vk_beta_2),
       snarkJSG2ToG2(snarkjs.vk_gamma_2),
       snarkJSG2ToG2(snarkjs.vk_delta_2),
-      snarkjs.IC.map(snarkJSG1ToG1),
-      empty,
-      empty
+      snarkjs.IC.map(snarkJSG1ToG1)
+      // empty,
+      // empty
     );
   }
 
@@ -185,9 +186,9 @@ export class Groth16VerifyingKey {
       gnarkG2ToG2(gnark.G2.Beta),
       gnarkG2ToG2(gnark.G2.Gamma),
       gnarkG2ToG2(gnark.G2.Delta),
-      gnark.G1.K.map(gnarkG1ToG1),
-      h1,
-      h2
+      gnark.G1.K.map(gnarkG1ToG1)
+      // h1,
+      // h2
     );
   }
 
@@ -214,9 +215,9 @@ export class Groth16VerifyingKey {
    * @returns
    */
   public snarkjs(): SnarkJSVKey {
-    if (this.h1.length || this.h2.length) {
-      throw new Error("Attempted to convert VK with commitment to SnarkJS");
-    }
+    // if (this.h1.length || this.h2.length) {
+    //   throw new Error("Attempted to convert VK with commitment to SnarkJS");
+    // }
     return {
       IC: this.s.map((x) => [x[0], x[1], "1"]),
       nPublic: this.s.length - 1,
@@ -252,8 +253,8 @@ export class Groth16Proof {
   public pi_a: G1Point;
   public pi_b: G2Point;
   public pi_c: G1Point;
-  public m: G1Point[];
-  public pok: G1Point[];
+  // public m: G1Point[];
+  // public pok: G1Point[];
 
   /**
    * Assumes that values passed in are in the "natural" order (i.e. Fq2
@@ -262,39 +263,39 @@ export class Groth16Proof {
   constructor(
     pi_a: [BigNumberish, BigNumberish],
     pi_b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]],
-    pi_c: [BigNumberish, BigNumberish],
-    m: [BigNumberish, BigNumberish][],
-    pok: [BigNumberish, BigNumberish][]
+    pi_c: [BigNumberish, BigNumberish]
+    // m: [BigNumberish, BigNumberish][],
+    // pok: [BigNumberish, BigNumberish][]
   ) {
-    if (m.length !== pok.length) {
-      throw new Error("Invalid data: m and pok length mismatch.");
-    }
-    if (m.length > 1) {
-      throw new Error("Invalid data: Multiple commitments are not supported");
-    }
+    // if (m.length !== pok.length) {
+    //   throw new Error("Invalid data: m and pok length mismatch.");
+    // }
+    // if (m.length > 1) {
+    //   throw new Error("Invalid data: Multiple commitments are not supported");
+    // }
     this.pi_a = [toBeHex(pi_a[0], 32), toBeHex(pi_a[1], 32)];
     this.pi_b = [
       [toBeHex(pi_b[0][0], 32), toBeHex(pi_b[0][1], 32)],
       [toBeHex(pi_b[1][0], 32), toBeHex(pi_b[1][1], 32)],
     ];
     this.pi_c = [toBeHex(pi_c[0], 32), toBeHex(pi_c[1], 32)];
-    this.m = m.map((pt) => [toBeHex(pt[0], 32), toBeHex(pt[1], 32)]);
-    this.pok = pok.map((pt) => [toBeHex(pt[0], 32), toBeHex(pt[1], 32)]);
+    // this.m = m.map((pt) => [toBeHex(pt[0], 32), toBeHex(pt[1], 32)]);
+    // this.pok = pok.map((pt) => [toBeHex(pt[0], 32), toBeHex(pt[1], 32)]);
   }
 
   public static from_solidity(sol: Groth16ProofStruct): Groth16Proof {
     return new Groth16Proof(
       sol.pA,
       reverseFq2Elements(sol.pB),
-      sol.pC,
-      sol.m,
-      sol.pok
+      sol.pC
+      // sol.m,
+      // sol.pok
     );
   }
 
   public static from_json(json_obj: object): Groth16Proof {
     const obj = json_obj as Groth16Proof;
-    return new Groth16Proof(obj.pi_a, obj.pi_b, obj.pi_c, obj.m, obj.pok);
+    return new Groth16Proof(obj.pi_a, obj.pi_b, obj.pi_c); // obj.m, obj.pok);
   }
 
   /**
@@ -315,13 +316,13 @@ export class Groth16Proof {
    */
   public static from_snarkjs(json_obj: SnarkJSProof): Groth16Proof {
     // SnarkJS does not support commitment points
-    const empty: G1Point[] = [];
+    // const empty: G1Point[] = [];
     return new Groth16Proof(
       snarkJSG1ToG1(json_obj.pi_a),
       snarkJSG2ToG2(json_obj.pi_b),
-      snarkJSG1ToG1(json_obj.pi_c),
-      empty,
-      empty
+      snarkJSG1ToG1(json_obj.pi_c)
+      // empty,
+      // empty
     );
   }
 
@@ -354,9 +355,9 @@ export class Groth16Proof {
     return new Groth16Proof(
       gnarkG1ToG1(json_obj.Ar),
       gnarkG2ToG2(json_obj.Bs),
-      gnarkG1ToG1(json_obj.Krs),
-      m,
-      pok
+      gnarkG1ToG1(json_obj.Krs)
+      // m,
+      // pok
     );
   }
 
@@ -365,8 +366,8 @@ export class Groth16Proof {
       pA: this.pi_a,
       pB: reverseFq2Elements(this.pi_b),
       pC: this.pi_c,
-      m: this.m,
-      pok: this.pok,
+      // m: this.m,
+      // pok: this.pok,
     };
   }
 
@@ -384,9 +385,9 @@ export class Groth16Proof {
     const pi_a = compressG1Point(this.pi_a);
     const pi_b = compressG2Point(this.pi_b);
     const pi_c = compressG1Point(this.pi_c);
-    const m = this.m.map(compressG1Point);
-    const pok = this.pok.map(compressG1Point);
-    return new CompressedGroth16Proof(pi_a, pi_b, pi_c, m, pok);
+    // const m = this.m.map(compressG1Point);
+    // const pok = this.pok.map(compressG1Point);
+    return new CompressedGroth16Proof(pi_a, pi_b, pi_c); // , m, pok);
   }
 }
 
@@ -394,27 +395,27 @@ export class CompressedGroth16Proof {
   public pi_a: CompressedG1Point;
   public pi_b: CompressedG2Point;
   public pi_c: CompressedG1Point;
-  public m: CompressedG1Point[];
-  public pok: CompressedG1Point[];
+  // public m: CompressedG1Point[];
+  // public pok: CompressedG1Point[];
 
   constructor(
     pi_a: BigNumberish,
     pi_b: [BigNumberish, BigNumberish],
-    pi_c: BigNumberish,
-    m: BigNumberish[],
-    pok: BigNumberish[]
+    pi_c: BigNumberish
+    // m: BigNumberish[],
+    // pok: BigNumberish[]
   ) {
-    if (m.length !== pok.length) {
-      throw new Error("Invalid data: m and pok length mismatch.");
-    }
-    if (m.length > 1) {
-      throw new Error("Invalid data: Multiple commitments are not supported");
-    }
+    // if (m.length !== pok.length) {
+    //   throw new Error("Invalid data: m and pok length mismatch.");
+    // }
+    // if (m.length > 1) {
+    //   throw new Error("Invalid data: Multiple commitments are not supported");
+    // }
     this.pi_a = toBeHex(pi_a, 32);
     this.pi_b = [toBeHex(pi_b[0], 32), toBeHex(pi_b[1], 32)];
     this.pi_c = toBeHex(pi_c, 32);
-    this.m = m.map((pt) => toBeHex(pt, 32));
-    this.pok = pok.map((pt) => toBeHex(pt, 32));
+    // this.m = m.map((pt) => toBeHex(pt, 32));
+    // this.pok = pok.map((pt) => toBeHex(pt, 32));
   }
 
   public static from_json(o: object): CompressedGroth16Proof {
@@ -423,38 +424,39 @@ export class CompressedGroth16Proof {
     assert(typeof json_obj.pi_a === "string");
     assert(typeof json_obj.pi_b === "object");
     assert(typeof json_obj.pi_c === "string");
-    assert(typeof json_obj.m === "object");
-    assert(typeof json_obj.pok === "object");
+    // assert(typeof json_obj.m === "object");
+    // assert(typeof json_obj.pok === "object");
     return new CompressedGroth16Proof(
       json_obj.pi_a,
       json_obj.pi_b,
-      json_obj.pi_c,
-      json_obj.m,
-      json_obj.pok
+      json_obj.pi_c
+      // json_obj.m,
+      // json_obj.pok
     );
   }
 
   public static from_solidity(
     sol: Groth16CompressedProofStruct
   ): CompressedGroth16Proof {
-    return new CompressedGroth16Proof(sol.pA, sol.pB, sol.pC, sol.m, sol.pok);
+    return new CompressedGroth16Proof(sol.pA, sol.pB, sol.pC); // , sol.m, sol.pok);
   }
 
   public decompress(): Groth16Proof | undefined {
     const pi_a = decompressG1Point(this.pi_a);
     const pi_b = decompressG2Point(this.pi_b);
     const pi_c = decompressG1Point(this.pi_c);
-    const m = this.m.map(decompressG1Point);
-    const pok = this.pok.map(decompressG1Point);
+    // const m = this.m.map(decompressG1Point);
+    // const pok = this.pok.map(decompressG1Point);
 
     // Check that decompression worked, otherwise return undefined.
-    if (pi_a && pi_b && pi_c && m.every((x) => x) && pok.every((x) => x)) {
+    if (pi_a && pi_b && pi_c) {
+      // && m.every((x) => x) && pok.every((x) => x)) {
       return new Groth16Proof(
         pi_a,
         pi_b,
-        pi_c,
-        m as G1Point[],
-        pok as G1Point[]
+        pi_c
+        // m as G1Point[],
+        // pok as G1Point[]
       );
     }
 
@@ -466,8 +468,8 @@ export class CompressedGroth16Proof {
       pA: this.pi_a,
       pB: this.pi_b,
       pC: this.pi_c,
-      m: this.m,
-      pok: this.pok,
+      // m: this.m,
+      // pok: this.pok,
     };
   }
 

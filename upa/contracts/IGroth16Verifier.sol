@@ -25,8 +25,8 @@ struct Groth16CompressedProof {
     uint256 pA;
     uint256[2] pB;
     uint256 pC;
-    uint256[] m;
-    uint256[] pok;
+    // uint256[] m;
+    // uint256[] pok;
 }
 
 /// A Groth16 proof (with Fq2 elements reversed, to be compatible with the EVM
@@ -37,8 +37,8 @@ struct Groth16Proof {
     uint256[2] pA;
     uint256[2][2] pB;
     uint256[2] pC;
-    uint256[2][] m;
-    uint256[2][] pok;
+    // uint256[2][] m;
+    // uint256[2][] pok;
 }
 
 /// A Groth16 verification key.  This is primarily used by off-chain
@@ -53,8 +53,8 @@ struct Groth16VK {
     uint256[2][2] gamma;
     uint256[2][2] delta;
     uint256[2][] s;
-    uint256[2][2][] h1;
-    uint256[2][2][] h2;
+    // uint256[2][2][] h1;
+    // uint256[2][2][] h2;
 }
 
 /// Interface to a universal Groth16 verifier contract.

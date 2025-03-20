@@ -198,11 +198,11 @@ contract UpaProofReceiver is
         require(sLength > 1, InvalidVK());
         require(sLength <= maxNumPublicInputs() + 1, TooManyPublicInputs());
 
-        uint256 hasCommitment = vk.h1.length;
+        uint256 hasCommitment = 0; // vk.h1.length;
         // Ensure the VK only has 0 or 1 commitments, and that
         // the `vk.h` is consistent
         require(hasCommitment < 2, TooManyCommitmentPoints());
-        require(hasCommitment == vk.h2.length, InconsistentPedersenVK());
+        // require(hasCommitment == vk.h2.length, InconsistentPedersenVK());
 
         // Record the new circuitId.
         circuitId = UpaInternalLib.computeCircuitId(vk);
@@ -239,16 +239,16 @@ contract UpaProofReceiver is
                 NotOnCurve(Groth16PointType.S)
             );
         }
-        for (uint256 i = 0; i < hasCommitment; i++) {
-            require(
-                EllipticCurveUtils.isOnG2Curve(vk.h1[i][0], vk.h1[i][1]),
-                NotOnCurve(Groth16PointType.H1)
-            );
-            require(
-                EllipticCurveUtils.isOnG2Curve(vk.h2[i][0], vk.h2[i][1]),
-                NotOnCurve(Groth16PointType.H2)
-            );
-        }
+        // for (uint256 i = 0; i < hasCommitment; i++) {
+        //     require(
+        //         EllipticCurveUtils.isOnG2Curve(vk.h1[i][0], vk.h1[i][1]),
+        //         NotOnCurve(Groth16PointType.H1)
+        //     );
+        //     require(
+        //         EllipticCurveUtils.isOnG2Curve(vk.h2[i][0], vk.h2[i][1]),
+        //         NotOnCurve(Groth16PointType.H2)
+        //     );
+        // }
 
         /// Emit the VKRegistered event
         emit VKRegistered(circuitId, vk);
@@ -465,7 +465,7 @@ contract UpaProofReceiver is
         require(proofId != DUMMY_PROOF_ID, DummyProofInSubmission());
         proofIds[i] = proofId;
 
-        uint256 numPublicInputs = publicInput.length + proof.m.length;
+        uint256 numPublicInputs = publicInput.length; // proof.m.length;
         require(numPublicInputs <= _maxNumPublicInputs, TooManyPublicInputs());
     }
 }

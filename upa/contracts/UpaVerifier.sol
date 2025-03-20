@@ -1064,7 +1064,7 @@ contract UpaVerifier is
         VerifierStorage storage verifierStorage = _getVerifierStorage();
 
         // Check the number of public inputs doesn't exceed the max allowed
-        uint256 numPublicInputs = publicInputs.length + proof.m.length;
+        uint256 numPublicInputs = publicInputs.length; //  + proof.m.length;
         require(numPublicInputs <= maxNumPublicInputs(), TooManyPublicInputs());
 
         // Check that the challenge proof is valid for the corresponding VK
