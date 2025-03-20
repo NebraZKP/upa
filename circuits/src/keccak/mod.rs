@@ -579,18 +579,6 @@ pub(crate) struct AssignedKeccakInput<F: ScalarField> {
     /// Length of the application public input, in field elements
     len: AssignedValue<F>,
 
-    /// Application verifying key
-    ///
-    /// # Note
-    ///
-    /// This vk isn't constrained to consist of valid EC points. Furthermore,
-    /// the padding of this verifying key isn't constrained to consist of
-    /// the G1 generator (for the elements of `app_vk.s`) or the G2 generator
-    /// (for `app_vk.h1` and `app_vk.h2`). However, its elements (i.e. its
-    /// flattened representation) will be copy constrained one-to-one to the
-    /// limbs of a fully constrained (in the UBV circuit) Groth16 verification key.
-    pub(crate) app_vk: AssignedVerifyingKeyLimbs<F>,
-
     /// Application public inputs
     ///
     /// # Note
@@ -615,7 +603,6 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
     /// Flattens `self`, returning a vector of [`AssignedValue`]s.
     pub fn to_instance_values(&self) -> Vec<AssignedValue<F>> {
         let mut result = vec![self.len];
-        result.extend_from_slice(&self.app_vk.flatten());
         result.extend_from_slice(&self.app_public_inputs);
         result
     }
@@ -633,10 +620,6 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
 
         let len = ctx.load_witness(input.len);
         let app_public_inputs = ctx.assign_witnesses(input.app_public_inputs);
-        let app_vk = AssignedVerifyingKeyLimbs::from_padded_verifying_key(
-            ctx,
-            input.app_vk,
-        );
         // Constrain `len < MAX_LEN`
         range.check_less_than_safe(ctx, len, max_len + 1);
         // Constrain `len > 0`
@@ -644,7 +627,6 @@ impl<F: ScalarField> AssignedKeccakInput<F> {
         range.gate.assert_is_const(ctx, &is_len_zero, &F::zero());
         Self {
             len,
-            app_vk,
             app_public_inputs,
         }
     }
@@ -713,8 +695,10 @@ where
     break_points: RefCell<MultiPhaseThreadBreakPoints>,
     /// Keccak chip
     keccak: KeccakChip<F>,
+    /// Groth16 Verifying Key (assumed same for all proofs)
+    pub(crate) assigned_vk: AssignedVerifyingKeyLimbs<F>,
     /// Public inputs
-    pub(crate) public_inputs: AssignedKeccakInputs<F>,
+    pub(crate) public_inputs: AssignedKeccakInputs<F>, // TODO: Now need to assert all lengths are same
     /// Public output
     pub(crate) public_output: [AssignedValue<F>; 2],
     /// Gate config
@@ -728,12 +712,13 @@ where
     C: CurveAffine<ScalarExt = F>,
 {
     /// Computes the circuit Id as a [`multi_var_query`](KeccakChip::multi_var_query)
-    /// of the limbs of `assigned_input.app_vk`.
+    /// of the limbs of `assigned_vk`.
     fn compute_circuit_id(
         ctx: &mut Context<F>,
         range: &RangeChip<F>,
         keccak: &mut KeccakChip<F>,
-        assigned_input: &AssignedKeccakInput<F>,
+        assigned_input: &AssignedKeccakInput<F>, // TODO: We actually just want the length off of this
+        assigned_vk: &AssignedVerifyingKeyLimbs<F>,
     ) -> Vec<AssignedValue<F>> {
         // select domain tag
         let domain_tag_groth16: Vec<AssignedValue<F>> =
@@ -756,29 +741,29 @@ where
         preimage.append(&mut g1_point_limbs_to_bytes(
             ctx,
             range,
-            &assigned_input.app_vk.alpha,
+            &assigned_vk.alpha,
         ));
         preimage.append(&mut g2_point_limbs_to_bytes(
             ctx,
             range,
-            &assigned_input.app_vk.beta,
+            &assigned_vk.beta,
         ));
         preimage.append(&mut g2_point_limbs_to_bytes(
             ctx,
             range,
-            &assigned_input.app_vk.gamma,
+            &assigned_vk.gamma,
         ));
         preimage.append(&mut g2_point_limbs_to_bytes(
             ctx,
             range,
-            &assigned_input.app_vk.delta,
+            &assigned_vk.delta,
         ));
         preimage.append(&mut byte_decomposition(ctx, range, &vk_s_len));
         let fixed_input_length = preimage.len();
         let fixed_input_length_assigned =
             ctx.load_constant(F::from(fixed_input_length as u64));
         // variable input: vk_s
-        for s in &assigned_input.app_vk.s {
+        for s in &assigned_vk.s {
             preimage.append(&mut g1_point_limbs_to_bytes(ctx, range, s));
         }
 
@@ -1057,6 +1042,10 @@ where
 
         // Compute circuit ID from VK of first input. Assume VK is same on
         // all subsequent inputs
+        let assigned_vk = AssignedVerifyingKeyLimbs::from_padded_verifying_key(
+            ctx,
+            inputs.inputs[0].app_vk.clone(),
+        );
         let assigned_input_0 = AssignedKeccakInput::from_keccak_padded_input(
             ctx,
             &range,
@@ -1067,7 +1056,9 @@ where
             &range,
             &mut keccak,
             &assigned_input_0,
+            &assigned_vk,
         );
+        // Compute first proof ID here, remainder in for loop
         // Specification: Proof ID Computation
         Self::compute_proof_id(
             ctx,
@@ -1142,6 +1133,7 @@ where
                 inputs: public_inputs,
                 num_proof_ids,
             },
+            assigned_vk,
             public_output,
             config,
             _marker: PhantomData,
