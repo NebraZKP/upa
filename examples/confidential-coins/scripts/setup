@@ -41,7 +41,7 @@ POWERSOFTAUFILE="${TEST_DIR}/powersOfTau28_hez_final_08.ptau"
 # Pre-generated powersOfTau from snarkjs
 #
 if ! [ -e ${POWERSOFTAUFILE} ] ; then
-    curl https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_08.ptau --output ${POWERSOFTAUFILE}
+    curl https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_08.ptau --output ${POWERSOFTAUFILE}
 fi
 
 # We just need the following files from this setup script.
