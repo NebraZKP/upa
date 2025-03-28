@@ -98,7 +98,9 @@ function stop_daemon() {
     cid_file="$1.cid"
     if [ "${DOCKER}" == "1" ] ; then
         cid=$(cat ${cid_file})
-        docker container kill ${cid}
+        docker container kill ${cid} || \
+            echo "Failed stopping container ${cid}. It may have died."
+
         rm ${cid_file}
     else
         if ! [ -e ${pid_file} ] ; then
