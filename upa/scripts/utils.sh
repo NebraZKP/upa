@@ -102,7 +102,9 @@ function stop_daemon() {
         fi
 
         cid=$(cat ${cid_file})
-        docker container kill ${cid}
+        docker container kill ${cid} || \
+            echo "Failed stopping container ${cid}. It may have died."
+
         rm ${cid_file}
     else
         pid_file="$1.pid"
