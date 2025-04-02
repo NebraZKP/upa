@@ -94,13 +94,20 @@ function start_daemon() {
 
 # 1 - name
 function stop_daemon() {
-    pid_file="$1.pid"
-    cid_file="$1.cid"
     if [ "${DOCKER}" == "1" ] ; then
+        cid_file="$1.cid"
+        if ! [ -e ${cid_file} ] ; then
+            echo "$1 has no CID file: ${cid_file}"
+            return
+        fi
+
         cid=$(cat ${cid_file})
-        docker container kill ${cid}
+        docker container kill ${cid} || \
+            echo "Failed stopping container ${cid}. It may have died."
+
         rm ${cid_file}
     else
+        pid_file="$1.pid"
         if ! [ -e ${pid_file} ] ; then
             echo "$1 has no PID file: ${pid_file}"
             return

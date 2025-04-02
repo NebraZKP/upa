@@ -86,7 +86,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Install rust compiler for circom
+      - name: Install rust compiler
         uses: actions-rs/toolchain@v1
 
       - name: Cargo cache
@@ -96,16 +96,18 @@ jobs:
         id: install_circom
         run: |
           if ! (which circom); then
+            pushd /tmp
             echo "Installing circom"
             if [ ! -d "circom" ]; then
               echo "Directory 'circom' does not exist."
-              git clone --depth 1 --branch v2.1.9 https://github.com/iden3/circom.git
+              git clone --depth 1 --branch v2.1.6 https://github.com/iden3/circom.git
             else
               echo "Directory 'circom' already exists."
             fi
             pushd circom
             cargo build --release
             cargo install --path circom
+            popd
             popd
           else
             echo "circom is already installed"
