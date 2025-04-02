@@ -122,6 +122,27 @@ export abstract class EventGetterBase<
     return output;
   }
 
+  public parseTransactionReceipt(
+    txReceipt: ethers.TransactionReceipt
+  ): EventSet<EventOutput> {
+    const evName = this.eventName();
+    const events: EventOutput[] = [];
+    for (const log of txReceipt.logs) {
+      const parsed = this.upa.interface.parseLog(log as unknown as ethers.Log)!;
+      const name = parsed.name;
+      if (name === evName) {
+        events.push(this.parseEvent(parsed as unknown as TypedEventLog<Event>));
+      }
+    }
+    return {
+      blockNumber: txReceipt.blockNumber,
+      txHash: txReceipt.hash,
+      events,
+    };
+  }
+
+  abstract eventName(): string;
+
   // TODO: There should be a generic way to write this.
   abstract parseEvent(ev: TypedEventLog<Event>): EventOutput;
 }
@@ -149,6 +170,10 @@ export class ProofSubmittedEventGetter extends EventGetterBase<
     ...args: Partial<ProofSubmittedEvent.InputTuple>
   ) {
     super(upa, upa.filters.ProofSubmitted(...args));
+  }
+
+  eventName(): string {
+    return "ProofSubmitted";
   }
 
   parseEvent(
@@ -345,6 +370,10 @@ export class SubmissionVerifiedEventGetter extends EventGetterBase<
     super(upa, upa.filters.SubmissionVerified(...args));
   }
 
+  eventName(): string {
+    return "SubmissionVerified";
+  }
+
   parseEvent(
     ev: TypedEventLog<SubmissionVerifiedEvent.Event>
   ): SubmissionVerifiedEvent.OutputObject {
@@ -416,6 +445,10 @@ export class VKRegisteredEventGetter extends EventGetterBase<
     super(upa, upa.filters.VKRegistered());
   }
 
+  eventName(): string {
+    return "VKRegistered";
+  }
+
   parseEvent(
     ev: TypedEventLog<VKRegisteredEvent.Event>
   ): VKRegisteredEvent.OutputObject {
@@ -439,6 +472,10 @@ export class ChallengeEventGetter extends EventGetterBase<
     super(upa, upa.filters.Challenge());
   }
 
+  eventName(): string {
+    return "Challenge";
+  }
+
   // eslint-disable-next-line
   parseEvent(ev: TypedEventLog<ChallengeEvent.Event>): ChallengeEventOutput {
     return {};
@@ -456,6 +493,10 @@ export class SubmissionChallengeSuccessEventGetter extends EventGetterBase<
 > {
   constructor(upa: IUpaVerifier) {
     super(upa, upa.filters.SubmissionChallengeSuccess());
+  }
+
+  eventName(): string {
+    return "SubmissionChallengeSuccess";
   }
 
   // eslint-disable-next-line

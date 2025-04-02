@@ -97,3 +97,37 @@ export const isVerified = command({
     process.exit(verified ? 0 : 1);
   },
 });
+
+export const isUnitSubmissionVerified = command({
+  name: "is-unit-submission",
+  description:
+    "Query UPA contract for verification status of a single-proof submission " +
+    "with the given proofid",
+  args: {
+    chainEndpoint: options.chainEndpoint(),
+    instance: options.instance(),
+    proofId: positional({
+      type: string,
+      displayName: "proof-id",
+      description: "Proof Id to verifiy (must be part of single submission)",
+    }),
+
+    proofReferenceFile: options.proofReferenceFile(),
+  },
+  handler: async function ({
+    chainEndpoint,
+    instance,
+    proofId,
+  }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
+    const upa = await config.upaFromInstanceFile(instance, provider);
+
+    const verified = await upa.verifier.getFunction("isProofVerified(bytes32)")(
+      proofId
+    );
+
+    // write 1/0 to stdout and use exit status to indicate validity
+    console.log(verified ? "1" : "0");
+    process.exit(verified ? 0 : 1);
+  },
+});
