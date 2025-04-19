@@ -579,7 +579,7 @@ where
         _: &Self::CircuitConfig,
         inputs: &Self::InstanceInputs,
     ) -> Vec<Fr> {
-        // Note, the construction of `inputs` requires that that all inputs are
+        // Note, the construction of `inputs` requires that all inputs are
         // consistent, including the final digest.  Hence we can just read that
         // out.
         let keccak_instance = &inputs.keccak_instance;
