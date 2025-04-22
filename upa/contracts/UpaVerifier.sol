@@ -105,7 +105,7 @@ contract UpaVerifier is
         /// from which height they should start reading proofs.
         uint64 lastVerifiedSubmissionHeight;
         /// Open censorship challenges. The key is the `submissionId`, the
-        /// value is the amount to refund if the challenge is sucessful.
+        /// value is the amount to refund if the challenge is successful.
         mapping(bytes32 => uint256) openChallengeRefundAmounts;
         /// Fixed reimbursement for censorship challenges. The aggregator must
         /// pay the claimant this amount upon the completion of a successful
@@ -1038,7 +1038,7 @@ contract UpaVerifier is
     ) external returns (bool challengeSuccessful) {
         emit Challenge();
 
-        // We track the gas to reimburse the costs to sucessful
+        // We track the gas to reimburse the costs to successful
         // challenges
         uint256 startGas = gasleft();
 
