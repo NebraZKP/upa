@@ -570,14 +570,14 @@ describe("UPA", async () => {
         );
       // If the fee recipient claims it, it will succeed. Let's check the
       // fee recipient received the funds.
-      const feeRecipentBalanceBeforeClaim = await ethers.provider.getBalance(
+      const feeRecipientBalanceBeforeClaim = await ethers.provider.getBalance(
         feeRecipient
       );
       const claimTx = await verifier.connect(feeRecipient).claimAggregatorFee();
       const claimTxReceipt = await claimTx.wait();
       const claimTxCost = claimTxReceipt!.gasUsed * claimTxReceipt!.gasPrice;
       expect(await ethers.provider.getBalance(feeRecipient)).equals(
-        feeRecipentBalanceBeforeClaim - claimTxCost + feeDue
+        feeRecipientBalanceBeforeClaim - claimTxCost + feeDue
       );
       // And that the due balance is reset to zero.
       expect(await verifier.feeAllocated()).equals(0n);
