@@ -66,11 +66,10 @@ pushd _test_upa
                     --dump-tx \
                     ${UPA_DIR}/upa/test/data/test.bin \
                     > new_agg_proof_verifier.tx
-    KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy-binary \
-                    --keyfile ${KEYFILE} \
+    KEYFILE_PASSWORD=${DUMMY_PW} KEYFILE=`cat ${KEYFILE}` upa owner deploy-binary \
                     ${UPA_DIR}/upa/test/data/test.bin \
                     > new_agg_proof_verifier.addr
-    # Test dumpt-tx with a different --from address
+    # Test dump-tx with a different --from address
     upa owner set-aggregated-proof-verifier \
                     --keyfile ${USER_KEYFILE} \
                     --from ${deployer_addr} \
@@ -84,8 +83,10 @@ pushd _test_upa
                     ${orig_max_num_inputs} --wait
     [ `cat new_agg_proof_verifier.addr` == `upa query aggregated-proof-verifier` ]
 
-    # Print the config
-    upa query config > config.upa.json
+    # Print the config.  Test UPA_INSTANCE as content
+    mv upa.instance upa.instance.bak
+    UPA_INSTANCE=`cat upa.instance.bak` upa query config > config.upa.json
+    mv upa.instance.bak upa.instance
 
     # Test data:
     #   vk
