@@ -387,6 +387,21 @@ export const balance = command({
   },
 });
 
+export const aggregatorAddress = command({
+  name: "aggregator-address",
+  args: {
+    chainEndpoint: chainEndpoint(),
+    depositContract: depositContract(),
+  },
+  description: "Get the aggregator address for a given deposits contract",
+  handler: async function ({ chainEndpoint, depositContract }): Promise<void> {
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
+    const deposits =
+      Deposits__factory.connect(depositContract).connect(provider);
+    console.log(await deposits.AGGREGATOR_ADDRESS());
+  },
+});
+
 export const withdrawAtBlock = command({
   name: "withdraw-at-block",
   args: {
@@ -427,5 +442,6 @@ export const offChain = subcommands({
     "refund-fee": refundFee,
     "get-state": getState,
     "get-parameters": getParameters,
+    "aggregator-address": aggregatorAddress,
   },
 });
