@@ -24,21 +24,19 @@ export function keyfile(
   required: boolean = true
 ): Option {
   const defaultValue = () => {
-    const value = process.env.KEYFILE;
-    if (!value && required) {
+    if (required) {
       // Caught by the CLI framework
       throw "Keyfile not specified";
     }
-
-    return value || "";
+    return "";
   };
   return option({
     type: string,
     long: "keyfile",
     short: "k",
+    env: "KEYFILE",
     defaultValue,
-    description:
-      description || "Keyfile to sign tx (defaults to KEYFILE env var)",
+    description: description || "Keyfile to sign tx (file or contents)",
   });
 }
 
@@ -47,10 +45,9 @@ export function password(description?: string | undefined): Option {
   return option({
     type: string,
     long: "password",
-    defaultValue: () => process.env.KEYFILE_PASSWORD || "",
-    description:
-      description ||
-      "Password for keyfile (defaults to KEYFILE_PASSWORD env var)",
+    env: "KEYFILE_PASSWORD",
+    defaultValue: () => "",
+    description: description || "Password for keyfile",
   });
 }
 
@@ -79,19 +76,18 @@ export function getPassword(password?: string): string {
 
 export function chainEndpoint(required: boolean = true): Option {
   const defaultValue = () => {
-    const value = process.env.CHAIN_ENDPOINT;
-    if (!value && required) {
+    if (required) {
       throw "CHAIN_ENDPOINT not specified";
     }
-
-    return value || "http://127.0.0.1:8545/";
+    return "http://127.0.0.1:8545/";
   };
   return option({
     type: string,
     long: "chain-endpoint",
     short: "e",
+    env: "CHAIN_ENDPOINT",
     defaultValue,
-    description: "Chain RPC endpoint (defaults to CHAIN_ENDPOINT env var)",
+    description: "Chain RPC endpoint",
   });
 }
 
@@ -99,9 +95,9 @@ export function submissionEndpoint(): Option {
   return option({
     type: string,
     long: "submission-endpoint",
-    defaultValue: () => process.env.SUBMISSION_ENDPOINT || "",
-    description:
-      "Submission endpoint (defaults to SUBMISSION_ENDPOINT env var)",
+    env: "SUBMISSION_ENDPOINT",
+    defaultValue: () => "",
+    description: "Submission endpoint",
   });
 }
 
@@ -109,16 +105,8 @@ export function depositContract() {
   return option({
     type: string,
     long: "deposit-contract",
-    description:
-      "Aggregator's deposit contract (DEPOSIT_CONTRACT or query server)",
-    defaultValue: () => {
-      const val = process.env.DEPOSIT_CONTRACT;
-      if (val) {
-        return val;
-      }
-
-      throw "deposit contract not specified";
-    },
+    description: "Aggregator's deposit contract",
+    env: "DEPOSIT_CONTRACT",
   });
 }
 
@@ -126,8 +114,9 @@ export function instance(description?: string | undefined): Option {
   return option({
     type: string,
     long: "instance",
+    env: "UPA_INSTANCE",
     defaultValue: () => "upa.instance",
-    description: description || "UPA instance file",
+    description: description || "UPA instance file or contents",
   });
 }
 
@@ -254,10 +243,9 @@ export function maxFeePerGasGwei(): Option {
   return option({
     type: string,
     long: "max-fee-per-gas",
-    defaultValue: () => {
-      return process.env.MAX_FEE_PER_GAS_GWEI || "";
-    },
-    description: "Maximum fee per gas(Gwei) (or env var MAX_FEE_PER_GAS_GWEI)",
+    env: "MAX_FEE_PER_GAS_GWEI",
+    defaultValue: () => "",
+    description: "Maximum fee per gas(Gwei)",
   });
 }
 

@@ -21,11 +21,16 @@ import { GnarkInputs, GnarkProof, GnarkVerificationKey } from "../sdk/gnark";
 import { computeCircuitId } from "../sdk/utils";
 import { SP1ProofFixture } from "../sdk/sp1";
 
+/// Infer whether value is JSON or a filename. Return the JSON string.
+export function readJSONContentOrFile(value: string): string {
+  // Infer from the first character.  If it's '{', assume JSON.
+  return value.startsWith("{") ? value : fs.readFileSync(value, "ascii");
+}
+
 /// Load an instance descriptor file
 export function loadInstance(instanceFile: string): UpaInstanceDescriptor {
-  return JSON.parse(
-    fs.readFileSync(instanceFile, "ascii")
-  ) as UpaInstanceDescriptor;
+  const instanceStr = readJSONContentOrFile(instanceFile);
+  return JSON.parse(instanceStr) as UpaInstanceDescriptor;
 }
 
 /// Load an instance descriptor file and initialize and instance.  Optionally
@@ -40,7 +45,8 @@ export async function upaFromInstanceFile(
 
 /// Create a Signer from an encrypted keyfile, allowing overriding by a
 /// VoidSigner (which cannot actually sign) for a specific fromAddress (for
-/// simulating txs).
+/// simulating txs).  Keyfile can be either keyfile contents (JSON) or a
+/// filename.
 export async function loadWallet(
   keyfile: string,
   password: string,
@@ -52,7 +58,7 @@ export async function loadWallet(
     return new ethers.VoidSigner(fromAddress, provider);
   }
 
-  const keystoreStr = fs.readFileSync(keyfile, "ascii");
+  const keystoreStr = readJSONContentOrFile(keyfile);
   let wallet = await ethers.Wallet.fromEncryptedJson(keystoreStr, password);
   if (provider) {
     wallet = wallet.connect(provider);
@@ -62,7 +68,8 @@ export async function loadWallet(
 
 /// Read an address from a keyfile
 export function readAddressFromKeyfile(keyfile: string): string {
-  const keystoreObj = JSON.parse(fs.readFileSync(keyfile, "ascii"));
+  const keystoreStr = readJSONContentOrFile(keyfile);
+  const keystoreObj = JSON.parse(keystoreStr);
   return ethers.getAddress(keystoreObj.address);
 }
 
