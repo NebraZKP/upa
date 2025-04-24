@@ -358,7 +358,8 @@ export function loadAppVkCompressedProofAndInputsFile(
 
 /// Load the UPA config file that was used to generate the circuits.
 export function loadUpaConfig(upaConfigFile: string): UpaConfig {
-  return JSON.parse(fs.readFileSync(upaConfigFile, "utf-8"));
+  const upaConfigStr = readJSONContentOrFile(upaConfigFile);
+  return JSON.parse(upaConfigStr);
 }
 
 export function findUpaDir(): string {

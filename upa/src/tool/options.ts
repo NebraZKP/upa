@@ -124,8 +124,9 @@ export function upaConfigFile(): Option {
   return option({
     type: string,
     long: "config",
+    env: "UPA_CONFIG",
     defaultValue: () => "upa_config.json",
-    description: "Location of UPA config json file (upa_config.json)",
+    description: "UPA config json file or contents (upa_config.json)",
   });
 }
 
