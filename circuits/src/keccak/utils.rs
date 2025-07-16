@@ -472,7 +472,7 @@ pub fn compute_submission_id(
 
 /// Compute the representation of a 32-byte Keccak digest as a pair of field
 /// elements.  The elements are the low and high order 128-bit halves
-/// (respectivaly) of the digest when interpretted as a 256-bit word.  Namely,
+/// (respectively) of the digest when interpreted as a 256-bit word.  Namely,
 /// they are the (big-endian) integers encoded in the trailing and leading
 /// (respectively) 16 bytes of the digest in memory.
 /// See ``digestAsFieldElements` in `UpaLib.sol`.
