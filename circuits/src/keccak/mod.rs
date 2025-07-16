@@ -269,7 +269,7 @@ where
     ///
     /// # Note
     ///
-    /// The `vk` has to be already paddeed.
+    /// The `vk` has to be already padded.
     pub fn from_vk(vk: &VerificationKey) -> Self {
         let VerificationKey {
             alpha,
