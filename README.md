@@ -3,7 +3,7 @@ NEBRA UPA
 
 NEBRA UPA is the blazingly fast, production ready universal proof aggregation engine built by Nebra team.
 
-Currently, NEBRA UPA (v1.2) takes a batch of Groth16 proofs and aggregates them into a single Etheruem verifiable Halo2<KZG> proof. NEBRA UPA supports the following 3 implementations of Groth16:
+Currently, NEBRA UPA (v1.2) takes a batch of Groth16 proofs and aggregates them into a single Ethereum verifiable Halo2<KZG> proof. NEBRA UPA supports the following 3 implementations of Groth16:
 - SnarkJS
 - Gnark (without commitment)
 - Gnark (with commitment)
