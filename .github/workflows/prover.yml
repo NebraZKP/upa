@@ -19,33 +19,8 @@ env:
   RUST_BACKTRACE: full
 
 jobs:
-  start-runner:
-    name: Start EC2 runner
-    runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-      - name: Start EC2 runner
-        id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: start
-          github-token: ${{ secrets.AWS_GITHUB_TOKEN }}
-          ec2-image-id: ${{ vars.EC2_IMAGE_ID }}
-          ec2-instance-type: c7a.4xlarge
-          subnet-id: ${{ vars.SUBNET_ID }}
-          security-group-id: ${{ vars.SECURITY_GROUP_ID }}
-
   prover-tests:
-    needs: start-runner # required to start the main job when the runner is ready
-    runs-on: ${{ needs.start-runner.outputs.label }}
+    runs-on: ubuntu-latest
 
     defaults:
       run:
@@ -60,24 +35,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # For EC2 runner
-      - name: Set HOME env variable
-        run: |
-          echo "HOME=/root" >> ${GITHUB_ENV}
-
-      # For EC2 runner
-      - name: Add pre-installed cargo and rustc executables to github path.
-        run: |
-          echo "$HOME/.cargo/bin" >> ${GITHUB_PATH}
-
-      # For EC2 runner
-      - name: Add pre-installed yarn executable to github path.
-        run: |
-          echo "$HOME/.nvm/versions/node/v20.11.0/bin" >> ${GITHUB_PATH}
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@master
         with:
-          node-version: ${{ matrix.node-version }}
+          toolchain: nightly-2022-12-09
+          components: rustfmt, clippy
 
       # Based on https://github.com/actions/cache/blob/main/examples.md#node---yarn-2
       - name: Get yarn cache directory path
@@ -117,7 +79,7 @@ jobs:
       - name: Run test_prover (dry run)
         run: |
             DRY_RUN=1 ./scripts/test_prover
-      
+
       - name: Run test_prover (dry run, compute submission id)
         run: |
             DRY_RUN=1 OUTPUT_SUBMISSION_ID=1 ./scripts/test_prover
@@ -125,25 +87,3 @@ jobs:
       - name: Run aggregation benchmark
         run: |
           DRY_RUN=1 ./scripts/aggregation_benchmark
-
-  stop-runner:
-    name: Stop EC2 runner
-    needs:
-      - start-runner
-      - prover-tests
-    runs-on: ubuntu-latest
-    if: ${{ always() }} # required to stop the runner even if an error happened in the previous jobs
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-      - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: stop
-          github-token: ${{ secrets.AWS_GITHUB_TOKEN }}
-          label: ${{ needs.start-runner.outputs.label }}
-          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
