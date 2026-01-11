@@ -169,7 +169,7 @@ pushd _test_upa
            # --submission-file submit-multi-4.submission.json
 
     # Extract the submissions
-    upa get-submission `cat submit-1.tx.hash` > submit-1.submission.json
+    upa get-submission --events `cat submit-1.tx.hash` > submit-1.submission.json
     upa get-submission `cat submit-multi-4.tx.hash` > submit-multi-4.submission.json
 
     multi_4_submissionid=`jq -r .submissionId submit-multi-4.submission.json`

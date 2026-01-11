@@ -4,7 +4,11 @@ import { getConfig } from "./getConfig";
 import { chainEndpoint, instance } from "./options";
 import { ethers } from "ethers";
 import { upaFromInstanceFile } from "./config";
-import { isVerified, isSubmissionVerified } from "./isVerified";
+import {
+  isVerified,
+  isSubmissionVerified,
+  isUnitSubmissionVerified,
+} from "./isVerified";
 import { getAggregatedProofVerifier } from "./aggregatedProofVerifier";
 
 const getVerifierByteCode = command({
@@ -39,5 +43,6 @@ export const query = subcommands({
     "verifier-bytecode": getVerifierByteCode,
     "is-verified": isVerified,
     "is-submission-verified": isSubmissionVerified,
+    "is-unit-submission-verified": isUnitSubmissionVerified,
   },
 });
