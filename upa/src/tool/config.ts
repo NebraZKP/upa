@@ -5,6 +5,8 @@ import {
   UpaInstance,
   upaInstanceFromDescriptor,
   UpaConfig,
+  upaSimpleInstanceFromDescriptor,
+  UpaSimpleInstance,
 } from "../sdk/upa";
 import { AppVkProofInputs, CircuitIdProofAndInputs } from "../sdk/application";
 import {
@@ -36,6 +38,16 @@ export async function upaFromInstanceFile(
 ): Promise<UpaInstance> {
   const instanceDesc = loadInstance(instanceFile);
   return upaInstanceFromDescriptor(instanceDesc, provider);
+}
+
+/// Load an instance descriptor file and initialize and instance.  Optionally
+/// connect to an ethers.Provider or etheres.Signer.
+export async function upaSimpleFromInstanceFile(
+  instanceFile: string,
+  provider: ethers.ContractRunner
+): Promise<UpaSimpleInstance> {
+  const instanceDesc = loadInstance(instanceFile);
+  return upaSimpleInstanceFromDescriptor(instanceDesc, provider);
 }
 
 /// Create a Signer from an encrypted keyfile, allowing overriding by a

@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+set -x
+set -e
+
+# Build
+yarn
+yarn build
+
+. scripts/shell_setup.sh
+
+# Include the util functions.
+. scripts/utils.sh
+
+DUMMY_PW="pw"
+
+# 1 - keyfile to fund
+function fund() {
+    bal=`upa dev balance --keyfile $1`
+    if (( $(echo "${bal} < 100" | bc -l) )) ; then
+        upa dev fund --keyfile $1
+    fi
+}
+
+mkdir -p _test_simple
+pushd _test_simple
+    start_hardhat_node 10545
+    echo CHAIN_ENDPOINT="http://127.0.0.1:10545/" > .env
+    echo 'KEYFILE_PASSWORD=' >> .env
+
+    KEYFILE="deployer.key"
+
+    # Create and fund a dummy address (with password)
+    if ! [ -e ${KEYFILE} ]; then
+        upa dev ethkeygen --keyfile ${KEYFILE} --password ${DUMMY_PW}
+    fi
+    fund ${KEYFILE}
+    deployer_addr=0x`jq -r .address ${KEYFILE}`
+
+    # Deploy UPA simple verifier using this key.
+    KEYFILE_PASSWORD=${DUMMY_PW} upa owner deploy-simple \
+                    --keyfile ${KEYFILE} \
+                    --verifier ${UPA_DIR}/upa/test/data/test.bin \
+                    --retries 3
+
+    # Batch of 4 proofs with different vks and num public inputs.
+    UNIVERSAL_PROOFS_4=${UPA_DIR}/circuits/src/tests/data/universal_batch_verifier_4_proofs.json
+
+    # proof array to query verification
+    for i in {0..3} ; do
+        jq ".[$i]" ${UNIVERSAL_PROOFS_4} > four-proofs$i.json
+    done
+
+    # querying non verified proof
+    ( ! upa query is-verified-simple \
+            --chain-endpoint http://127.0.0.1:10545 \
+            --proof-file four-proofs0.json 
+    )
+
+    # computing proof ids
+    upa compute proof-ids $UNIVERSAL_PROOFS_4 > agg.pids.json
+
+    # Compute the dummy calldata using `compute-final-digest`
+    upa aggregator compute-final-digest \
+            --proof-ids-file agg.pids.json \
+            --calldata-file agg.proof.calldata
+
+    # submiting aggregated proof to simple verifier
+    upa aggregator submit-simple-aggregated-proof \
+            --chain-endpoint http://127.0.0.1:10545 \
+            --keyfile ${KEYFILE} \
+            --password pw \
+            --proof-ids-file agg.pids.json \
+            --calldata-file agg.proof.calldata \
+            --wait
+
+    # querying four verified proofs
+    for i in {0..3} ; do
+        upa query is-verified-simple \
+                --chain-endpoint http://127.0.0.1:10545 \
+                --proof-file four-proofs$i.json
+    done
+
+    stop_hardhat_node
+
+popd # _test_simple
+
+set +e
+set +x
+
+echo "========================================"
+echo "====             PASSED             ===="
+echo "========================================"
