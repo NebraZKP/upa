@@ -357,6 +357,79 @@ const makeSubmitAggregatedProofCommand = (
     },
   });
 
+  const submitSimple = command({
+  name: `submit-simple-aggregated-proof`,
+  args: {
+    chainEndpoint: options.chainEndpoint(),
+    keyfile: options.keyfile(),
+    password: options.password(),
+    instance: options.instance(),
+    wait: options.wait(),
+    estimateGas: options.estimateGas(),
+    dumpTx: options.dumpTx(),
+    maxFeePerGasGwei: options.maxFeePerGasGwei(),
+    calldataFile: option({
+      type: string,
+      long: "calldata-file",
+      description: "Proof file",
+    }),
+    proofIdsFile: option({
+      type: string,
+      long: "proof-ids-file",
+      description: "File containing proofIds of submitted proofs",
+    }),
+  },
+  description: "Submit an aggregated proof to the UPA contract",
+  handler: async function ({
+    chainEndpoint,
+    keyfile,
+    password,
+    instance,
+    wait,
+    estimateGas,
+    dumpTx,
+    maxFeePerGasGwei,
+    calldataFile,
+    proofIdsFile,
+  }): Promise<void> {
+    const proofIds: string[] = JSON.parse(readFileSync(proofIdsFile, "ascii"));
+    const calldata = readFileSync(calldataFile);
+
+    // Connect
+
+    const provider = new ethers.JsonRpcProvider(chainEndpoint);
+    const wallet = await config.loadWallet(
+      keyfile,
+      options.getPassword(password),
+      provider
+    );
+    const { verifier } = await config.upaSimpleFromInstanceFile(
+      instance,
+      wallet
+    );
+
+    // Create and handle the tx
+
+    const optionsPayable: PayableOverrides = {
+      maxFeePerGas: utils.parseGweiOrUndefined(maxFeePerGasGwei),
+    };
+    const txReq = await verifier["verifyAggregatedProof"].populateTransaction(
+      proofIds,
+      calldata,
+      optionsPayable
+    );
+
+    await config.handleTxRequest(
+      wallet,
+      txReq,
+      estimateGas,
+      dumpTx,
+      wait,
+      verifier.interface
+    );
+  },
+});
+
 export const claimDepositFees = command({
   name: "claim-deposit-fees",
   args: {
@@ -425,6 +498,7 @@ export const aggregator = subcommands({
     "compute-final-digest": computeFinalDigest,
     "submit-aggregated-proof": makeSubmitAggregatedProofCommand("OnChain"),
     "submit-mixed-aggregated-proof": makeSubmitAggregatedProofCommand("Mixed"),
+    "submit-simple-aggregated-proof": submitSimple,
     "deploy-deposit-contract": deployDeposits,
     "claim-deposit-fees": claimDepositFees,
   },

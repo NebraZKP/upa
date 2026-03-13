@@ -11,6 +11,7 @@ import {
 } from "./aggregatedProofVerifier";
 import { setWorker } from "./setWorker";
 import { setVersion } from "./setVersion";
+import { deploySimple } from "./deploySimple";
 
 export const owner = subcommands({
   name: "owner",
@@ -26,5 +27,6 @@ export const owner = subcommands({
     "deploy-binary": deployBinary,
     "set-aggregated-proof-verifier": setAggregatedProofVerifier,
     "set-sid-aggregated-proof-verifier": setSidAggregatedProofVerifier,
+    "deploy-simple": deploySimple,
   },
 });

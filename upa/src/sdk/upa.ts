@@ -8,6 +8,8 @@ import {
   UpaVerifier__factory,
   TestUpgradedUpaVerifier,
   TestUpgradedUpaVerifier__factory,
+  SimpleVerifier,
+  SimpleVerifier__factory,
 } from "../../typechain-types";
 import { Groth16Proof } from "./application";
 import { PayableOverrides } from "../../typechain-types/common";
@@ -64,8 +66,7 @@ export type CircuitConfig = {
 };
 
 /**
- * Description of a single deployment.  Intended to be serializable as
- * JSON. This is a longer sentence.
+ * Description of a single deployment.  Intended to be serializable as JSON.
  */
 export type UpaInstanceDescriptor = {
   /// Address of the UPA verifier contract
@@ -81,6 +82,13 @@ export type UpaInstanceDescriptor = {
 /// Reference to a deployed instance
 export type UpaInstance = {
   verifier: UpaVerifier;
+  deploymentBlockNumber: number;
+  deploymentTx: string;
+  chainId: string;
+};
+
+export type UpaSimpleInstance = {
+  verifier: SimpleVerifier;
   deploymentBlockNumber: number;
   deploymentTx: string;
   chainId: string;
@@ -109,6 +117,22 @@ export async function upaInstanceFromDescriptor(
     );
   }
 
+  return {
+    verifier,
+    deploymentBlockNumber: instanceDescriptor.deploymentBlockNumber,
+    deploymentTx: instanceDescriptor.deploymentTx,
+    chainId: instanceDescriptor.chainId,
+  };
+}
+
+export async function upaSimpleInstanceFromDescriptor(
+  instanceDescriptor: UpaInstanceDescriptor,
+  provider: ethers.ContractRunner
+): Promise<UpaSimpleInstance> {
+  const verifierContract = SimpleVerifier__factory.connect(
+    instanceDescriptor.verifier
+  );
+  const verifier = verifierContract.connect(provider);
   return {
     verifier,
     deploymentBlockNumber: instanceDescriptor.deploymentBlockNumber,

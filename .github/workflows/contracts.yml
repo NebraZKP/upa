@@ -60,6 +60,10 @@ jobs:
         run: |
           yarn test
 
+      - name: run test_simple
+        run: |
+          ./scripts/test_simple
+
       - name: run test_upa
         run: |
           ./scripts/test_upa

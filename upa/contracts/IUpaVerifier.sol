@@ -21,6 +21,7 @@ YMMMUP^
 pragma solidity 0.8.26;
 
 import "./IUpaProofReceiver.sol";
+import "./IUpaProofVerifier.sol";
 
 /// Reference to a single proof in a Submission.  Used by clients to show that
 /// a given proof appears in a submission which has been verified as part of
@@ -36,7 +37,7 @@ struct ProofReference {
 }
 
 // Contract which verifies aggregated proofs.
-interface IUpaVerifier {
+interface IUpaVerifier is IUpaProofVerifier {
     /// Emitted when a submission has been verified as part of an aggregated
     /// proof.  After this event is emitted, `isProofVerified` will return true
     /// for proofs in the corresponding submission.
@@ -55,14 +56,6 @@ interface IUpaVerifier {
     // Functions to look up verification status from public inputs. If the app
     // contract takes in public inputs as calldata, then these will be more
     // gas-efficient than looking up using a proofId or submissionId.
-
-    /// Checks if UPA has verified a proof from a single-proof submission that
-    /// publicInputs is valid for the circuit `circuitId`.
-    /// This should be renamed to `isProofVerified` when we redeploy.
-    function isProofVerified(
-        bytes32 circuitId,
-        uint256[] calldata publicInputs
-    ) external view returns (bool);
 
     /// Checks if UPA has verified a proof from a multi-proof submission that
     /// `publicInputs` is valid for the circuit `circuitId`.
@@ -87,14 +80,11 @@ interface IUpaVerifier {
         uint256[][] memory publicInputsArray
     ) external view returns (bool);
 
-    // Functions to look up verification status from proofId or submissionId.
+    // Functions to look up verification status from proofId.
     // If the app contract constructs a memory array of public inputs, then it
     // is more gas-efficient for the app contract to compute the
     // proofId/submissionId (see UpaLib.sol) and use that to look up its
     // status.
-
-    /// Checks if UPA has verified a proofId from a single-proof submission.
-    function isProofVerified(bytes32 proofId) external view returns (bool);
 
     /// Checks if UPA has verified a proofId from a multi-proof submission.
     function isProofVerified(
