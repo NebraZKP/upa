@@ -394,7 +394,7 @@ pub trait InCircuitPartialHash<F: EccPrimeField>:
     /// Absorbs the first `parts` of `self` into `hasher`.
     fn partial_hash(&self, parts: usize, hasher: &mut PoseidonHasher<F>);
 
-    /// Returns the number of of field elements contained in `parts`.
+    /// Returns the number of field elements contained in `parts`.
     ///
     /// # Note
     ///

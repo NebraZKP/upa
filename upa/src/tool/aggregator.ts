@@ -227,7 +227,7 @@ const makeSubmitAggregatedProofCommand = (
         type: optional(number),
         long: "off-chain-final-count",
         description:
-          "include only leading proofs from final final submission " +
+          "include only leading proofs from final submission " +
           "(default: all)",
       }),
     },
