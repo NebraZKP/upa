@@ -69,7 +69,7 @@ const convertProofSnarkjs = command({
       description: "The destination for output UPA proof with inputs",
     }),
   },
-  description: "Convert Groth16 verifying key from SnarkJS to UPA format",
+  description: "Convert Groth16 proof from SnarkJS to UPA format",
   handler: async function ({
     snarkJSProofAndInputsFile,
     upaProofFile,

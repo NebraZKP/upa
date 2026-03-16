@@ -314,17 +314,17 @@ async function getRequest(url: string): Promise<object> {
   return processResponse(response, url);
 }
 
-async function jsonPostRequest<Request>(
+export async function jsonPostRequest<Request>(
   url: string,
   request: Request
 ): Promise<object> {
   const requestBody = utils.JSONstringify(request);
-  const response = await fetch(url, {
+  const httpRequest = {
     method: "POST",
     body: requestBody,
     headers: { "Content-Type": "application/json" },
-  });
-
+  };
+  const response = await fetch(url, httpRequest);
   return processResponse(response, url, requestBody);
 }
 

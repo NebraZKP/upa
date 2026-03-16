@@ -229,7 +229,6 @@ export function loadGnarkProof(filename: string): GnarkProof {
 export function loadGnarkInputs(filename: string): GnarkInputs {
   const inputsJSON = JSON.parse(fs.readFileSync(filename, "ascii"));
   const result = inputsJSON.map(BigInt);
-  console.log(result);
   return result;
 }
 
@@ -259,6 +258,28 @@ export function loadAppVkProofInputsBatchFile(
       Groth16Proof.from_json
     )
   );
+}
+
+export function loadAppVkProofInputsSingleOrBatchFile(
+  filename: string
+): AppVkProofInputs[] {
+  const vkProofInputs: object = JSON.parse(fs.readFileSync(filename, "ascii"));
+  if (Array.isArray(vkProofInputs)) {
+    return vkProofInputs.map((o) =>
+      AppVkProofInputs.from_json(
+        o,
+        Groth16VerifyingKey.from_json,
+        Groth16Proof.from_json
+      )
+    );
+  }
+  return [
+    AppVkProofInputs.from_json(
+      vkProofInputs,
+      Groth16VerifyingKey.from_json,
+      Groth16Proof.from_json
+    ),
+  ];
 }
 
 /// Converts either of the JSON objects:

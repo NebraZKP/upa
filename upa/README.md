@@ -32,7 +32,10 @@ See [DEVELOPMENT.md].
 
 ## Release notes
 
-### V2.0.x
+### V2.0.3
+Support for off-chain verifier services in the upa tool.
+
+### V2.0.2
 UPA `V2` supports submission of Groth16 proofs to an off-chain submission
 endpoint, allowing users to save the gas cost of submitting on-chain. The
  `upa` tool has been updated to support this new feature.

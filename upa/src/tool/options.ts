@@ -105,6 +105,34 @@ export function submissionEndpoint(): Option {
   });
 }
 
+export function verifyEndpoint(): Option {
+  return option({
+    type: string,
+    long: "verify-endpoint",
+    defaultValue: () => process.env.VERIFY_ENDPOINT || "",
+    description: "Verify endpoint (defaults to VERIFY_ENDPOINT env var)",
+  });
+}
+
+export function verifierAddress(): OptionalOption {
+  return option({
+    type: optional(string),
+    long: "verifier-address",
+    short: "v",
+    description:
+      "Trusted verifier address for signature verification (VERIFIER_ADDRESS)" +
+      ". If not given, any well-formed signature from the verifier will be " +
+      "accepted.",
+    defaultValue: () => {
+      const val = process.env.VERIFIER_ADDRESS;
+      if (val) {
+        return val;
+      }
+      return undefined;
+    },
+  });
+}
+
 export function depositContract() {
   return option({
     type: string,
@@ -185,6 +213,24 @@ export function vkProofInputsBatchFilePositional(): Option {
     description:
       "VK, proof, inputs batch file: " +
       '[{"vk": {..}, "proof": {..}, "inputs": [..]}, ..]',
+  });
+}
+
+export function vkProofInputsSingleOrBatchFile(): Option {
+  return option({
+    type: string,
+    long: "proofs-file",
+    description:
+      "JSON file: {vk, proof, inputs} object, or list of such objects",
+  });
+}
+
+export function vkProofInputsSingleOrBatchFilePositional(): Option {
+  return positional({
+    type: string,
+    displayName: "proofs-file",
+    description:
+      "JSON file: {vk, proof, inputs} object, or list of such objects",
   });
 }
 
